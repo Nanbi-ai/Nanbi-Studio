@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Territory Matrix Module</title>
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-    <link rel="stylesheet" href="[https://unpkg.com/leaflet@1.9.4/dist/leaflet.css](https://unpkg.com/leaflet@1.9.4/dist/leaflet.css)" />
-    <script src="[https://unpkg.com/leaflet@1.9.4/dist/leaflet.js](https://unpkg.com/leaflet@1.9.4/dist/leaflet.js)"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         .table-container { overflow-y: auto; max-height: 52vh; }
         th { position: sticky; top: 0; background-color: #f8fafc; color: #475569; z-index: 10; text-align: center; border-bottom: 2px solid #e2e8f0; }
@@ -21,6 +21,7 @@
 <body class="bg-slate-50 text-slate-800 font-sans h-full flex flex-col overflow-hidden p-2">
     <main class="flex-1 flex gap-3 overflow-hidden">
         <aside class="w-[35%] flex flex-col gap-3 overflow-hidden shrink-0">
+            <!-- Filters -->
             <div class="bg-white p-3 rounded border border-slate-200 flex flex-col gap-2 shrink-0 shadow-sm">
                 <div class="grid grid-cols-2 gap-2 text-[10px]">
                     <div class="flex flex-col"><label class="font-bold text-slate-400 uppercase mb-0.5">Country</label><select id="selCountry" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-700 outline-none"></select></div>
@@ -30,6 +31,7 @@
                     <div class="flex flex-col col-span-2"><label class="font-bold text-slate-400 uppercase mb-0.5">Local Body</label><select id="selLocalBody" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-700 outline-none" disabled></select></div>
                 </div>
             </div>
+            <!-- Map -->
             <div class="flex-1 bg-white p-1.5 rounded border border-slate-200 flex flex-col relative overflow-hidden shadow-sm">
                 <div class="flex-1 relative rounded overflow-hidden border border-slate-200">
                     <div id="map"></div>
@@ -38,6 +40,7 @@
         </aside>
 
         <section class="w-[65%] flex flex-col gap-3 overflow-hidden">
+            <!-- Metrics -->
             <div class="bg-white p-2.5 rounded border border-slate-200 flex justify-around items-center shrink-0 shadow-sm">
                 <div class="text-center">
                     <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Active Territories</p>
@@ -48,6 +51,7 @@
                     <p class="text-2xl font-black text-emerald-600" id="metricMPS">₹0</p>
                 </div>
             </div>
+            <!-- Table -->
             <div class="flex-1 bg-white rounded border border-slate-200 flex flex-col overflow-hidden shadow-sm">
                 <div class="table-container flex-1">
                     <table class="w-full border-collapse text-[10px]">
@@ -63,6 +67,7 @@
                     </table>
                 </div>
             </div>
+            <!-- Inspector -->
             <div class="h-[22vh] bg-white rounded border border-slate-200 p-3 flex flex-col overflow-hidden shrink-0 shadow-sm">
                 <div class="flex justify-between items-center border-b border-slate-100 pb-1.5 mb-2">
                     <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500" id="deepDiveTitle">Entity Inspector</h3>
@@ -85,19 +90,21 @@
 
         window.addEventListener('error', (e) => updateParentStatus(`<span style="color:#ef4444; font-weight:bold;">CRASH: ${e.message}</span>`));
 
-        import { createClient } from '[https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm](https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm)';
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
         let map, markers = [];
         let globalData = [], filteredData = [];
 
+        // Exact coordinates mapped for specific nodes
         const wardGeoAnchor = {
             1: [12.9180, 77.5560], 4: [12.9240, 77.5780], 14: [12.9260, 77.5930], 65: [12.9420, 77.5750]
         };
 
         async function boot() {
             try {
-                const SUPABASE_URL = "[https://yeoracoxyjzgpsyxgwri.supabase.co](https://yeoracoxyjzgpsyxgwri.supabase.co)";
+                const SUPABASE_URL = "https://yeoracoxyjzgpsyxgwri.supabase.co";
                 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inllb3JhY294eWp6Z3BzeXhnd3JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3MzgzNzUsImV4cCI6MjEwMzMxNDM3NX0.rNcvhRCw4KyfNpsWH6IYxlQT07zJ7i68Zg5jnpqj9yc";
+                
                 const nanbiDB = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 
                 initMap();
@@ -110,7 +117,11 @@
         function initMap() {
             map = L.map('map', { zoomControl: false, attributionControl: false }).setView([12.9250, 77.5800], 12);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-            setTimeout(() => { map.invalidateSize(); }, 300);
+            
+            // Forces Leaflet to render correctly inside dynamic iframes
+            setTimeout(() => { map.invalidateSize(); }, 100);
+            setTimeout(() => { map.invalidateSize(); }, 500);
+            setTimeout(() => { map.invalidateSize(); }, 1500);
         }
 
         async function fetchRelationalData(db) {
@@ -232,6 +243,7 @@
 
             data.forEach(item => {
                 const wNo = parseInt(item.territory_no);
+                // Unmapped wards default safely to Bengaluru South center without random scattering
                 const lat = wardGeoAnchor[wNo] ? wardGeoAnchor[wNo][0] : 12.9250;
                 const lng = wardGeoAnchor[wNo] ? wardGeoAnchor[wNo][1] : 77.5800;
                 latlngs.push([lat, lng]);
