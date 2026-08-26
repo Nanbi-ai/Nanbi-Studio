@@ -3,126 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nanbi Studio - Territory Matrix</title>
+    <title>Territory Matrix Module</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
-        .table-container { max-height: 50vh; overflow-y: auto; }
+        .table-container { overflow-y: auto; }
         th { position: sticky; top: 0; background-color: #f8fafc; color: #475569; z-index: 10; text-align: center; border-bottom: 2px solid #e2e8f0; }
         td { text-align: center; border-bottom: 1px solid #f1f5f9; }
         .col-left { text-align: left; }
         .row-active { background-color: #f0fdfa !important; border-left: 4px solid #0d9488; }
-        #map { height: 100%; width: 100%; border-radius: 0.5rem; z-index: 1; }
+        #map { height: 100%; width: 100%; border-radius: 0.25rem; z-index: 1; }
+        /* Hide scrollbars for cleaner embedded look */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans h-screen flex flex-col overflow-hidden">
+<body class="bg-slate-50 text-slate-800 font-sans h-full flex flex-col overflow-hidden p-2">
 
-    <!-- Header -->
-    <header class="bg-[#344d59] border-b border-[#253942] px-6 py-4 flex justify-between items-center shrink-0 shadow-md">
-        <div class="flex items-center space-x-4">
-            <a href="index.html" class="text-slate-300 hover:text-white text-sm flex items-center gap-1 transition" title="Return to Home">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                Back to Studio
-            </a>
-            <div class="h-4 w-px bg-slate-500/50"></div>
-            <h1 class="text-xl font-bold tracking-wide text-white flex items-center gap-2">
-                <span class="text-[#e29d74]">❖</span> Nanbi Territory Matrix
-            </h1>
-        </div>
-        <div id="syncStatus" class="text-xs font-mono text-slate-300 bg-black/20 px-3 py-1.5 rounded flex items-center gap-2">
-            <svg class="w-4 h-4 animate-spin text-teal-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+    <!-- Compact Top Row -->
+    <div class="flex justify-between items-center px-1 pb-2 shrink-0">
+        <h2 class="text-lg font-bold text-slate-700 tracking-tight flex items-center gap-2">
+            <span class="text-teal-600">❖</span> Territories
+        </h2>
+        <div id="syncStatus" class="text-[10px] font-mono text-slate-500 bg-white px-2 py-1 rounded border border-slate-200 flex items-center gap-1 shadow-sm">
             Booting Infrastructure...
         </div>
-    </header>
+    </div>
 
-    <!-- Main Workspace -->
-    <main class="flex-1 flex gap-4 p-4 overflow-hidden">
+    <!-- Main Workspace (Space Optimized) -->
+    <main class="flex-1 flex gap-3 overflow-hidden">
         
-        <!-- Left Panel: Hierarchy Filters & Heat Map -->
-        <aside class="w-[35%] flex flex-col gap-4 overflow-hidden shrink-0">
-            
-            <div class="bg-white p-4 rounded-lg border border-slate-200 flex flex-col gap-3 shrink-0 shadow-sm">
-                <h2 class="text-xs font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100 pb-2">Administrative Hierarchy</h2>
-                <div class="grid grid-cols-2 gap-3 text-xs">
-                    <div class="flex flex-col">
-                        <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Country</label>
-                        <select id="selCountry" class="bg-slate-50 border border-slate-200 rounded p-1.5 text-slate-700 outline-none focus:border-teal-500"></select>
-                    </div>
-                    <div class="flex flex-col">
-                        <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">State</label>
-                        <select id="selState" class="bg-slate-50 border border-slate-200 rounded p-1.5 text-slate-700 outline-none focus:border-teal-500" disabled></select>
-                    </div>
-                    <div class="flex flex-col">
-                        <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">District</label>
-                        <select id="selDistrict" class="bg-slate-50 border border-slate-200 rounded p-1.5 text-slate-700 outline-none focus:border-teal-500" disabled></select>
-                    </div>
-                    <div class="flex flex-col">
-                        <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Taluk</label>
-                        <select id="selTaluk" class="bg-slate-50 border border-slate-200 rounded p-1.5 text-slate-700 outline-none focus:border-teal-500" disabled></select>
-                    </div>
-                    <div class="flex flex-col col-span-2">
-                        <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Local Body</label>
-                        <select id="selLocalBody" class="bg-slate-50 border border-slate-200 rounded p-1.5 text-slate-700 outline-none focus:border-teal-500" disabled></select>
-                    </div>
+        <!-- Left Panel: Hierarchy & Map -->
+        <aside class="w-[35%] flex flex-col gap-3 overflow-hidden shrink-0">
+            <div class="bg-white p-3 rounded border border-slate-200 flex flex-col gap-2 shrink-0 shadow-sm">
+                <div class="grid grid-cols-2 gap-2 text-[10px]">
+                    <div class="flex flex-col"><label class="font-bold text-slate-400 uppercase mb-0.5">Country</label><select id="selCountry" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-700 outline-none"></select></div>
+                    <div class="flex flex-col"><label class="font-bold text-slate-400 uppercase mb-0.5">State</label><select id="selState" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-700 outline-none" disabled></select></div>
+                    <div class="flex flex-col"><label class="font-bold text-slate-400 uppercase mb-0.5">District</label><select id="selDistrict" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-700 outline-none" disabled></select></div>
+                    <div class="flex flex-col"><label class="font-bold text-slate-400 uppercase mb-0.5">Taluk</label><select id="selTaluk" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-700 outline-none" disabled></select></div>
+                    <div class="flex flex-col col-span-2"><label class="font-bold text-slate-400 uppercase mb-0.5">Local Body</label><select id="selLocalBody" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-700 outline-none" disabled></select></div>
                 </div>
             </div>
 
-            <div class="flex-1 bg-white p-2 rounded-lg border border-slate-200 flex flex-col relative overflow-hidden shadow-sm">
-                <div class="flex justify-between items-center mb-2 px-2 z-10">
-                    <span class="text-xs font-bold uppercase tracking-widest text-slate-500">Spatial Topology</span>
-                    <span class="text-[10px] bg-teal-50 px-2 py-0.5 rounded border border-teal-100 text-teal-700 font-bold" id="mapEntityCount">0 Nodes</span>
-                </div>
+            <div class="flex-1 bg-white p-1.5 rounded border border-slate-200 flex flex-col relative overflow-hidden shadow-sm">
                 <div class="flex-1 relative rounded overflow-hidden border border-slate-200">
                     <div id="map"></div>
                 </div>
             </div>
         </aside>
 
-        <!-- Right Panel: Ledger & Entity Deep Dive -->
-        <section class="w-[65%] flex flex-col gap-4 overflow-hidden">
+        <!-- Right Panel: Ledger & Inspector -->
+        <section class="w-[65%] flex flex-col gap-3 overflow-hidden">
             
-            <div class="bg-white p-4 rounded-lg border border-slate-200 flex justify-around items-center shrink-0 shadow-sm">
+            <div class="bg-white p-2.5 rounded border border-slate-200 flex justify-around items-center shrink-0 shadow-sm">
                 <div class="text-center">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Territories</p>
-                    <p class="text-3xl font-black text-slate-700" id="metricCount">0</p>
+                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Active Territories</p>
+                    <p class="text-2xl font-black text-slate-700" id="metricCount">0</p>
                 </div>
                 <div class="text-center border-l border-slate-200 pl-8">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Market Capacity Potential</p>
-                    <p class="text-3xl font-black text-emerald-600" id="metricMPS">₹0</p>
+                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Market Capacity</p>
+                    <p class="text-2xl font-black text-emerald-600" id="metricMPS">₹0</p>
                 </div>
             </div>
 
-            <div class="flex-1 bg-white rounded-lg border border-slate-200 flex flex-col overflow-hidden shadow-sm">
+            <div class="flex-1 bg-white rounded border border-slate-200 flex flex-col overflow-hidden shadow-sm">
                 <div class="table-container flex-1">
-                    <table class="w-full border-collapse text-xs">
+                    <table class="w-full border-collapse text-[10px]">
                         <thead>
                             <tr>
-                                <th class="p-3 uppercase tracking-wider text-[10px] font-bold">Territory-ID</th>
-                                <th class="p-3 uppercase tracking-wider text-[10px] font-bold text-left">Ward Name</th>
-                                <th class="p-3 uppercase tracking-wider text-[10px] font-bold text-left">Biz-Class</th>
-                                <th class="p-3 uppercase tracking-wider text-[10px] font-bold text-left">Civic Coverage</th>
+                                <th class="p-2 uppercase tracking-wider font-bold">ID</th>
+                                <th class="p-2 uppercase tracking-wider font-bold text-left">Ward Name</th>
+                                <th class="p-2 uppercase tracking-wider font-bold text-left">Biz-Class</th>
+                                <th class="p-2 uppercase tracking-wider font-bold text-left">Civic Coverage</th>
                             </tr>
                         </thead>
-                        <tbody id="territoryTbody" class="cursor-pointer text-slate-600">
-                            <!-- Injected dynamically -->
-                        </tbody>
+                        <tbody id="territoryTbody" class="cursor-pointer text-slate-600"></tbody>
                     </table>
                 </div>
             </div>
 
-            <div class="h-[25vh] bg-white rounded-lg border border-slate-200 p-4 flex flex-col overflow-hidden shrink-0 shadow-sm">
-                <div class="flex justify-between items-center border-b border-slate-100 pb-2 mb-3">
-                    <h3 class="text-xs font-bold uppercase tracking-widest text-slate-500" id="deepDiveTitle">Entity Inspector</h3>
-                    <span class="text-[10px] text-slate-400 font-mono" id="deepDiveSubtitle">Select a territory</span>
+            <div class="h-[22vh] bg-white rounded border border-slate-200 p-3 flex flex-col overflow-hidden shrink-0 shadow-sm">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-1.5 mb-2">
+                    <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500" id="deepDiveTitle">Entity Inspector</h3>
+                    <span class="text-[9px] text-slate-400 font-mono" id="deepDiveSubtitle">Select a territory</span>
                 </div>
-                <div id="deepDiveContent" class="flex-1 overflow-y-auto text-xs text-slate-400 flex items-center justify-center">
+                <div id="deepDiveContent" class="flex-1 overflow-y-auto text-[10px] text-slate-400 flex items-center justify-center">
                     Awaiting node selection...
                 </div>
             </div>
-
         </section>
     </main>
 
@@ -130,7 +101,7 @@
     <script type="module">
         function printError(msg) {
             const status = document.getElementById('syncStatus');
-            if(status) status.innerHTML = `<span class="text-red-500 font-bold text-[10px]">CRASH: ${msg}</span>`;
+            if(status) status.innerHTML = `<span class="text-red-500 font-bold">CRASH: ${msg}</span>`;
         }
 
         window.addEventListener('error', (event) => printError(event.message));
@@ -164,34 +135,24 @@
         }
 
         function initMap() {
-            if(!document.getElementById('map')) throw new Error("Map container missing");
-            
-            map = L.map('map', { zoomControl: false }).setView([12.9250, 77.5800], 12);
-            // FIXED: Swapped Carto map for 100% free OpenStreetMap layer (No API Key Required)
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
-            }).addTo(map);
+            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([12.9250, 77.5800], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
         }
 
         async function fetchRelationalData(db) {
             const { data, error } = await db
                 .from('territories')
-                .select(`
-                    *,
-                    local_bodies ( body_name, taluks ( taluk_name, districts ( district_name, states ( state_name, countries (country_name) ) ) ) ),
-                    territory_entity_mappings ( relationship_type, civic_entities (entity_name, category_id) )
-                `);
+                .select(`*, local_bodies ( body_name, taluks ( taluk_name, districts ( district_name, states ( state_name, countries (country_name) ) ) ) ), territory_entity_mappings ( relationship_type, civic_entities (entity_name, category_id) )`);
 
             if (error) throw new Error(error.message);
-            
             const safeData = data || [];
 
             if(safeData.length === 0) {
-                document.getElementById('syncStatus').innerHTML = `<span class="text-amber-400 font-bold text-xs">Connected (0 Records)</span>`;
+                document.getElementById('syncStatus').innerHTML = `<span class="text-amber-500 font-bold">Connected (0)</span>`;
                 return;
             }
 
-            document.getElementById('syncStatus').innerHTML = `<span class="text-emerald-400 font-bold text-xs">● Synchronized</span>`;
+            document.getElementById('syncStatus').innerHTML = `<span class="text-emerald-500 font-bold">● Synchronized</span>`;
 
             globalData = safeData.map(t => ({
                 ...t,
@@ -210,7 +171,6 @@
 
         function initCascadingDropdowns() {
             const getUnique = (key, dataset) => [...new Set(dataset.map(item => item[key]))].filter(Boolean);
-
             const populate = (id, items) => {
                 const select = document.getElementById(id);
                 select.innerHTML = '<option value="All">All</option>';
@@ -225,46 +185,18 @@
                 const t = document.getElementById('selTaluk').value;
                 const lb = document.getElementById('selLocalBody').value;
 
-                filteredData = globalData.filter(item => {
-                    return (c === 'All' || item.country === c) &&
-                           (s === 'All' || item.state === s) &&
-                           (d === 'All' || item.district === d) &&
-                           (t === 'All' || item.taluk === t) &&
-                           (lb === 'All' || item.localBody === lb);
-                });
+                filteredData = globalData.filter(item => 
+                    (c === 'All' || item.country === c) && (s === 'All' || item.state === s) &&
+                    (d === 'All' || item.district === d) && (t === 'All' || item.taluk === t) &&
+                    (lb === 'All' || item.localBody === lb)
+                );
                 updateUI();
             };
 
             populate('selCountry', getUnique('country', globalData));
-
-            document.getElementById('selCountry').addEventListener('change', (e) => {
-                const fd = globalData.filter(i => e.target.value === 'All' || i.country === e.target.value);
-                populate('selState', getUnique('state', fd));
-                ['selDistrict', 'selTaluk', 'selLocalBody'].forEach(id => document.getElementById(id).innerHTML = '<option value="All">All</option>');
-                filterMatrix();
+            ['selCountry', 'selState', 'selDistrict', 'selTaluk', 'selLocalBody'].forEach(id => {
+                document.getElementById(id).addEventListener('change', filterMatrix);
             });
-
-            document.getElementById('selState').addEventListener('change', (e) => {
-                const fd = globalData.filter(i => e.target.value === 'All' || i.state === e.target.value);
-                populate('selDistrict', getUnique('district', fd));
-                ['selTaluk', 'selLocalBody'].forEach(id => document.getElementById(id).innerHTML = '<option value="All">All</option>');
-                filterMatrix();
-            });
-
-            document.getElementById('selDistrict').addEventListener('change', (e) => {
-                const fd = globalData.filter(i => e.target.value === 'All' || i.district === e.target.value);
-                populate('selTaluk', getUnique('taluk', fd));
-                document.getElementById('selLocalBody').innerHTML = '<option value="All">All</option>';
-                filterMatrix();
-            });
-
-            document.getElementById('selTaluk').addEventListener('change', (e) => {
-                const fd = globalData.filter(i => e.target.value === 'All' || i.taluk === e.target.value);
-                populate('selLocalBody', getUnique('localBody', fd));
-                filterMatrix();
-            });
-
-            document.getElementById('selLocalBody').addEventListener('change', filterMatrix);
         }
 
         function updateUI() {
@@ -277,7 +209,6 @@
         function renderTable(data) {
             const tbody = document.getElementById('territoryTbody');
             tbody.innerHTML = '';
-
             data.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 transition";
@@ -285,19 +216,14 @@
 
                 const civicCount = item.civicEntities.length;
                 const civicBadge = civicCount > 0 
-                    ? `<span class="bg-emerald-100 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded font-bold text-[9px]">${civicCount} Nodes Mapped</span>`
-                    : `<span class="bg-slate-100 text-slate-500 px-2 py-0.5 rounded text-[9px]">Unmapped</span>`;
-
-                let bizColor = 'text-sky-600';
-                if (item.biz_class.includes('Startup') || item.biz_class.includes('Tech')) bizColor = 'text-purple-600';
-                if (item.biz_class.includes('Heritage')) bizColor = 'text-amber-600';
-                if (item.biz_class.includes('Forest')) bizColor = 'text-emerald-600';
+                    ? `<span class="bg-emerald-100 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded font-bold text-[8px]">${civicCount} Nodes</span>`
+                    : `<span class="bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded text-[8px]">0 Nodes</span>`;
 
                 tr.innerHTML = `
-                    <td class="p-3 text-teal-700 font-bold border-r border-slate-100">${item.territory_id}</td>
-                    <td class="p-3 text-slate-700 font-bold col-left border-r border-slate-100 whitespace-nowrap"><span class="text-slate-400 text-[10px] mr-1">Ward ${item.territory_no}:</span> ${item.territory_name}</td>
-                    <td class="p-3 ${bizColor} font-bold col-left border-r border-slate-100 whitespace-nowrap">${item.biz_class}</td>
-                    <td class="p-3 col-left">${civicBadge}</td>
+                    <td class="p-2 text-teal-700 font-bold border-r border-slate-100">${item.territory_id}</td>
+                    <td class="p-2 text-slate-700 font-bold col-left border-r border-slate-100 whitespace-nowrap"><span class="text-slate-400 mr-1">W-${item.territory_no}:</span> ${item.territory_name}</td>
+                    <td class="p-2 text-sky-600 font-bold col-left border-r border-slate-100 whitespace-nowrap">${item.biz_class}</td>
+                    <td class="p-2 col-left">${civicBadge}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -314,24 +240,11 @@
                 const lng = wardGeoAnchor[wNo] ? wardGeoAnchor[wNo][1] : 77.5800 + (Math.cos(wNo) * 0.04);
                 latlngs.push([lat, lng]);
 
-                let color = '#0284c7'; 
-                if (item.biz_class.includes('Startup')) color = '#9333ea';
-                if (item.biz_class.includes('Heritage')) color = '#d97706';
-                if (item.biz_class.includes('Forest')) color = '#059669';
-
-                const circle = L.circleMarker([lat, lng], {
-                    radius: 7, fillColor: color, color: '#ffffff', weight: 1.5, opacity: 1, fillOpacity: 0.8
-                }).addTo(map);
-
+                const circle = L.circleMarker([lat, lng], { radius: 6, fillColor: '#0284c7', color: '#ffffff', weight: 1.5, opacity: 1, fillOpacity: 0.8 }).addTo(map);
                 circle.on('click', () => isolateTerritory(item));
                 markers.push(circle);
             });
-
-            document.getElementById('mapEntityCount').innerText = `${markers.length} Spatial Nodes`;
-            
-            if(latlngs.length > 0) {
-                map.flyToBounds(L.latLngBounds(latlngs), { padding: [20, 20], maxZoom: 14 });
-            }
+            if(latlngs.length > 0) map.flyToBounds(L.latLngBounds(latlngs), { padding: [20, 20], maxZoom: 14 });
         }
 
         function isolateTerritory(item, trElement = null) {
@@ -347,41 +260,28 @@
             document.getElementById('deepDiveSubtitle').innerText = `H3: ${item.h3_polygon_anchor}`;
 
             const content = document.getElementById('deepDiveContent');
-            
             if (item.civicEntities.length === 0) {
-                content.innerHTML = `<div class="text-slate-400 italic w-full text-center">No mapped infrastructure found for this sector.</div>`;
+                content.innerHTML = `<div class="text-slate-400 italic w-full text-center text-[10px]">No mapped infrastructure.</div>`;
                 return;
             }
 
-            let html = `<div class="w-full flex flex-col gap-2">`;
+            let html = `<div class="w-full flex flex-col gap-1.5">`;
             item.civicEntities.forEach(ent => {
-                const civicName = ent.civic_entities?.entity_name || 'Unknown Entity';
-                const cat = ent.civic_entities?.category_id || '';
-                
-                let bg = 'bg-slate-50 border-slate-200';
-                let icon = '🏛️';
-                if(cat.includes('POLICE')) { bg = 'bg-blue-50 border-blue-200 text-blue-800'; icon = '🚓'; }
-                if(cat.includes('FIRE')) { bg = 'bg-red-50 border-red-200 text-red-800'; icon = '🚒'; }
-                if(cat.includes('BESCOM')) { bg = 'bg-amber-50 border-amber-200 text-amber-800'; icon = '⚡'; }
-                if(cat.includes('HOSP')) { bg = 'bg-emerald-50 border-emerald-200 text-emerald-800'; icon = '🏥'; }
-
                 html += `
-                    <div class="${bg} border p-2 rounded flex justify-between items-center shadow-sm">
+                    <div class="bg-slate-50 border border-slate-200 p-1.5 rounded flex justify-between items-center shadow-sm">
                         <div class="flex items-center gap-2">
-                            <span class="text-lg">${icon}</span>
+                            <span class="text-base">🏛️</span>
                             <div class="flex flex-col">
-                                <span class="font-bold">${civicName}</span>
-                                <span class="text-[9px] uppercase font-bold opacity-70">${ent.relationship_type.replace(/_/g, ' ')}</span>
+                                <span class="font-bold text-[10px]">${ent.civic_entities?.entity_name || 'Unknown'}</span>
+                                <span class="text-[8px] uppercase font-bold opacity-70">${ent.relationship_type.replace(/_/g, ' ')}</span>
                             </div>
                         </div>
                     </div>
                 `;
             });
-            html += `</div>`;
-            content.innerHTML = html;
+            content.innerHTML = html + `</div>`;
         }
 
-        // Start execution
         boot();
     </script>
 </body>
