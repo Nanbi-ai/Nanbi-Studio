@@ -207,7 +207,7 @@ header.app button,header.app .conn{-webkit-app-region:no-drag;app-region:no-drag
   <a href="#/library"><span class="ic">▤</span>Library</a>
   <a href="#/queue"><span class="ic">≡</span>Queue</a>
   <a href="#/studio"><span class="ic">✦</span>Ask</a>
-  <a href="#" onclick="loadMatrix()"><span class="ic">❖</span>Territory Matrix</a>
+  <a href="#/territories" id="matrixLink" onclick="event.preventDefault(); loadMatrix();"><span class="ic">❖</span>Territory Matrix</a>
   <a href="#/settings" class="foot"><span class="av" id="avatar">R</span><span id="whoami">Account</span></a>
 </nav>
 <main id="main"><div class="card"><span class="spin"></span> Starting…</div></main>
@@ -339,7 +339,7 @@ function parseDraft(md){
   return { cats:cats, total:total, notes:notes };
 }
 function parseApproved(md){
-  // ## ID — name   counted only when first 400 chars carry *LOCKED|RATIFIED* and "Rajesh"
+  // ## ID — name    counted only when first 400 chars carry *LOCKED|RATIFIED* and "Rajesh"
   var out=[], blocks=md.split(/\n## /).slice(1);
   blocks.forEach(function(b){
     var head=b.split("\n",1)[0].trim(), body=b.slice(0,400);
@@ -655,8 +655,8 @@ function vHome(){
     h+='</table></div></div>';
   }
   h+='<div class="card"><h2>What\u2019s next</h2><div class="empty">The live task queue arrives at '+
-     'milestone M4. Until then, position 1 is the ratification sitting itself — '+
-     '<a href="#/registers/const">start ruling</a>.</div></div>';
+      'milestone M4. Until then, position 1 is the ratification sitting itself — '+
+      '<a href="#/registers/const">start ruling</a>.</div></div>';
   render(h);
 }
 
@@ -1259,7 +1259,7 @@ function mdBlock(src){
   }
   while(i<lines.length){
     var L=lines[i];
-    if(/^```/.test(L)){                                   // fenced code
+    if(/^```/.test(L)){                                     // fenced code
       var buf=[]; i++;
       while(i<lines.length && !/^```/.test(lines[i])) buf.push(lines[i++]);
       i++; out.push("<pre><code>"+esc(buf.join("\n"))+"</code></pre>"); continue;
@@ -1345,7 +1345,7 @@ function vLibrary(q){
       fs.forEach(function(n){
         var orph=!inbound[n.path] && !g.edges.some(function(e){return e.from===n.path&&e.kind==="link";});
         h+='<div class="tfile'+(orph?" orph":"")+'" onclick="location.hash=\'#/doc/'+
-           encodeURIComponent(n.path)+'\'"><b>'+esc(n.title||n.path)+'</b>'+
+            encodeURIComponent(n.path)+'\'"><b>'+esc(n.title||n.path)+'</b>'+
            '<span class="p">'+esc(n.path)+' · '+Math.round(n.bytes/1024)+' KB'+
            (inbound[n.path]?' · '+inbound[n.path]+' inbound':'')+'</span></div>';
       });
@@ -1369,7 +1369,7 @@ function vDoc(path){
     } else body='<pre><code>'+esc(f.text)+'</code></pre>';
     var h='<div class="card"><button class="quiet" onclick="location.hash=\'#/library\'">← Library</button>'+
       '<div class="small" style="margin-top:6px">'+esc(path)+' · '+Math.round(f.text.length/1024)+' KB · '+
-      '<a href="https://github.com/'+esc(S.repo.owner)+'/'+esc(S.repo.repo)+'/blob/'+
+      '<a href="[https://github.com/'+esc(S.repo.owner)+'/'+esc(S.repo.repo)+'/blob/](https://github.com/'+esc(S.repo.owner)+'/'+esc(S.repo.repo)+'/blob/)'+
       esc(S.repo.branch)+'/'+esc(path)+'" target="_blank" rel="noopener">on GitHub</a></div></div>'+
       '<div class="card">'+body+'</div>';
     if((node.codes||[]).length){
@@ -1468,13 +1468,37 @@ if("serviceWorker" in navigator){
 if (window.matchMedia("(display-mode: standalone)").matches ||
     window.navigator.standalone) document.documentElement.classList.add("installed");
 </script>
-  <script>
+<script>
     function loadMatrix() {
+        // 1. Fix the Dual Menu Highlight
+        document.querySelectorAll('nav a').forEach(a => {
+            a.classList.remove('active');
+            a.style.backgroundColor = ''; 
+            a.style.color = '';
+        });
+        const activeLink = document.getElementById('matrixLink');
+        if(activeLink) {
+            activeLink.classList.add('active');
+        }
+
+        // 2. Inject Status Badge into Parent's Dark Green Header
+        let header = document.querySelector('header.app');
+        let tmStatus = document.getElementById('tm-status');
+        if(!tmStatus) {
+            tmStatus = document.createElement('span');
+            tmStatus.id = 'tm-status';
+            tmStatus.style.cssText = 'margin-left: auto; margin-right: 15px; padding: 4px 10px; border-radius: 4px; font-size: 12px; background: rgba(0,0,0,0.2); color: #94a3b8; font-family: monospace; display: flex; align-items: center; gap: 8px;';
+            const connNode = document.getElementById('conn');
+            if(connNode) header.insertBefore(tmStatus, connNode);
+            else header.appendChild(tmStatus);
+        }
+        tmStatus.innerHTML = 'Booting Matrix...';
+
+        // 3. Safely Load the Iframe without crashing the map
         const mainView = document.getElementById('main');
-        // Injects the map directly into the card without reloading the page
         mainView.innerHTML = `
             <iframe src="Territory-Matrix.html" 
-                    style="width: 100%; height: 100%; min-height: 85vh; border: none; border-radius: 0.5rem;">
+                    style="width: 100%; height: 100%; min-height: 86vh; border: none; background: transparent;">
             </iframe>
         `;
     }
