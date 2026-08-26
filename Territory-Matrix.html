@@ -20,7 +20,7 @@
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans h-screen flex flex-col overflow-hidden">
 
-    <!-- Header (Matching Nanbi Studio Original) -->
+    <!-- Header -->
     <header class="bg-[#344d59] border-b border-[#253942] px-6 py-4 flex justify-between items-center shrink-0 shadow-md">
         <div class="flex items-center space-x-4">
             <a href="index.html" class="text-slate-300 hover:text-white text-sm flex items-center gap-1 transition" title="Return to Home">
@@ -32,7 +32,6 @@
                 <span class="text-[#e29d74]">❖</span> Nanbi Territory Matrix
             </h1>
         </div>
-        <!-- This status bar will now catch ALL errors globally -->
         <div id="syncStatus" class="text-xs font-mono text-slate-300 bg-black/20 px-3 py-1.5 rounded flex items-center gap-2">
             <svg class="w-4 h-4 animate-spin text-teal-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
             Booting Infrastructure...
@@ -123,13 +122,12 @@
                     Awaiting node selection...
                 </div>
             </div>
-
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inllb3JhY294eWp6Z3BzeXhnd3JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3MzgzNzUsImV4cCI6MjEwMzMxNDM3NX0.rNcvhRCw4KyfNpsWH6IYxlQT07zJ7i68Zg5jnpqj9yc
         </section>
     </main>
 
-    <!-- ES MODULE SCRIPT: Bypasses global variables entirely and adds global error catching -->
+    <!-- ES MODULE SCRIPT -->
     <script type="module">
-        // 1. GLOBAL DIAGNOSTIC ENGINE: Catch any invisible crashes and print to the status bar
         function printError(msg) {
             const status = document.getElementById('syncStatus');
             if(status) status.innerHTML = `<span class="text-red-500 font-bold text-[10px]">CRASH: ${msg}</span>`;
@@ -138,7 +136,6 @@
         window.addEventListener('error', (event) => printError(event.message));
         window.addEventListener('unhandledrejection', (event) => printError(event.reason?.message || "Unknown Promise Rejection"));
 
-        // 2. ESM IMPORT: Modern browser standard, no global variable collisions
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
         let map, markers = [];
@@ -149,11 +146,13 @@
             1: [12.9180, 77.5560], 4: [12.9240, 77.5780], 14: [12.9260, 77.5930], 65: [12.9420, 77.5750]
         };
 
-        // 3. BOOT SEQUENCE
         async function boot() {
             try {
                 const SUPABASE_URL = "https://yeoracoxyjzgpsyxgwri.supabase.co";
-                const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inllb3JhY294eWp6Z3BzeXhnd3JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjQ2Nzc3MzcsImV4cCI6MjA0MDI1MzczN30.5m-V9f1g5wQyP8K2jB4K8x_L1v8X8V6Z_7Q8X9V6Z_0";
+                
+                // --- PASTE YOUR ACTUAL SUPABASE ANON KEY HERE ---
+                const SUPABASE_ANON_KEY = "PASTE_YOUR_COPIED_ANON_KEY_HERE";
+                // ------------------------------------------------
                 
                 const nanbiDB = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 
@@ -168,8 +167,9 @@
             if(!document.getElementById('map')) throw new Error("Map container missing");
             
             map = L.map('map', { zoomControl: false }).setView([12.9250, 77.5800], 12);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; CARTO', maxZoom: 19
+            // FIXED: Swapped Carto map for 100% free OpenStreetMap layer (No API Key Required)
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
             }).addTo(map);
         }
 
