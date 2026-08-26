@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Loads global 'supabase' variable -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
@@ -21,7 +22,7 @@
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans h-screen flex flex-col overflow-hidden">
 
-    <!-- Header (Matching Nanbi Studio Original) -->
+    <!-- Header -->
     <header class="bg-[#344d59] border-b border-[#253942] px-6 py-4 flex justify-between items-center shrink-0 shadow-md">
         <div class="flex items-center space-x-4">
             <a href="index.html" class="text-slate-300 hover:text-white text-sm flex items-center gap-1 transition" title="Return to Home">
@@ -130,7 +131,9 @@
     <script>
         const SUPABASE_URL = "https://yeoracoxyjzgpsyxgwri.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inllb3JhY294eWp6Z3BzeXhnd3JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjQ2Nzc3MzcsImV4cCI6MjA0MDI1MzczN30.5m-V9f1g5wQyP8K2jB4K8x_L1v8X8V6Z_7Q8X9V6Z_0";
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // FIX: Renamed connection variable to nanbiDB to prevent global collision with Supabase CDN script
+        const nanbiDB = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let map, markers = [];
         let globalData = [];
@@ -154,7 +157,8 @@
 
         async function fetchRelationalData() {
             try {
-                const { data, error } = await supabase
+                // Now using the renamed nanbiDB variable
+                const { data, error } = await nanbiDB
                     .from('territories')
                     .select(`
                         *,
@@ -164,7 +168,6 @@
 
                 if (error) throw error;
                 
-                // CRASH PROTECTION: If data is null, default to empty array
                 const safeData = data || [];
 
                 if(safeData.length === 0) {
