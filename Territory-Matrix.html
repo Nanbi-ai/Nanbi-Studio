@@ -17,22 +17,13 @@
         #map-wrapper { position: relative; width: 100%; height: 100%; min-height: 380px; flex: 1; }
         #map { position: absolute; top: 0; bottom: 0; left: 0; right: 0; border-radius: 0.25rem; z-index: 1; }
         
-        .leaflet-interactive:hover { stroke: #0f766e !important; stroke-width: 3px !important; fill-opacity: 0.45 !important; cursor: pointer; }
+        /* SLEEK HOVER EFFECTS: Borders thicken and shapes highlight cleanly on mouseover */
+        path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s; outline: none; }
+        path.leaflet-interactive:hover { fill-opacity: 0.8 !important; stroke-width: 2px !important; stroke: #0f172a !important; cursor: pointer; }
+        
         .map-nav-btn { background: white; border: 1px solid #cbd5e1; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; color: #334155; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
         .map-nav-btn:hover { background: #f8fafc; color: #0d9488; }
         
-        .permanent-label {
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-            font-weight: 800;
-            font-size: 11px;
-            color: #0f172a;
-            text-shadow: 1px 1px 3px #ffffff, -1px -1px 3px #ffffff, 1px -1px 3px #ffffff, -1px 1px 3px #ffffff;
-            white-space: normal;
-            text-align: center;
-        }
-
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
     </style>
@@ -104,9 +95,7 @@
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-        function updateParentStatus(html) {
-            try { const parentStatus = window.parent.document.getElementById('tm-status'); if(parentStatus) parentStatus.innerHTML = html; } catch(e) { }
-        }
+        function updateParentStatus(html) { try { const parentStatus = window.parent.document.getElementById('tm-status'); if(parentStatus) parentStatus.innerHTML = html; } catch(e) { } }
 
         const SUPABASE_URL = "https://yeoracoxyjzgpsyxgwri.supabase.co";
         // --- PASTE YOUR ACTUAL SUPABASE ANON KEY HERE ---
@@ -121,13 +110,19 @@
             1: [12.9180, 77.5560], 4: [12.9240, 77.5780], 14: [12.9260, 77.5930], 65: [12.9420, 77.5750]
         };
 
+        // HASH COLOR GENERATOR: Generates beautiful distinct pastel colors automatically based on the territory's name
+        function getDistinctColor(name) {
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            return `hsl(${Math.abs(hash % 360)}, 65%, 55%)`; 
+        }
+
         async function boot() {
             try {
                 initMap();
                 initDropdownListeners();
-                await fetchRelationalData(); // Loads the 72 wards
+                await fetchRelationalData(); 
                 
-                // DECOUPLED FIX: Populates the Country dropdown directly from the spatial PostGIS table
                 const { data } = await window.nanbiDB.rpc('get_countries_geojson');
                 if (data) {
                     const sel = document.getElementById('selCountry');
@@ -162,28 +157,12 @@
 
             let rpcName = '';
             let rpcParams = {};
-            let styleOpts = { color: '#0d9488', weight: 1.5, fillOpacity: 0.12 };
             let targetDropdownId = null;
 
-            if (level === 'world') {
-                rpcName = 'get_countries_geojson';
-                styleOpts = { color: '#475569', weight: 1, fillOpacity: 0.08 };
-            } else if (level === 'country') {
-                rpcName = 'get_states_for_country';
-                rpcParams = { p_country: parentName };
-                styleOpts = { color: '#0369a1', weight: 1.5, fillOpacity: 0.15 };
-                targetDropdownId = 'selState';
-            } else if (level === 'state') {
-                rpcName = 'get_districts_for_state';
-                rpcParams = { p_state: parentName };
-                styleOpts = { color: '#0d9488', weight: 1.5, fillOpacity: 0.18 };
-                targetDropdownId = 'selDistrict';
-            } else if (level === 'district') {
-                rpcName = 'get_taluks_for_district';
-                rpcParams = { p_district: parentName };
-                styleOpts = { color: '#d97706', weight: 2, fillOpacity: 0.22 };
-                targetDropdownId = 'selTaluk';
-            }
+            if (level === 'world') { rpcName = 'get_countries_geojson'; targetDropdownId = 'selCountry'; }
+            else if (level === 'country') { rpcName = 'get_states_for_country'; rpcParams = { p_country: parentName }; targetDropdownId = 'selState'; }
+            else if (level === 'state') { rpcName = 'get_districts_for_state'; rpcParams = { p_state: parentName }; targetDropdownId = 'selDistrict'; }
+            else if (level === 'district') { rpcName = 'get_taluks_for_district'; rpcParams = { p_district: parentName }; targetDropdownId = 'selTaluk'; }
 
             if (level === 'taluk') {
                 renderWardFallbacks();
@@ -206,12 +185,27 @@
                 if (!item.geojson) return;
                 try {
                     const parsedGeom = JSON.parse(item.geojson);
-                    const layer = L.geoJSON(parsedGeom, { style: styleOpts });
                     const displayName = item.name || item.id;
-                    
                     layerNames.push(displayName);
+                    
+                    // ASSIGNS DYNAMIC DISTINCT COLORS TO EVERY TERRITORY
+                    const polyColor = getDistinctColor(displayName);
+                    const styleOpts = {
+                        color: '#ffffff', // Clean white borders
+                        weight: 1.5,
+                        fillColor: polyColor,
+                        fillOpacity: 0.45
+                    };
 
-                    layer.bindTooltip(displayName, { permanent: true, direction: 'center', className: 'permanent-label' });
+                    const layer = L.geoJSON(parsedGeom, { style: styleOpts });
+
+                    // SMART TOOLTIPS: Names appear on hover, keeping the map visually clean
+                    layer.bindTooltip(`<b>${displayName}</b>`, {
+                        direction: 'top',
+                        className: 'text-[11px] font-sans font-bold text-slate-800 bg-white/95 px-2 py-1 rounded shadow-md border border-slate-200',
+                        sticky: true
+                    });
+
                     layer.on('click', () => { handleMapPolygonClick(level, displayName); });
                     featureGroup.addLayer(layer);
                 } catch(e) {}
@@ -228,9 +222,13 @@
                 sel.disabled = false;
             }
 
+            // ROBUST ZOOM FIX: Ensures Leaflet fully renders dimensions before bounding
             map.invalidateSize(true);
             if (featureGroup.getLayers().length > 0) {
-                setTimeout(() => { map.fitBounds(featureGroup.getBounds(), { padding: [15, 15], maxZoom: level === 'world' ? 3 : 13 }); }, 100);
+                setTimeout(() => { 
+                    map.invalidateSize(true);
+                    map.fitBounds(featureGroup.getBounds(), { padding: [20, 20], maxZoom: level === 'world' ? 3 : 11 }); 
+                }, 200);
             }
             updateParentStatus(`<span style="color:#34d399; font-weight:bold;">● ${level.toUpperCase()} Active</span>`);
         }
@@ -258,12 +256,14 @@
                 latlngs.push([lat, lng]);
 
                 const circle = L.circleMarker([lat, lng], { radius: 6, fillColor: '#0284c7', color: '#ffffff', weight: 1.5, opacity: 1, fillOpacity: 0.85 }).addTo(map);
-                circle.bindTooltip(`W-${item.territory_no}`, { permanent: true, direction: 'center', className: 'permanent-label' });
+                
+                // Fallback dots still use tooltips on hover to prevent crowding
+                circle.bindTooltip(`<b>W-${item.territory_no}</b>: ${item.territory_name}`, { direction: 'top', className: 'text-[10px] font-bold shadow-md bg-white', sticky: true });
                 circle.on('click', () => { isolateTerritory(item); });
                 markers.push(circle);
             });
 
-            if (latlngs.length > 0) { map.flyToBounds(L.latLngBounds(latlngs), { padding: [30, 30], maxZoom: 14 }); }
+            if (latlngs.length > 0) { map.flyToBounds(L.latLngBounds(latlngs), { padding: [35, 35], maxZoom: 14 }); }
         }
 
         async function fetchRelationalData() {
@@ -377,17 +377,8 @@
             const tbody = document.getElementById('territoryTbody');
             tbody.innerHTML = '';
             
-            // THE EMPTY STATE FIX: Displays the exact "Yet to be Launched" message you requested if no business data exists
             if (data.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="4" class="p-8 text-center bg-slate-50/50">
-                            <div class="text-3xl mb-3">🚀</div>
-                            <div class="font-bold text-[12px] uppercase tracking-widest text-slate-500 mb-1">Yet to be Launched</div>
-                            <div class="text-[10px] text-slate-400">Territory operations for this specific region are currently in the pipeline.</div>
-                        </td>
-                    </tr>
-                `;
+                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center bg-slate-50/50"><div class="text-3xl mb-3">🚀</div><div class="font-bold text-[12px] uppercase tracking-widest text-slate-500 mb-1">Yet to be Launched</div><div class="text-[10px] text-slate-400">Territory operations for this specific region are currently in the pipeline.</div></td></tr>`;
                 return;
             }
 
@@ -444,17 +435,7 @@
 
             let html = `<div class="w-full flex flex-col gap-1.5">`;
             item.civicEntities.forEach(ent => {
-                html += `
-                    <div class="bg-slate-50 border border-slate-200 p-1.5 rounded flex justify-between items-center shadow-sm">
-                        <div class="flex items-center gap-2">
-                            <span class="text-base">🏛️</span>
-                            <div class="flex flex-col">
-                                <span class="font-bold text-[10px]">${ent.civic_entities?.entity_name || 'Unknown'}</span>
-                                <span class="text-[8px] uppercase font-bold opacity-70">${ent.relationship_type.replace(/_/g, ' ')}</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                html += `<div class="bg-slate-50 border border-slate-200 p-1.5 rounded flex justify-between items-center shadow-sm"><div class="flex items-center gap-2"><span class="text-base">🏛️</span><div class="flex flex-col"><span class="font-bold text-[10px]">${ent.civic_entities?.entity_name || 'Unknown'}</span><span class="text-[8px] uppercase font-bold opacity-70">${ent.relationship_type.replace(/_/g, ' ')}</span></div></div></div>`;
             });
             content.innerHTML = html + `</div>`;
         }
