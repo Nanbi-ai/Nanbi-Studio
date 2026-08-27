@@ -26,7 +26,6 @@
         .map-nav-btn:hover:not(:disabled) { color: #D35400; }
         .map-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
         
-        /* Your explicit UX request: Small, clean, non-bold permanent short IDs */
         .id-label {
             background: transparent !important;
             border: none !important;
@@ -66,7 +65,6 @@
             
             <div class="flex-1 bg-white p-1.5 rounded border border-slate-200 flex flex-col relative overflow-hidden shadow-sm">
                 <div id="map-wrapper" class="rounded overflow-hidden border border-slate-200 bg-[#e2f0f5]">
-                    <!-- THE HOVER INFO BOX -->
                     <div id="hoveredRegionName" class="absolute top-3 right-3 bg-slate-800 text-white text-[11px] px-3 py-1.5 rounded shadow-lg z-[1000] hidden pointer-events-none"></div>
                     <div id="map"></div>
                 </div>
@@ -147,7 +145,7 @@
                 await loadCountryList();
                 await renderSpatialLayer('world', '', false);
             } catch(err) {
-                updateParentStatus(`<span style="color:#ef4444; font-weight:bold;">CRASH: ${err.message}</span>`);
+                updateParentStatus('<span style="color:#ef4444; font-weight:bold;">CRASH: ' + err.message + '</span>');
             }
         }
 
@@ -160,8 +158,7 @@
             }).setView([22.5937, 78.9629], 3);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, opacity: 0.5 }).addTo(map);
 
-            const resizeObserver = new ResizeObserver(() => { map.invalidateSize(); });
-            resizeObserver.observe(document.getElementById('map-wrapper'));
+            window.addEventListener('resize', () => { if(map) map.invalidateSize(true); });
         }
 
         async function loadCountryList() {
@@ -170,7 +167,7 @@
                 allCountryNames = data.map(d => d.name).filter(Boolean).sort();
                 const sel = document.getElementById('selCountry');
                 sel.innerHTML = '<option value="All">All Countries</option>';
-                allCountryNames.forEach(c => sel.innerHTML += `<option value="${c}">${c}</option>`);
+                allCountryNames.forEach(c => sel.innerHTML += '<option value="' + c + '">' + c + '</option>');
                 sel.disabled = false;
             }
         }
@@ -187,8 +184,8 @@
             markers.forEach(m => map.removeLayer(m));
             markers = [];
 
-            updateParentStatus(`<span style="color:#D35400; font-weight:bold;">Loading ${level.toUpperCase()}...</span>`);
-            document.getElementById('geoHierarchyBreadcrumb').innerText = parentName ? `${parentName}` : 'World View';
+            updateParentStatus('<span style="color:#D35400; font-weight:bold;">Loading ' + level.toUpperCase() + '...</span>');
+            document.getElementById('geoHierarchyBreadcrumb').innerText = parentName ? parentName : 'World View';
 
             let rpcName = '';
             let rpcParams = {};
@@ -202,7 +199,7 @@
             if (level === 'taluk') {
                 renderWardFallbacks();
                 populateWardDropdown(parentName);
-                updateParentStatus(`<span style="color:#10b981; font-weight:bold;">● Layer Ready (Ward)</span>`);
+                updateParentStatus('<span style="color:#10b981; font-weight:bold;">● Layer Ready (Ward)</span>');
                 updateUI(level);
                 return;
             }
@@ -212,7 +209,7 @@
             if (error || !data || data.length === 0) {
                 if (level === 'country') await drawIsolatedBoundary('get_country_polygon', { p_country: parentName }, parentName);
                 else if (level === 'state') await drawIsolatedBoundary('get_state_polygon', { p_state: parentName }, parentName);
-                else updateParentStatus(`<span style="color:#ef4444; font-weight:bold;">No Sub-divisions Found</span>`);
+                else updateParentStatus('<span style="color:#ef4444; font-weight:bold;">No Sub-divisions Found</span>');
                 updateUI(level);
                 return;
             }
@@ -225,30 +222,23 @@
                 try {
                     const parsedGeom = JSON.parse(item.geojson);
                     const displayName = item.name || '';
-                    const displayId = item.id || item.name; // Falls back to name if ID is missing (like Districts)
+                    const displayId = item.id || item.name;
                     layerNames.push(displayName);
                     
                     const polyColor = getDistinctColor(displayName);
                     const styleOpts = { color: '#ffffff', weight: 1, fillColor: polyColor, fillOpacity: 0.65 };
                     const layer = L.geoJSON(parsedGeom, { style: styleOpts });
 
-                    // Clean, permanent Short ID Label
                     layer.bindTooltip(displayId, {
-                        direction: 'center',
-                        className: 'id-label',
-                        permanent: level === 'country' || level === 'state',
-                        interactive: false 
+                        direction: 'center', className: 'id-label', permanent: level === 'country' || level === 'state', interactive: false 
                     });
 
-                    // Trigger Hover Box for Full Name
                     layer.on('mouseover', () => {
                         const hBox = document.getElementById('hoveredRegionName');
                         hBox.innerText = displayName;
                         hBox.style.display = 'block';
                     });
-                    layer.on('mouseout', () => {
-                        document.getElementById('hoveredRegionName').style.display = 'none';
-                    });
+                    layer.on('mouseout', () => { document.getElementById('hoveredRegionName').style.display = 'none'; });
 
                     layer.on('click', () => { handleMapPolygonClick(level, displayName); });
                     featureGroup.addLayer(layer);
@@ -261,13 +251,13 @@
                 const sel = document.getElementById(targetDropdownId);
                 const currentVal = sel.value;
                 sel.innerHTML = '<option value="All">All</option>';
-                layerNames.sort().forEach(n => sel.innerHTML += `<option value="${n}">${n}</option>`);
+                layerNames.sort().forEach(n => sel.innerHTML += '<option value="' + n + '">' + n + '</option>');
                 sel.value = layerNames.includes(currentVal) ? currentVal : 'All';
                 sel.disabled = false;
             }
 
             fitLayerBounds(featureGroup, level === 'world' ? 3 : 11);
-            updateParentStatus(`<span style="color:#10b981; font-weight:bold;">● ${level.toUpperCase()} Active</span>`);
+            updateParentStatus('<span style="color:#10b981; font-weight:bold;">● ' + level.toUpperCase() + ' Active</span>');
             updateUI(level);
         }
 
@@ -279,14 +269,14 @@
                     style: { color: '#D35400', weight: 1.5, fillColor: '#D35400', fillOpacity: 0.15 }
                 });
                 
-                layer.bindTooltip(`${entityName}<br><span style="font-size:9px; font-weight:normal; color:#D35400">Pipeline Territory</span>`, {
+                layer.bindTooltip(entityName + '<br><span style="font-size:9px; font-weight:normal; color:#D35400">Pipeline Territory</span>', {
                     permanent: true, direction: 'center', className: 'id-label'
                 });
                 
                 featureGroup.addLayer(layer);
                 currentGeoLayer = featureGroup.addTo(map);
                 fitLayerBounds(featureGroup, 8);
-                updateParentStatus(`<span style="color:#10b981; font-weight:bold;">● ${entityName} Isolated</span>`);
+                updateParentStatus('<span style="color:#10b981; font-weight:bold;">● ' + entityName + ' Isolated</span>');
             }
         }
 
@@ -361,11 +351,11 @@
 
                 const circle = L.circleMarker([lat, lng], { radius: 6, fillColor: '#D35400', color: '#ffffff', weight: 1.5, opacity: 1, fillOpacity: 0.85 }).addTo(map);
                 
-                circle.bindTooltip(`W-${item.territory_no}`, { permanent: true, direction: 'center', className: 'id-label' });
+                circle.bindTooltip('W-' + item.territory_no, { permanent: true, direction: 'center', className: 'id-label' });
                 
                 circle.on('mouseover', () => {
                     const hBox = document.getElementById('hoveredRegionName');
-                    hBox.innerText = `W-${item.territory_no}:${item.territory_name}`;
+                    hBox.innerText = 'W-' + item.territory_no + ': ' + item.territory_name;
                     hBox.style.display = 'block';
                 });
                 circle.on('mouseout', () => { document.getElementById('hoveredRegionName').style.display = 'none'; });
@@ -385,7 +375,7 @@
         async function fetchRelationalData() {
             const { data, error } = await window.nanbiDB
                 .from('territories')
-                .select(`*, local_bodies ( body_name, taluks ( taluk_name, districts ( district_name, states ( state_name, countries (country_name) ) ) ) ), territory_entity_mappings ( relationship_type, civic_entities (entity_name, category_id) )`);
+                .select('*, local_bodies ( body_name, taluks ( taluk_name, districts ( district_name, states ( state_name, countries (country_name) ) ) ) ), territory_entity_mappings ( relationship_type, civic_entities (entity_name, category_id) )');
 
             if (error) return;
             const safeData = data || [];
@@ -396,7 +386,7 @@
                 state: t.local_bodies?.taluks?.districts?.states?.state_name || 'Karnataka',
                 district: t.local_bodies?.taluks?.districts?.district_name || 'Bengaluru Urban',
                 taluk: t.local_bodies?.taluks?.taluk_name || 'Bengaluru South Taluk',
-                territory_name: `W-${t.territory_no}:${t.territory_name}`,
+                territory_name: 'W-' + t.territory_no + ': ' + t.territory_name,
                 civicEntities: t.territory_entity_mappings || []
             }));
 
@@ -407,7 +397,7 @@
             const selWard = document.getElementById('selWard');
             selWard.innerHTML = '<option value="All">All</option>';
             const wards = globalData.filter(i => i.taluk === talukName).map(i => i.territory_name).sort();
-            wards.forEach(w => selWard.innerHTML += `<option value="${w}">${w}</option>`);
+            wards.forEach(w => selWard.innerHTML += '<option value="' + w + '">' + w + '</option>');
             selWard.disabled = wards.length === 0;
         }
 
@@ -490,16 +480,12 @@
             tbody.innerHTML = '';
             
             if (level === 'world' || level === 'country' || level === 'state' || level === 'district') {
-                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center bg-slate-50/50">
-                    <div class="text-3xl mb-3 text-slate-300"><i class="fas fa-layer-group"></i></div>
-                    <div class="font-bold text-[12px] uppercase tracking-widest text-[#D35400] mb-1">Macro Region Selected</div>
-                    <div class="text-[10px] text-slate-400">Drill down to a specific <b>Taluk</b> to view granular Ward data matrices.</div>
-                </td></tr>`;
+                tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center bg-slate-50/50"><div class="text-3xl mb-3 text-slate-300"><i class="fas fa-layer-group"></i></div><div class="font-bold text-[12px] uppercase tracking-widest text-[#D35400] mb-1">Macro Region Selected</div><div class="text-[10px] text-slate-400">Drill down to a specific <b>Taluk</b> to view granular Ward data matrices.</div></td></tr>';
                 return;
             }
 
             if (filteredData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center bg-slate-50/50"><div class="text-3xl mb-3 text-slate-300">🚀</div><div class="font-bold text-[12px] uppercase tracking-widest text-[#D35400] mb-1">Pipeline Territory</div><div class="text-[10px] text-slate-400">Territory operations for this region are currently pre-launch.</div></td></tr>`;
+                tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center bg-slate-50/50"><div class="text-3xl mb-3 text-slate-300">🚀</div><div class="font-bold text-[12px] uppercase tracking-widest text-[#D35400] mb-1">Pipeline Territory</div><div class="text-[10px] text-slate-400">Territory operations for this region are currently pre-launch.</div></td></tr>';
                 return;
             }
 
@@ -510,15 +496,10 @@
 
                 const civicCount = item.civicEntities.length;
                 const civicBadge = civicCount > 0 
-                    ? `<span class="bg-orange-100 text-[#D35400] border border-orange-200 px-1.5 py-0.5 rounded font-bold text-[8px]">${civicCount} Nodes</span>`
-                    : `<span class="bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded text-[8px]">0 Nodes</span>`;
+                    ? '<span class="bg-orange-100 text-[#D35400] border border-orange-200 px-1.5 py-0.5 rounded font-bold text-[8px]">' + civicCount + ' Nodes</span>'
+                    : '<span class="bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded text-[8px]">0 Nodes</span>';
 
-                tr.innerHTML = `
-                    <td class="p-2 text-teal-700 font-bold border-r border-slate-100 pl-4">${item.territory_id}</td>
-                    <td class="p-2 text-slate-700 font-bold col-left border-r border-slate-100 whitespace-nowrap">${item.territory_name}</td>
-                    <td class="p-2 text-sky-600 font-bold col-left border-r border-slate-100 whitespace-nowrap">${item.biz_class}</td>
-                    <td class="p-2 col-left">${civicBadge}</td>
-                `;
+                tr.innerHTML = '<td class="p-2 text-teal-700 font-bold border-r border-slate-100 pl-4">' + item.territory_id + '</td><td class="p-2 text-slate-700 font-bold col-left border-r border-slate-100 whitespace-nowrap">' + item.territory_name + '</td><td class="p-2 text-sky-600 font-bold col-left border-r border-slate-100 whitespace-nowrap">' + item.biz_class + '</td><td class="p-2 col-left">' + civicBadge + '</td>';
                 tbody.appendChild(tr);
             });
         }
@@ -545,20 +526,23 @@
             map.invalidateSize(true);
             setTimeout(() => { map.fitBounds(L.latLngBounds([[lat - 0.002, lng - 0.002], [lat + 0.002, lng + 0.002]]), { padding: [25, 25], maxZoom: 15, animate: false }); }, 100);
 
-            document.getElementById('deepDiveTitle').innerText = `${item.territory_id} —${item.territory_name}`;
-            document.getElementById('deepDiveSubtitle').innerText = `H3: ${item.h3_polygon_anchor}`;
+            document.getElementById('deepDiveTitle').innerText = item.territory_id + ' — ' + item.territory_name;
+            document.getElementById('deepDiveSubtitle').innerText = 'H3: ' + item.h3_polygon_anchor;
 
             const content = document.getElementById('deepDiveContent');
             if (item.civicEntities.length === 0) {
-                content.innerHTML = `<div class="text-slate-400 italic w-full text-center text-[10px] py-4">No mapped infrastructure found for this sector.</div>`;
+                content.innerHTML = '<div class="text-slate-400 italic w-full text-center text-[10px] py-4">No mapped infrastructure found for this sector.</div>';
                 return;
             }
 
-            let html = `<div class="w-full flex flex-col gap-1.5">`;
+            let html = '<div class="w-full flex flex-col gap-1.5">';
             item.civicEntities.forEach(ent => {
-                html += `<div class="bg-slate-50 border border-slate-200 p-1.5 rounded flex justify-between items-center shadow-sm"><div class="flex items-center gap-2"><span class="text-base">🏛️</span><div class="flex flex-col"><span class="font-bold text-[10px]">${ent.civic_entities?.entity_name \vert{}\vert{} 'Unknown'}</span><span class="text-[8px] uppercase font-bold opacity-70">${ent.relationship_type.replace(/_/g, ' ')}</span></div></div></div>`;
+                let entName = ent.civic_entities?.entity_name || 'Unknown';
+                let relType = ent.relationship_type ? ent.relationship_type.replace(/_/g, ' ') : '';
+                html += '<div class="bg-slate-50 border border-slate-200 p-1.5 rounded flex justify-between items-center shadow-sm"><div class="flex items-center gap-2"><span class="text-base">🏛️</span><div class="flex flex-col"><span class="font-bold text-[10px]">' + entName + '</span><span class="text-[8px] uppercase font-bold opacity-70">' + relType + '</span></div></div></div>';
             });
-            content.innerHTML = html + `</div>`;
+            html += '</div>';
+            content.innerHTML = html;
         }
 
         boot();
