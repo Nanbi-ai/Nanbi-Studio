@@ -149,11 +149,12 @@ footer.diag{max-width:980px;margin:20px auto 8px;padding:0 16px;font-size:11.5px
   footer.diag{margin-left:var(--rail)}
   
   /* Collapsed State (Activated by Toggle) */
-  body.sidebar-collapsed nav.bottom { width: var(--rail-collapsed); overflow: hidden; }
-  body.sidebar-collapsed nav.bottom a { max-width: 44px; overflow: hidden; white-space: nowrap; padding-left: 11px; margin: 0 auto; justify-content: flex-start; }
-  body.sidebar-collapsed header.app .brandbox { width: var(--rail-collapsed); padding: 0 12px; justify-content: center; overflow: hidden; }
-  body.sidebar-collapsed header.app .brandbox h1 { opacity: 0; pointer-events: none; }
-  body.sidebar-collapsed main, body.sidebar-collapsed footer.diag { margin-left: var(--rail-collapsed); max-width: none; width: auto; }
+body.sidebar-collapsed nav.bottom { width: var(--rail-collapsed); overflow: hidden; }
+body.sidebar-collapsed nav.bottom a { font-size: 0; justify-content: center; padding: 11px 0; margin: 0 8px; }
+body.sidebar-collapsed nav.bottom a .ic { font-size: 19px; margin: 0; }
+body.sidebar-collapsed header.app .brandbox { width: var(--rail-collapsed); padding: 0; justify-content: center; overflow: hidden; }
+body.sidebar-collapsed header.app .brandbox h1 { display: none; }
+body.sidebar-collapsed main, body.sidebar-collapsed footer.diag { margin-left: var(--rail-collapsed); max-width: none; width: auto; }
 }
 
 header.app{-webkit-app-region:drag;app-region:drag}
