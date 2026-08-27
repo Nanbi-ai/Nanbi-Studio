@@ -134,7 +134,13 @@
         }
 
         function initMap() {
-            map = L.map('map', { zoomControl: true, attributionControl: false }).setView([22.5937, 78.9629], 3);
+            // FRACTIONAL ZOOM FIX: zoomSnap 0.1 allows the map to perfectly fit boundaries edge-to-edge
+            map = L.map('map', { 
+                zoomControl: true, 
+                attributionControl: false,
+                zoomSnap: 0.1, 
+                zoomDelta: 0.5 
+            }).setView([22.5937, 78.9629], 3);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
             let invalidateCount = 0;
@@ -206,7 +212,6 @@
                 sel.disabled = false;
             }
 
-            // TIGHT ZOOM LOGIC: Uses flyToBounds with [0,0] padding to maximize screen real estate
             map.invalidateSize(true);
             if (featureGroup.getLayers().length > 0) {
                 setTimeout(() => { 
