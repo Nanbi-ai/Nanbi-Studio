@@ -14,7 +14,6 @@
         td { text-align: center; border-bottom: 1px solid #f1f5f9; }
         .col-left { text-align: left; }
         
-        /* Nanbi Brick Orange Highlight */
         .row-active { background-color: #fff7ed !important; border-left: 4px solid #D35400; } 
         
         #map-wrapper { position: relative; width: 100%; height: 100%; min-height: 420px; flex: 1; }
@@ -26,6 +25,18 @@
         .map-nav-btn { color: #64748b; padding: 2px 8px; font-size: 13px; font-weight: bold; transition: color 0.2s; background: transparent; border: none; cursor: pointer; }
         .map-nav-btn:hover:not(:disabled) { color: #D35400; }
         .map-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        
+        /* Your explicit UX request: Small, clean, non-bold permanent short IDs */
+        .id-label {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            font-weight: 700;
+            font-size: 11px;
+            color: #334155;
+            text-shadow: 1px 1px 2px #ffffff, -1px -1px 2px #ffffff, 1px -1px 2px #ffffff, -1px 1px 2px #ffffff;
+            text-align: center;
+        }
 
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
@@ -33,7 +44,7 @@
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans h-full flex flex-col overflow-hidden p-2">
     <main class="flex-1 flex gap-3 overflow-hidden">
-        <aside class="w-[42%] flex flex-col gap-3 overflow-hidden shrink-0">
+        <aside class="w-[38%] flex flex-col gap-3 overflow-hidden shrink-0">
             <div class="bg-white p-3 rounded border border-slate-200 flex flex-col gap-2 shrink-0 shadow-sm">
                 <div class="flex justify-between items-center pb-1 border-b border-slate-100">
                     <div class="flex items-center gap-1">
@@ -54,14 +65,15 @@
             </div>
             
             <div class="flex-1 bg-white p-1.5 rounded border border-slate-200 flex flex-col relative overflow-hidden shadow-sm">
-                <!-- Clean background replacing the heavy map container -->
-                <div id="map-wrapper" class="rounded overflow-hidden border border-slate-200 bg-[#f8fafc]">
+                <div id="map-wrapper" class="rounded overflow-hidden border border-slate-200 bg-[#e2f0f5]">
+                    <!-- THE HOVER INFO BOX -->
+                    <div id="hoveredRegionName" class="absolute top-3 right-3 bg-slate-800 text-white text-[11px] px-3 py-1.5 rounded shadow-lg z-[1000] hidden pointer-events-none"></div>
                     <div id="map"></div>
                 </div>
             </div>
         </aside>
 
-        <section class="w-[58%] flex flex-col gap-3 overflow-hidden">
+        <section class="w-[62%] flex flex-col gap-3 overflow-hidden">
             <div class="bg-white p-2.5 rounded border border-slate-200 flex justify-around items-center shrink-0 shadow-sm">
                 <div class="text-center">
                     <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Active Territories</p>
@@ -212,18 +224,30 @@
                 if (!item.geojson) return;
                 try {
                     const parsedGeom = JSON.parse(item.geojson);
-                    const displayName = item.name || item.id;
+                    const displayName = item.name || '';
+                    const displayId = item.id || item.name; // Falls back to name if ID is missing (like Districts)
                     layerNames.push(displayName);
                     
                     const polyColor = getDistinctColor(displayName);
                     const styleOpts = { color: '#ffffff', weight: 1, fillColor: polyColor, fillOpacity: 0.65 };
                     const layer = L.geoJSON(parsedGeom, { style: styleOpts });
 
-                    // Clean, hovering tooltip (Reverts the permanent overlapping text bug)
-                    layer.bindTooltip(`<b>${displayName}</b>`, {
-                        direction: 'top',
-                        className: 'text-[11px] font-sans font-bold text-slate-800 bg-white/95 px-2 py-1 rounded shadow-md border border-slate-200',
-                        sticky: true
+                    // Clean, permanent Short ID Label
+                    layer.bindTooltip(displayId, {
+                        direction: 'center',
+                        className: 'id-label',
+                        permanent: level === 'country' || level === 'state',
+                        interactive: false 
+                    });
+
+                    // Trigger Hover Box for Full Name
+                    layer.on('mouseover', () => {
+                        const hBox = document.getElementById('hoveredRegionName');
+                        hBox.innerText = displayName;
+                        hBox.style.display = 'block';
+                    });
+                    layer.on('mouseout', () => {
+                        document.getElementById('hoveredRegionName').style.display = 'none';
                     });
 
                     layer.on('click', () => { handleMapPolygonClick(level, displayName); });
@@ -251,13 +275,12 @@
             const { data } = await window.nanbiDB.rpc(rpcName, rpcParams);
             if (data && data.length > 0 && data[0].geojson) {
                 const featureGroup = L.featureGroup();
-                // Nanbi Brick Orange for unlaunched territories
                 const layer = L.geoJSON(JSON.parse(data[0].geojson), {
                     style: { color: '#D35400', weight: 1.5, fillColor: '#D35400', fillOpacity: 0.15 }
                 });
                 
-                layer.bindTooltip(`<b>${entityName}</b><br><span class="text-[9px] text-slate-500">Pipeline Territory</span>`, {
-                    direction: 'center', className: 'text-center bg-white/95 px-2 py-1 rounded shadow-md border border-slate-200', sticky: true
+                layer.bindTooltip(`${entityName}<br><span style="font-size:9px; font-weight:normal; color:#D35400">Pipeline Territory</span>`, {
+                    permanent: true, direction: 'center', className: 'id-label'
                 });
                 
                 featureGroup.addLayer(layer);
@@ -337,7 +360,16 @@
                 latlngs.push([lat, lng]);
 
                 const circle = L.circleMarker([lat, lng], { radius: 6, fillColor: '#D35400', color: '#ffffff', weight: 1.5, opacity: 1, fillOpacity: 0.85 }).addTo(map);
-                circle.bindTooltip(`<b>W-${item.territory_no}</b>: ${item.territory_name}`, { direction: 'top', className: 'text-[10px] font-bold shadow-md bg-white', sticky: true });
+                
+                circle.bindTooltip(`W-${item.territory_no}`, { permanent: true, direction: 'center', className: 'id-label' });
+                
+                circle.on('mouseover', () => {
+                    const hBox = document.getElementById('hoveredRegionName');
+                    hBox.innerText = `W-${item.territory_no}:${item.territory_name}`;
+                    hBox.style.display = 'block';
+                });
+                circle.on('mouseout', () => { document.getElementById('hoveredRegionName').style.display = 'none'; });
+
                 circle.on('click', () => { isolateTerritory(item); });
                 markers.push(circle);
             });
@@ -364,7 +396,7 @@
                 state: t.local_bodies?.taluks?.districts?.states?.state_name || 'Karnataka',
                 district: t.local_bodies?.taluks?.districts?.district_name || 'Bengaluru Urban',
                 taluk: t.local_bodies?.taluks?.taluk_name || 'Bengaluru South Taluk',
-                territory_name: `W-${t.territory_no}: ${t.territory_name}`,
+                territory_name: `W-${t.territory_no}:${t.territory_name}`,
                 civicEntities: t.territory_entity_mappings || []
             }));
 
@@ -513,7 +545,7 @@
             map.invalidateSize(true);
             setTimeout(() => { map.fitBounds(L.latLngBounds([[lat - 0.002, lng - 0.002], [lat + 0.002, lng + 0.002]]), { padding: [25, 25], maxZoom: 15, animate: false }); }, 100);
 
-            document.getElementById('deepDiveTitle').innerText = `${item.territory_id} — ${item.territory_name}`;
+            document.getElementById('deepDiveTitle').innerText = `${item.territory_id} —${item.territory_name}`;
             document.getElementById('deepDiveSubtitle').innerText = `H3: ${item.h3_polygon_anchor}`;
 
             const content = document.getElementById('deepDiveContent');
@@ -524,7 +556,7 @@
 
             let html = `<div class="w-full flex flex-col gap-1.5">`;
             item.civicEntities.forEach(ent => {
-                html += `<div class="bg-slate-50 border border-slate-200 p-1.5 rounded flex justify-between items-center shadow-sm"><div class="flex items-center gap-2"><span class="text-base">🏛️</span><div class="flex flex-col"><span class="font-bold text-[10px]">${ent.civic_entities?.entity_name || 'Unknown'}</span><span class="text-[8px] uppercase font-bold opacity-70">${ent.relationship_type.replace(/_/g, ' ')}</span></div></div></div>`;
+                html += `<div class="bg-slate-50 border border-slate-200 p-1.5 rounded flex justify-between items-center shadow-sm"><div class="flex items-center gap-2"><span class="text-base">🏛️</span><div class="flex flex-col"><span class="font-bold text-[10px]">${ent.civic_entities?.entity_name \vert{}\vert{} 'Unknown'}</span><span class="text-[8px] uppercase font-bold opacity-70">${ent.relationship_type.replace(/_/g, ' ')}</span></div></div></div>`;
             });
             content.innerHTML = html + `</div>`;
         }
