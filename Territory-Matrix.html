@@ -21,7 +21,6 @@
         .map-nav-btn { background: white; border: 1px solid #cbd5e1; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; color: #334155; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
         .map-nav-btn:hover { background: #f8fafc; color: #0d9488; }
         
-        /* THE TEXT FIX: Forces permanent labels directly onto the map polygons */
         .permanent-label {
             background: transparent !important;
             border: none !important;
@@ -52,8 +51,6 @@
                     <div class="flex flex-col"><label class="font-bold text-slate-400 uppercase mb-0.5">State</label><select id="selState" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-700 outline-none" disabled></select></div>
                     <div class="flex flex-col"><label class="font-bold text-slate-400 uppercase mb-0.5">District</label><select id="selDistrict" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-700 outline-none" disabled></select></div>
                     <div class="flex flex-col"><label class="font-bold text-slate-400 uppercase mb-0.5">Taluk</label><select id="selTaluk" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-700 outline-none" disabled></select></div>
-                    
-                    <!-- REPLACED: Local Body changed directly to Ward selection -->
                     <div class="flex flex-col col-span-2"><label class="font-bold text-slate-400 uppercase mb-0.5">Ward / Territory</label><select id="selWard" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-700 outline-none" disabled></select></div>
                 </div>
             </div>
@@ -133,6 +130,7 @@
                 initMap();
                 await fetchRelationalData();
                 await renderSpatialLayer('world');
+                initDropdownListeners();
             } catch(err) {
                 updateParentStatus(`<span style="color:#ef4444; font-weight:bold;">CRASH: ${err.message}</span>`);
             }
@@ -151,6 +149,7 @@
             window.addEventListener('resize', () => { map.invalidateSize(true); });
         }
 
+        // DECOUPLED SPATIAL ENGINE: Queries boundaries directly from PostGIS, completely independent of ward tables.
         async function renderSpatialLayer(level, parentName = '') {
             activeLevel = level;
             if (currentGeoLayer) { map.removeLayer(currentGeoLayer); currentGeoLayer = null; }
@@ -161,34 +160,48 @@
             document.getElementById('geoHierarchyBreadcrumb').innerText = parentName ? `${parentName} (${level.toUpperCase()})` : 'World View';
 
             let rpcName = '';
+            let rpcParams = {};
             let styleOpts = { color: '#0d9488', weight: 1.5, fillOpacity: 0.12 };
+            let targetDropdownId = null;
 
             if (level === 'world') {
                 rpcName = 'get_countries_geojson';
                 styleOpts = { color: '#475569', weight: 1, fillOpacity: 0.08 };
+                targetDropdownId = 'selCountry';
             } else if (level === 'country') {
-                rpcName = 'get_states_geojson';
+                rpcName = 'get_states_for_country';
+                rpcParams = { p_country: parentName };
                 styleOpts = { color: '#0369a1', weight: 1.5, fillOpacity: 0.15 };
+                targetDropdownId = 'selState';
             } else if (level === 'state') {
-                rpcName = 'get_districts_geojson';
+                rpcName = 'get_districts_for_state';
+                rpcParams = { p_state: parentName };
                 styleOpts = { color: '#0d9488', weight: 1.5, fillOpacity: 0.18 };
+                targetDropdownId = 'selDistrict';
             } else if (level === 'district') {
-                rpcName = 'get_taluks_geojson';
+                rpcName = 'get_taluks_for_district';
+                rpcParams = { p_district: parentName };
                 styleOpts = { color: '#d97706', weight: 2, fillOpacity: 0.22 };
-            } else if (level === 'taluk') {
-                rpcName = 'get_territories_geojson';
-                styleOpts = { color: '#dc2626', weight: 2, fillOpacity: 0.25 };
+                targetDropdownId = 'selTaluk';
             }
 
-            const { data, error } = await window.nanbiDB.rpc(rpcName);
-
-            // FALLBACK: If polygons for this level do not exist in PostGIS yet, render the relational dots
-            if (error || !data || data.length === 0) {
+            // Fallback for Ward level logic
+            if (level === 'taluk') {
                 renderWardFallbacks();
-                updateParentStatus(`<span style="color:#34d399; font-weight:bold;">● Layer Ready (${level})</span>`);
+                populateWardDropdown(parentName);
+                updateParentStatus(`<span style="color:#34d399; font-weight:bold;">● Layer Ready (Ward)</span>`);
                 return;
             }
 
+            const { data, error } = await window.nanbiDB.rpc(rpcName, rpcParams);
+
+            if (error || !data || data.length === 0) {
+                updateParentStatus(`<span style="color:#ef4444; font-weight:bold;">No Spatial Data Found</span>`);
+                return;
+            }
+
+            // DYNAMIC DROPDOWN POPULATION: Loads exactly what PostGIS returns
+            let layerNames = [];
             let featureGroup = L.featureGroup();
 
             data.forEach(item => {
@@ -197,8 +210,9 @@
                     const parsedGeom = JSON.parse(item.geojson);
                     const layer = L.geoJSON(parsedGeom, { style: styleOpts });
                     const displayName = item.name || item.id;
+                    
+                    layerNames.push(displayName);
 
-                    // PRINTS NAMES PERMANENTLY ON THE MAP
                     layer.bindTooltip(displayName, {
                         permanent: true,
                         direction: 'center',
@@ -212,6 +226,15 @@
 
             currentGeoLayer = featureGroup.addTo(map);
 
+            if (targetDropdownId && layerNames.length > 0) {
+                const sel = document.getElementById(targetDropdownId);
+                const currentVal = sel.value;
+                sel.innerHTML = '<option value="All">All</option>';
+                layerNames.sort().forEach(n => sel.innerHTML += `<option value="${n}">${n}</option>`);
+                sel.value = layerNames.includes(currentVal) ? currentVal : 'All';
+                sel.disabled = false;
+            }
+
             map.invalidateSize(true);
             if (featureGroup.getLayers().length > 0) {
                 setTimeout(() => {
@@ -223,26 +246,14 @@
         }
 
         function handleMapPolygonClick(level, entityName) {
-            if (level === 'world') {
-                const sel = document.getElementById('selCountry');
-                sel.value = entityName;
-                sel.dispatchEvent(new Event('change'));
-            } else if (level === 'country') {
-                const sel = document.getElementById('selState');
-                sel.value = entityName;
-                sel.dispatchEvent(new Event('change'));
-            } else if (level === 'state') {
-                const sel = document.getElementById('selDistrict');
-                sel.value = entityName;
-                sel.dispatchEvent(new Event('change'));
-            } else if (level === 'district') {
-                const sel = document.getElementById('selTaluk');
-                sel.value = entityName;
-                sel.dispatchEvent(new Event('change'));
-            }
+            const dropdownId = level === 'world' ? 'selCountry' :
+                               level === 'country' ? 'selState' :
+                               level === 'state' ? 'selDistrict' : 'selTaluk';
+            const sel = document.getElementById(dropdownId);
+            sel.value = entityName;
+            sel.dispatchEvent(new Event('change'));
         }
 
-        // Draws mechanical dots ONLY if boundary polygons are missing from PostGIS
         function renderWardFallbacks() {
             markers.forEach(m => map.removeLayer(m));
             markers = [];
@@ -276,7 +287,7 @@
                 .from('territories')
                 .select(`*, local_bodies ( body_name, taluks ( taluk_name, districts ( district_name, states ( state_name, countries (country_name) ) ) ) ), territory_entity_mappings ( relationship_type, civic_entities (entity_name, category_id) )`);
 
-            if (error) throw new Error(error.message);
+            if (error) return;
             const safeData = data || [];
 
             globalData = safeData.map(t => ({
@@ -290,75 +301,54 @@
             }));
 
             filteredData = [...globalData];
-            initCascadingDropdowns();
             updateUI();
         }
 
-        function initCascadingDropdowns() {
-            const getUnique = (key, dataset) => [...new Set(dataset.map(item => item[key]))].filter(Boolean);
-            const populate = (id, items) => {
-                const select = document.getElementById(id);
-                select.innerHTML = '<option value="All">All</option>';
-                items.forEach(item => select.innerHTML += `<option value="${item}">${item}</option>`);
-                select.disabled = items.length === 0;
+        function populateWardDropdown(talukName) {
+            const selWard = document.getElementById('selWard');
+            selWard.innerHTML = '<option value="All">All</option>';
+            const wards = globalData.filter(i => i.taluk === talukName).map(i => i.territory_name).sort();
+            wards.forEach(w => selWard.innerHTML += `<option value="${w}">${w}</option>`);
+            selWard.disabled = wards.length === 0;
+        }
+
+        function initDropdownListeners() {
+            const cascadeClear = (ids) => {
+                ids.forEach(id => {
+                    const el = document.getElementById(id);
+                    el.innerHTML = '<option value="All">All</option>';
+                    el.disabled = true;
+                });
             };
-
-            const filterMatrix = () => {
-                const c = document.getElementById('selCountry').value;
-                const s = document.getElementById('selState').value;
-                const d = document.getElementById('selDistrict').value;
-                const t = document.getElementById('selTaluk').value;
-                const w = document.getElementById('selWard').value;
-
-                filteredData = globalData.filter(item => 
-                    (c === 'All' || item.country === c) && (s === 'All' || item.state === s) &&
-                    (d === 'All' || item.district === d) && (t === 'All' || item.taluk === t) &&
-                    (w === 'All' || item.territory_name === w)
-                );
-                updateUI();
-            };
-
-            populate('selCountry', getUnique('country', globalData));
 
             document.getElementById('selCountry').addEventListener('change', (e) => {
                 const val = e.target.value;
-                const fd = globalData.filter(i => val === 'All' || i.country === val);
-                populate('selState', getUnique('state', fd));
-                ['selDistrict', 'selTaluk', 'selWard'].forEach(id => { document.getElementById(id).innerHTML = '<option value="All">All</option>'; document.getElementById(id).disabled = true; });
+                cascadeClear(['selState', 'selDistrict', 'selTaluk', 'selWard']);
                 filterMatrix();
-
                 if (val === 'All') renderSpatialLayer('world');
                 else renderSpatialLayer('country', val);
             });
 
             document.getElementById('selState').addEventListener('change', (e) => {
                 const val = e.target.value;
-                const fd = globalData.filter(i => val === 'All' || i.state === val);
-                populate('selDistrict', getUnique('district', fd));
-                ['selTaluk', 'selWard'].forEach(id => { document.getElementById(id).innerHTML = '<option value="All">All</option>'; document.getElementById(id).disabled = true; });
+                cascadeClear(['selDistrict', 'selTaluk', 'selWard']);
                 filterMatrix();
-
                 if (val === 'All') renderSpatialLayer('country', document.getElementById('selCountry').value);
                 else renderSpatialLayer('state', val);
             });
 
             document.getElementById('selDistrict').addEventListener('change', (e) => {
                 const val = e.target.value;
-                const fd = globalData.filter(i => val === 'All' || i.district === val);
-                populate('selTaluk', getUnique('taluk', fd));
-                document.getElementById('selWard').innerHTML = '<option value="All">All</option>'; document.getElementById('selWard').disabled = true;
+                cascadeClear(['selTaluk', 'selWard']);
                 filterMatrix();
-
                 if (val === 'All') renderSpatialLayer('state', document.getElementById('selState').value);
                 else renderSpatialLayer('district', val);
             });
 
             document.getElementById('selTaluk').addEventListener('change', (e) => {
                 const val = e.target.value;
-                const fd = globalData.filter(i => val === 'All' || i.taluk === val);
-                populate('selWard', getUnique('territory_name', fd));
+                cascadeClear(['selWard']);
                 filterMatrix();
-
                 if (val === 'All') renderSpatialLayer('district', document.getElementById('selDistrict').value);
                 else renderSpatialLayer('taluk', val);
             });
@@ -367,8 +357,25 @@
                 filterMatrix();
                 if (e.target.value !== 'All' && filteredData.length === 1) {
                     isolateTerritory(filteredData[0]);
+                } else if (e.target.value === 'All') {
+                    renderSpatialLayer('taluk', document.getElementById('selTaluk').value);
                 }
             });
+        }
+
+        function filterMatrix() {
+            const c = document.getElementById('selCountry').value;
+            const s = document.getElementById('selState').value;
+            const d = document.getElementById('selDistrict').value;
+            const t = document.getElementById('selTaluk').value;
+            const w = document.getElementById('selWard').value;
+
+            filteredData = globalData.filter(item => 
+                (c === 'All' || item.country === c) && (s === 'All' || item.state === s) &&
+                (d === 'All' || item.district === d) && (t === 'All' || item.taluk === t) &&
+                (w === 'All' || item.territory_name === w)
+            );
+            updateUI();
         }
 
         window.resetToWorld = function() {
@@ -388,8 +395,6 @@
             data.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 transition";
-                
-                // 3-WAY BINDING: Clicking the table clicks the map and updates the dropdown
                 tr.onclick = () => { isolateTerritory(item, tr); };
 
                 const civicCount = item.civicEntities.length;
@@ -408,7 +413,6 @@
         }
 
         function isolateTerritory(item, trElement = null) {
-            // SYNCHRONIZE DROPDOWN
             const selWard = document.getElementById('selWard');
             if (selWard && selWard.value !== item.territory_name) {
                 selWard.value = item.territory_name;
@@ -417,7 +421,6 @@
             document.querySelectorAll('#territoryTbody tr').forEach(r => r.classList.remove('row-active'));
             if (trElement) { trElement.classList.add('row-active'); }
             else {
-                // If isolated via map click, highlight the table row
                 const rows = document.querySelectorAll('#territoryTbody tr');
                 for (let r of rows) {
                     if (r.innerText.includes(item.territory_id)) { r.classList.add('row-active'); r.scrollIntoView({block: "center", behavior: "smooth"}); break; }
