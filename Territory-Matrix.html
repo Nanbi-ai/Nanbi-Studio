@@ -134,11 +134,10 @@
         }
 
         function initMap() {
-            // FRACTIONAL ZOOM FIX: zoomSnap 0.1 allows the map to perfectly fit boundaries edge-to-edge
             map = L.map('map', { 
                 zoomControl: true, 
                 attributionControl: false,
-                zoomSnap: 0.1, 
+                zoomSnap: 0,         // ACTIVATES FRACTIONAL ZOOMING
                 zoomDelta: 0.5 
             }).setView([22.5937, 78.9629], 3);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
@@ -216,7 +215,8 @@
             if (featureGroup.getLayers().length > 0) {
                 setTimeout(() => { 
                     map.invalidateSize(true);
-                    map.flyToBounds(featureGroup.getBounds(), { padding: [0, 0], maxZoom: level === 'world' ? 3 : 11, duration: 1.2 }); 
+                    // BROWSER AGNOSTIC ZOOM FIX: fitBounds + 25px safe-margin guarantees Edge/Chrome parity
+                    map.fitBounds(featureGroup.getBounds(), { padding: [25, 25], maxZoom: level === 'world' ? 3 : 11 }); 
                 }, 200);
             }
             updateParentStatus(`<span style="color:#34d399; font-weight:bold;">● ${level.toUpperCase()} Active</span>`);
@@ -250,7 +250,7 @@
                 markers.push(circle);
             });
 
-            if (latlngs.length > 0) { map.flyToBounds(L.latLngBounds(latlngs), { padding: [35, 35], maxZoom: 14 }); }
+            if (latlngs.length > 0) { map.fitBounds(L.latLngBounds(latlngs), { padding: [35, 35], maxZoom: 14 }); }
         }
 
         async function fetchRelationalData() {
@@ -409,7 +409,7 @@
             const lng = wardGeoAnchor[wNo] ? wardGeoAnchor[wNo][1] : 77.5600 + (col * 0.006);
             
             map.invalidateSize(true);
-            setTimeout(() => { map.flyTo([lat, lng], 15, { duration: 1.5 }); }, 100);
+            setTimeout(() => { map.fitBounds(L.latLngBounds([[lat - 0.002, lng - 0.002], [lat + 0.002, lng + 0.002]]), { padding: [25, 25], maxZoom: 15 }); }, 100);
 
             document.getElementById('deepDiveTitle').innerText = `${item.territory_id} — ${item.territory_name}`;
             document.getElementById('deepDiveSubtitle').innerText = `H3: ${item.h3_polygon_anchor}`;
