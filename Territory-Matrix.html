@@ -7,23 +7,40 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         .table-container { overflow-y: auto; max-height: 52vh; }
-        th { position: sticky; top: 0; background-color: #f8fafc; color: #475569; z-index: 10; text-align: center; border-bottom: 2px solid #e2e8f0; }
+        th { position: sticky; top: 0; background-color: #f8fafc; color: #475569; z-index: 10; text-align: center; border-bottom: 2px solid #e2e8f0; font-weight: 700; }
         td { text-align: center; border-bottom: 1px solid #f1f5f9; }
         .col-left { text-align: left; }
-        .row-active { background-color: #f0fdfa !important; border-left: 4px solid #0d9488; }
         
-        #map-wrapper { position: relative; width: 100%; height: 100%; min-height: 380px; flex: 1; }
+        /* Nanbi Brick Orange Highlight */
+        .row-active { background-color: #fff7ed !important; border-left: 4px solid #D35400; } 
+        
+        #map-wrapper { position: relative; width: 100%; height: 100%; min-height: 420px; flex: 1; }
         #map { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 0.25rem; z-index: 1; }
         
         path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s; outline: none; }
-        path.leaflet-interactive:hover { fill-opacity: 0.8 !important; stroke-width: 2.5px !important; stroke: #0f172a !important; cursor: pointer; }
+        path.leaflet-interactive:hover { fill-opacity: 0.8 !important; stroke-width: 2px !important; stroke: #0f172a !important; cursor: pointer; }
         
-        .map-nav-btn { background: white; border: 1px solid #cbd5e1; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; color: #334155; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .map-nav-btn:hover:not(:disabled) { background: #f8fafc; color: #0d9488; }
-        .map-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        /* Internal Map Navigation Buttons */
+        .map-nav-btn { color: #64748b; padding: 2px 8px; font-size: 13px; font-weight: bold; transition: color 0.2s; background: transparent; border: none; cursor: pointer; }
+        .map-nav-btn:hover:not(:disabled) { color: #D35400; }
+        .map-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
         
+        /* Professional Clean Map Labels */
+        .professional-label {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            font-weight: 600;
+            font-size: 11px;
+            color: #1e293b;
+            text-shadow: 1px 1px 2px #ffffff, -1px -1px 2px #ffffff, 1px -1px 2px #ffffff, -1px 1px 2px #ffffff;
+            white-space: nowrap;
+            text-align: center;
+        }
+
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
     </style>
@@ -31,17 +48,18 @@
 <body class="bg-slate-50 text-slate-800 font-sans h-full flex flex-col overflow-hidden p-2">
     <main class="flex-1 flex gap-3 overflow-hidden">
         <aside class="w-[38%] flex flex-col gap-3 overflow-hidden shrink-0">
-            <!-- Navigation Toolbar & Cascading Controls -->
             <div class="bg-white p-3 rounded border border-slate-200 flex flex-col gap-2 shrink-0 shadow-sm">
+                <!-- Internal Navigation Toolbar -->
                 <div class="flex justify-between items-center pb-1 border-b border-slate-100">
-                    <div class="flex items-center gap-1.5">
-                        <button id="btnNavBack" class="map-nav-btn" title="Go Back">←</button>
-                        <button id="btnNavForward" class="map-nav-btn" title="Go Forward">→</button>
-                        <span id="geoHierarchyBreadcrumb" class="text-[10px] font-bold text-teal-700 uppercase tracking-wider ml-1 truncate max-w-[150px]">World View</span>
+                    <div class="flex items-center gap-1">
+                        <button id="btnNavBack" class="map-nav-btn" title="Go Back"><i class="fas fa-chevron-left text-[10px]"></i></button>
+                        <button id="btnNavForward" class="map-nav-btn" title="Go Forward"><i class="fas fa-chevron-right text-[10px]"></i></button>
+                        <span id="geoHierarchyBreadcrumb" class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide ml-2 truncate max-w-[200px]">World View</span>
                     </div>
-                    <button onclick="resetToWorld()" class="map-nav-btn text-[9px]">Globe</button>
+                    <button onclick="resetToWorld()" class="text-[10px] font-semibold text-slate-500 hover:text-[#D35400] transition px-2"><i class="fas fa-globe-americas mr-1"></i> Globe</button>
                 </div>
-                <div class="grid grid-cols-2 gap-2 text-[10px]">
+                
+                <div class="grid grid-cols-2 gap-2 text-[10px] mt-1">
                     <div class="flex flex-col"><label class="font-bold text-slate-400 uppercase mb-0.5">Country</label><select id="selCountry" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-700 outline-none"><option value="All">Loading...</option></select></div>
                     <div class="flex flex-col"><label class="font-bold text-slate-400 uppercase mb-0.5">State / Province</label><select id="selState" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-700 outline-none" disabled><option value="All">All</option></select></div>
                     <div class="flex flex-col"><label class="font-bold text-slate-400 uppercase mb-0.5">District</label><select id="selDistrict" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-700 outline-none" disabled><option value="All">All</option></select></div>
@@ -51,7 +69,7 @@
             </div>
             
             <div class="flex-1 bg-white p-1.5 rounded border border-slate-200 flex flex-col relative overflow-hidden shadow-sm">
-                <div id="map-wrapper" class="rounded overflow-hidden border border-slate-200">
+                <div id="map-wrapper" class="rounded overflow-hidden border border-slate-200 bg-[#e2f0f5]">
                     <div id="map"></div>
                 </div>
             </div>
@@ -65,7 +83,7 @@
                 </div>
                 <div class="text-center border-l border-slate-200 pl-8">
                     <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Market Capacity</p>
-                    <p class="text-2xl font-black text-emerald-600" id="metricMPS">₹0</p>
+                    <p class="text-2xl font-black text-[#D35400]" id="metricMPS">₹0</p>
                 </div>
             </div>
             
@@ -74,10 +92,10 @@
                     <table class="w-full border-collapse text-[10px]">
                         <thead>
                             <tr>
-                                <th class="p-2 uppercase tracking-wider font-bold">ID</th>
-                                <th class="p-2 uppercase tracking-wider font-bold text-left">Ward Name</th>
-                                <th class="p-2 uppercase tracking-wider font-bold text-left">Biz-Class</th>
-                                <th class="p-2 uppercase tracking-wider font-bold text-left">Civic Coverage</th>
+                                <th class="p-2 uppercase tracking-wider text-left pl-4">ID</th>
+                                <th class="p-2 uppercase tracking-wider text-left">Ward Name</th>
+                                <th class="p-2 uppercase tracking-wider text-left">Biz-Class</th>
+                                <th class="p-2 uppercase tracking-wider text-left">Civic Coverage</th>
                             </tr>
                         </thead>
                         <tbody id="territoryTbody" class="cursor-pointer text-slate-600"></tbody>
@@ -111,7 +129,6 @@
         let globalData = [], filteredData = [];
         let allCountryNames = [];
         
-        // Navigation History Stack
         let navHistory = [{ level: 'world', parentName: '' }];
         let historyIndex = 0;
 
@@ -120,7 +137,7 @@
         function getDistinctColor(name) {
             let hash = 0;
             for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-            return `hsl(${Math.abs(hash % 360)}, 65%, 55%)`; 
+            return `hsl(${Math.abs(hash % 360)}, 40%, 65%)`; 
         }
 
         async function boot() {
@@ -143,7 +160,7 @@
                 zoomSnap: 0.1,
                 zoomDelta: 0.5 
             }).setView([22.5937, 78.9629], 3);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, opacity: 0.8 }).addTo(map);
 
             const resizeObserver = new ResizeObserver(() => { map.invalidateSize(); });
             resizeObserver.observe(document.getElementById('map-wrapper'));
@@ -160,7 +177,6 @@
             }
         }
 
-        // SPATIAL RENDERING WITH ISOLATED PARENT FALLBACKS
         async function renderSpatialLayer(level, parentName = '', pushHistory = true) {
             if (pushHistory) {
                 navHistory = navHistory.slice(0, historyIndex + 1);
@@ -173,7 +189,7 @@
             markers.forEach(m => map.removeLayer(m));
             markers = [];
 
-            updateParentStatus(`<span style="color:#f59e0b; font-weight:bold;">Loading ${level.toUpperCase()}...</span>`);
+            updateParentStatus(`<span style="color:#D35400; font-weight:bold;">Loading ${level.toUpperCase()}...</span>`);
             document.getElementById('geoHierarchyBreadcrumb').innerText = parentName ? `${parentName}` : 'World View';
 
             let rpcName = '';
@@ -188,21 +204,18 @@
             if (level === 'taluk') {
                 renderWardFallbacks();
                 populateWardDropdown(parentName);
-                updateParentStatus(`<span style="color:#34d399; font-weight:bold;">● Layer Ready (Ward)</span>`);
+                updateParentStatus(`<span style="color:#10b981; font-weight:bold;">● Layer Ready (Ward)</span>`);
+                updateUI(level);
                 return;
             }
 
             const { data, error } = await window.nanbiDB.rpc(rpcName, rpcParams);
 
-            // FALLBACK LOGIC: If child divisions don't exist, isolate the parent entity boundary directly
             if (error || !data || data.length === 0) {
-                if (level === 'country') {
-                    await drawIsolatedBoundary('get_country_polygon', { p_country: parentName }, parentName);
-                } else if (level === 'state') {
-                    await drawIsolatedBoundary('get_state_polygon', { p_state: parentName }, parentName);
-                } else {
-                    updateParentStatus(`<span style="color:#ef4444; font-weight:bold;">No Sub-divisions Found</span>`);
-                }
+                if (level === 'country') await drawIsolatedBoundary('get_country_polygon', { p_country: parentName }, parentName);
+                else if (level === 'state') await drawIsolatedBoundary('get_state_polygon', { p_state: parentName }, parentName);
+                else updateParentStatus(`<span style="color:#ef4444; font-weight:bold;">No Sub-divisions Found</span>`);
+                updateUI(level);
                 return;
             }
 
@@ -217,13 +230,13 @@
                     layerNames.push(displayName);
                     
                     const polyColor = getDistinctColor(displayName);
-                    const styleOpts = { color: '#ffffff', weight: 1.5, fillColor: polyColor, fillOpacity: 0.45 };
+                    const styleOpts = { color: '#ffffff', weight: 1, fillColor: polyColor, fillOpacity: 0.65 };
                     const layer = L.geoJSON(parsedGeom, { style: styleOpts });
 
-                    layer.bindTooltip(`<b>${displayName}</b>`, {
-                        direction: 'top',
-                        className: 'text-[11px] font-sans font-bold text-slate-800 bg-white/95 px-2 py-1 rounded shadow border border-slate-200',
-                        sticky: true
+                    layer.bindTooltip(`${displayName}`, {
+                        direction: 'center',
+                        className: 'professional-label',
+                        permanent: level === 'country' || level === 'state' 
                     });
 
                     layer.on('click', () => { handleMapPolygonClick(level, displayName); });
@@ -243,7 +256,8 @@
             }
 
             fitLayerBounds(featureGroup, level === 'world' ? 3 : 11);
-            updateParentStatus(`<span style="color:#34d399; font-weight:bold;">● ${level.toUpperCase()} Active</span>`);
+            updateParentStatus(`<span style="color:#10b981; font-weight:bold;">● ${level.toUpperCase()} Active</span>`);
+            updateUI(level);
         }
 
         async function drawIsolatedBoundary(rpcName, rpcParams, entityName) {
@@ -251,48 +265,33 @@
             if (data && data.length > 0 && data[0].geojson) {
                 const featureGroup = L.featureGroup();
                 const layer = L.geoJSON(JSON.parse(data[0].geojson), {
-                    style: { color: '#0d9488', weight: 2, fillColor: '#14b8a6', fillOpacity: 0.35 }
+                    style: { color: '#D35400', weight: 1.5, fillColor: '#D35400', fillOpacity: 0.15 }
                 });
-                layer.bindTooltip(`<b>${entityName}</b> (Operational Pipeline)`, {
-                    direction: 'top',
-                    className: 'text-[11px] font-sans font-bold text-slate-800 bg-white/95 px-2 py-1 rounded shadow',
-                    sticky: true
+                
+                layer.bindTooltip(`${entityName}`, {
+                    permanent: true, direction: 'center', className: 'professional-label'
                 });
+                
                 featureGroup.addLayer(layer);
                 currentGeoLayer = featureGroup.addTo(map);
-                fitLayerBounds(featureGroup, 10);
-                updateParentStatus(`<span style="color:#34d399; font-weight:bold;">● ${entityName} Isolated</span>`);
+                fitLayerBounds(featureGroup, 8);
+                updateParentStatus(`<span style="color:#10b981; font-weight:bold;">● ${entityName} Isolated</span>`);
             }
         }
 
         function fitLayerBounds(featureGroup, maxZoomVal) {
             map.invalidateSize(true);
-            if (featureGroup.getLayers().length > 0) {
-                setTimeout(() => { 
-                    map.invalidateSize(true);
-                    map.fitBounds(featureGroup.getBounds(), { padding: [20, 20], maxZoom: maxZoomVal }); 
-                }, 150);
-            }
+            setTimeout(() => { 
+                map.invalidateSize(true);
+                map.fitBounds(featureGroup.getBounds(), { padding: [30, 30], maxZoom: maxZoomVal, animate: false }); 
+            }, 300);
         }
 
         function handleMapPolygonClick(level, entityName) {
-            if (level === 'world') {
-                const sel = document.getElementById('selCountry');
-                sel.value = entityName;
-                sel.dispatchEvent(new Event('change'));
-            } else if (level === 'country') {
-                const sel = document.getElementById('selState');
-                sel.value = entityName;
-                sel.dispatchEvent(new Event('change'));
-            } else if (level === 'state') {
-                const sel = document.getElementById('selDistrict');
-                sel.value = entityName;
-                sel.dispatchEvent(new Event('change'));
-            } else if (level === 'district') {
-                const sel = document.getElementById('selTaluk');
-                sel.value = entityName;
-                sel.dispatchEvent(new Event('change'));
-            }
+            if (level === 'world') { document.getElementById('selCountry').value = entityName; document.getElementById('selCountry').dispatchEvent(new Event('change')); }
+            else if (level === 'country') { document.getElementById('selState').value = entityName; document.getElementById('selState').dispatchEvent(new Event('change')); }
+            else if (level === 'state') { document.getElementById('selDistrict').value = entityName; document.getElementById('selDistrict').dispatchEvent(new Event('change')); }
+            else if (level === 'district') { document.getElementById('selTaluk').value = entityName; document.getElementById('selTaluk').dispatchEvent(new Event('change')); }
         }
 
         function initHistoryControls() {
@@ -349,13 +348,18 @@
                 const lng = wardGeoAnchor[wNo] ? wardGeoAnchor[wNo][1] : 77.5600 + (col * 0.006);
                 latlngs.push([lat, lng]);
 
-                const circle = L.circleMarker([lat, lng], { radius: 6, fillColor: '#0284c7', color: '#ffffff', weight: 1.5, opacity: 1, fillOpacity: 0.85 }).addTo(map);
+                const circle = L.circleMarker([lat, lng], { radius: 6, fillColor: '#D35400', color: '#ffffff', weight: 1.5, opacity: 1, fillOpacity: 0.85 }).addTo(map);
                 circle.bindTooltip(`<b>W-${item.territory_no}</b>: ${item.territory_name}`, { direction: 'top', className: 'text-[10px] font-bold shadow-md bg-white', sticky: true });
                 circle.on('click', () => { isolateTerritory(item); });
                 markers.push(circle);
             });
 
-            if (latlngs.length > 0) { map.fitBounds(L.latLngBounds(latlngs), { padding: [35, 35], maxZoom: 14 }); }
+            if (latlngs.length > 0) { 
+                setTimeout(() => {
+                    map.invalidateSize(true);
+                    map.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 14, animate: false }); 
+                }, 300);
+            }
         }
 
         async function fetchRelationalData() {
@@ -377,7 +381,6 @@
             }));
 
             filteredData = [...globalData];
-            updateUI();
         }
 
         function populateWardDropdown(talukName) {
@@ -459,33 +462,39 @@
             document.getElementById('selCountry').dispatchEvent(new Event('change'));
         };
 
-        function updateUI() {
+        function updateUI(level) {
             document.getElementById('metricCount').innerText = filteredData.length;
             document.getElementById('metricMPS').innerText = "₹" + (filteredData.length * 35000).toLocaleString('en-IN');
-            renderTable(filteredData);
-        }
-
-        function renderTable(data) {
+            
             const tbody = document.getElementById('territoryTbody');
             tbody.innerHTML = '';
             
-            if (data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center bg-slate-50/50"><div class="text-3xl mb-3">🚀</div><div class="font-bold text-[12px] uppercase tracking-widest text-slate-500 mb-1">Yet to be Launched</div><div class="text-[10px] text-slate-400">Territory operations for this specific region are currently in the pipeline.</div></td></tr>`;
+            if (level === 'world' || level === 'country' || level === 'state' || level === 'district') {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center bg-slate-50/50">
+                    <div class="text-3xl mb-3 text-slate-300"><i class="fas fa-layer-group"></i></div>
+                    <div class="font-bold text-[12px] uppercase tracking-widest text-[#D35400] mb-1">Macro Region Selected</div>
+                    <div class="text-[10px] text-slate-400">Drill down to a specific <b>Taluk</b> to view granular Ward data matrices.</div>
+                </td></tr>`;
                 return;
             }
 
-            data.forEach(item => {
+            if (filteredData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center bg-slate-50/50"><div class="text-3xl mb-3 text-slate-300">🚀</div><div class="font-bold text-[12px] uppercase tracking-widest text-[#D35400] mb-1">Pipeline Territory</div><div class="text-[10px] text-slate-400">Territory operations for this region are currently pre-launch.</div></td></tr>`;
+                return;
+            }
+
+            filteredData.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 transition";
                 tr.onclick = () => { isolateTerritory(item, tr); };
 
                 const civicCount = item.civicEntities.length;
                 const civicBadge = civicCount > 0 
-                    ? `<span class="bg-emerald-100 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded font-bold text-[8px]">${civicCount} Nodes</span>`
+                    ? `<span class="bg-orange-100 text-[#D35400] border border-orange-200 px-1.5 py-0.5 rounded font-bold text-[8px]">${civicCount} Nodes</span>`
                     : `<span class="bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded text-[8px]">0 Nodes</span>`;
 
                 tr.innerHTML = `
-                    <td class="p-2 text-teal-700 font-bold border-r border-slate-100">${item.territory_id}</td>
+                    <td class="p-2 text-teal-700 font-bold border-r border-slate-100 pl-4">${item.territory_id}</td>
                     <td class="p-2 text-slate-700 font-bold col-left border-r border-slate-100 whitespace-nowrap">${item.territory_name}</td>
                     <td class="p-2 text-sky-600 font-bold col-left border-r border-slate-100 whitespace-nowrap">${item.biz_class}</td>
                     <td class="p-2 col-left">${civicBadge}</td>
@@ -514,7 +523,7 @@
             const lng = wardGeoAnchor[wNo] ? wardGeoAnchor[wNo][1] : 77.5600 + (col * 0.006);
             
             map.invalidateSize(true);
-            setTimeout(() => { map.fitBounds(L.latLngBounds([[lat - 0.002, lng - 0.002], [lat + 0.002, lng + 0.002]]), { padding: [25, 25], maxZoom: 15 }); }, 100);
+            setTimeout(() => { map.fitBounds(L.latLngBounds([[lat - 0.002, lng - 0.002], [lat + 0.002, lng + 0.002]]), { padding: [25, 25], maxZoom: 15, animate: false }); }, 100);
 
             document.getElementById('deepDiveTitle').innerText = `${item.territory_id} — ${item.territory_name}`;
             document.getElementById('deepDiveSubtitle').innerText = `H3: ${item.h3_polygon_anchor}`;
