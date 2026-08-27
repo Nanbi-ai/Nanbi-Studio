@@ -40,18 +40,17 @@
 <body class="bg-slate-50 text-slate-800 font-sans h-full flex flex-col overflow-hidden p-2">
     <main class="flex-1 flex gap-3 overflow-hidden">
         <aside class="w-[38%] flex flex-col gap-3 overflow-hidden shrink-0">
-            <!-- 3-Way Cascading Dropdowns -->
             <div class="bg-white p-3 rounded border border-slate-200 flex flex-col gap-2 shrink-0 shadow-sm">
                 <div class="flex justify-between items-center pb-1 border-b border-slate-100">
                     <span id="geoHierarchyBreadcrumb" class="text-[10px] font-bold text-teal-700 uppercase tracking-wider">World View</span>
                     <button onclick="resetToWorld()" class="map-nav-btn text-[9px]">Reset to Globe</button>
                 </div>
                 <div class="grid grid-cols-2 gap-2 text-[10px]">
-                    <div class="flex flex-col"><label class="font-bold text-slate-400 uppercase mb-0.5">Country</label><select id="selCountry" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-700 outline-none"></select></div>
-                    <div class="flex flex-col"><label class="font-bold text-slate-400 uppercase mb-0.5">State</label><select id="selState" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-700 outline-none" disabled></select></div>
-                    <div class="flex flex-col"><label class="font-bold text-slate-400 uppercase mb-0.5">District</label><select id="selDistrict" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-700 outline-none" disabled></select></div>
-                    <div class="flex flex-col"><label class="font-bold text-slate-400 uppercase mb-0.5">Taluk</label><select id="selTaluk" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-700 outline-none" disabled></select></div>
-                    <div class="flex flex-col col-span-2"><label class="font-bold text-slate-400 uppercase mb-0.5">Ward / Territory</label><select id="selWard" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-700 outline-none" disabled></select></div>
+                    <div class="flex flex-col"><label class="font-bold text-slate-400 uppercase mb-0.5">Country</label><select id="selCountry" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-700 outline-none" disabled><option value="All">Loading...</option></select></div>
+                    <div class="flex flex-col"><label class="font-bold text-slate-400 uppercase mb-0.5">State / Province</label><select id="selState" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-700 outline-none" disabled><option value="All">All</option></select></div>
+                    <div class="flex flex-col"><label class="font-bold text-slate-400 uppercase mb-0.5">District</label><select id="selDistrict" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-700 outline-none" disabled><option value="All">All</option></select></div>
+                    <div class="flex flex-col"><label class="font-bold text-slate-400 uppercase mb-0.5">Taluk / County</label><select id="selTaluk" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-700 outline-none" disabled><option value="All">All</option></select></div>
+                    <div class="flex flex-col col-span-2"><label class="font-bold text-slate-400 uppercase mb-0.5">Ward / Territory</label><select id="selWard" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-700 outline-none" disabled><option value="All">All</option></select></div>
                 </div>
             </div>
             
@@ -106,10 +105,7 @@
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
         function updateParentStatus(html) {
-            try {
-                const parentStatus = window.parent.document.getElementById('tm-status');
-                if(parentStatus) parentStatus.innerHTML = html;
-            } catch(e) { }
+            try { const parentStatus = window.parent.document.getElementById('tm-status'); if(parentStatus) parentStatus.innerHTML = html; } catch(e) { }
         }
 
         const SUPABASE_URL = "https://yeoracoxyjzgpsyxgwri.supabase.co";
@@ -128,9 +124,19 @@
         async function boot() {
             try {
                 initMap();
-                await fetchRelationalData();
-                await renderSpatialLayer('world');
                 initDropdownListeners();
+                await fetchRelationalData(); // Loads the 72 wards
+                
+                // DECOUPLED FIX: Populates the Country dropdown directly from the spatial PostGIS table
+                const { data } = await window.nanbiDB.rpc('get_countries_geojson');
+                if (data) {
+                    const sel = document.getElementById('selCountry');
+                    sel.innerHTML = '<option value="All">All</option>';
+                    data.map(d => d.name).sort().forEach(c => sel.innerHTML += `<option value="${c}">${c}</option>`);
+                    sel.disabled = false;
+                }
+
+                await renderSpatialLayer('world');
             } catch(err) {
                 updateParentStatus(`<span style="color:#ef4444; font-weight:bold;">CRASH: ${err.message}</span>`);
             }
@@ -141,15 +147,10 @@
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
             let invalidateCount = 0;
-            let invalidator = setInterval(() => {
-                map.invalidateSize(true);
-                invalidateCount++;
-                if (invalidateCount > 8) clearInterval(invalidator);
-            }, 250);
+            let invalidator = setInterval(() => { map.invalidateSize(true); invalidateCount++; if (invalidateCount > 8) clearInterval(invalidator); }, 250);
             window.addEventListener('resize', () => { map.invalidateSize(true); });
         }
 
-        // DECOUPLED SPATIAL ENGINE: Queries boundaries directly from PostGIS, completely independent of ward tables.
         async function renderSpatialLayer(level, parentName = '') {
             activeLevel = level;
             if (currentGeoLayer) { map.removeLayer(currentGeoLayer); currentGeoLayer = null; }
@@ -167,7 +168,6 @@
             if (level === 'world') {
                 rpcName = 'get_countries_geojson';
                 styleOpts = { color: '#475569', weight: 1, fillOpacity: 0.08 };
-                targetDropdownId = 'selCountry';
             } else if (level === 'country') {
                 rpcName = 'get_states_for_country';
                 rpcParams = { p_country: parentName };
@@ -185,7 +185,6 @@
                 targetDropdownId = 'selTaluk';
             }
 
-            // Fallback for Ward level logic
             if (level === 'taluk') {
                 renderWardFallbacks();
                 populateWardDropdown(parentName);
@@ -200,7 +199,6 @@
                 return;
             }
 
-            // DYNAMIC DROPDOWN POPULATION: Loads exactly what PostGIS returns
             let layerNames = [];
             let featureGroup = L.featureGroup();
 
@@ -213,12 +211,7 @@
                     
                     layerNames.push(displayName);
 
-                    layer.bindTooltip(displayName, {
-                        permanent: true,
-                        direction: 'center',
-                        className: 'permanent-label'
-                    });
-
+                    layer.bindTooltip(displayName, { permanent: true, direction: 'center', className: 'permanent-label' });
                     layer.on('click', () => { handleMapPolygonClick(level, displayName); });
                     featureGroup.addLayer(layer);
                 } catch(e) {}
@@ -237,11 +230,8 @@
 
             map.invalidateSize(true);
             if (featureGroup.getLayers().length > 0) {
-                setTimeout(() => {
-                    map.fitBounds(featureGroup.getBounds(), { padding: [15, 15], maxZoom: level === 'world' ? 3 : 13 });
-                }, 100);
+                setTimeout(() => { map.fitBounds(featureGroup.getBounds(), { padding: [15, 15], maxZoom: level === 'world' ? 3 : 13 }); }, 100);
             }
-
             updateParentStatus(`<span style="color:#34d399; font-weight:bold;">● ${level.toUpperCase()} Active</span>`);
         }
 
@@ -268,18 +258,12 @@
                 latlngs.push([lat, lng]);
 
                 const circle = L.circleMarker([lat, lng], { radius: 6, fillColor: '#0284c7', color: '#ffffff', weight: 1.5, opacity: 1, fillOpacity: 0.85 }).addTo(map);
-
-                circle.bindTooltip(`W-${item.territory_no}`, {
-                    permanent: true, direction: 'center', className: 'permanent-label'
-                });
-
+                circle.bindTooltip(`W-${item.territory_no}`, { permanent: true, direction: 'center', className: 'permanent-label' });
                 circle.on('click', () => { isolateTerritory(item); });
                 markers.push(circle);
             });
 
-            if (latlngs.length > 0) {
-                map.flyToBounds(L.latLngBounds(latlngs), { padding: [30, 30], maxZoom: 14 });
-            }
+            if (latlngs.length > 0) { map.flyToBounds(L.latLngBounds(latlngs), { padding: [30, 30], maxZoom: 14 }); }
         }
 
         async function fetchRelationalData() {
@@ -392,6 +376,21 @@
         function renderTable(data) {
             const tbody = document.getElementById('territoryTbody');
             tbody.innerHTML = '';
+            
+            // THE EMPTY STATE FIX: Displays the exact "Yet to be Launched" message you requested if no business data exists
+            if (data.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="p-8 text-center bg-slate-50/50">
+                            <div class="text-3xl mb-3">🚀</div>
+                            <div class="font-bold text-[12px] uppercase tracking-widest text-slate-500 mb-1">Yet to be Launched</div>
+                            <div class="text-[10px] text-slate-400">Territory operations for this specific region are currently in the pipeline.</div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
             data.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 transition";
@@ -414,9 +413,7 @@
 
         function isolateTerritory(item, trElement = null) {
             const selWard = document.getElementById('selWard');
-            if (selWard && selWard.value !== item.territory_name) {
-                selWard.value = item.territory_name;
-            }
+            if (selWard && selWard.value !== item.territory_name) { selWard.value = item.territory_name; }
 
             document.querySelectorAll('#territoryTbody tr').forEach(r => r.classList.remove('row-active'));
             if (trElement) { trElement.classList.add('row-active'); }
