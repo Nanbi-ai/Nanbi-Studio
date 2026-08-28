@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Atlas Module</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <link rel="stylesheet" href="[https://unpkg.com/leaflet@1.9.4/dist/leaflet.css](https://unpkg.com/leaflet@1.9.4/dist/leaflet.css)" />
+    <script src="[https://unpkg.com/leaflet@1.9.4/dist/leaflet.js](https://unpkg.com/leaflet@1.9.4/dist/leaflet.js)"></script>
+    <link href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css)" rel="stylesheet">
     <style>
         .table-container { overflow-y: auto; max-height: 52vh; }
         th { position: sticky; top: 0; background-color: #f8fafc; color: #334155; z-index: 10; text-align: center; border-bottom: 2px solid #e2e8f0; font-weight: 700; }
@@ -20,7 +20,7 @@
         @media (min-width: 1024px) { #map-wrapper { min-height: 420px; } }
         #map { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 0.25rem; z-index: 1; }
         
-        /* Dark Navy Hover Stroke Fix */
+        /* The Dark Navy Hover Fix */
         path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s, stroke 0.2s; outline: none; }
         path.leaflet-interactive:hover { fill-opacity: 0.8 !important; stroke-width: 2.5px !important; stroke: #1E293B !important; cursor: pointer; }
         
@@ -28,7 +28,6 @@
         .map-nav-btn:hover:not(:disabled) { color: #D35400; }
         .map-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
         
-        /* 9.5px Non-Bold Labels */
         .id-label {
             background: transparent !important;
             border: none !important;
@@ -50,7 +49,7 @@
         
         <!-- LEFT COLUMN: MAP (TOP) & DROPDOWNS (BOTTOM) -->
         <aside class="w-full lg:w-[38%] flex flex-col gap-3 shrink-0">
-            <div class="flex-1 bg-white p-1.5 rounded border border-slate-200 flex flex-col relative overflow-hidden shadow-sm h-64 lg:h-auto">
+            <div class="flex-1 bg-white p-1.5 rounded border border-slate-200 flex flex-col relative overflow-hidden shadow-sm h-64 lg:h-auto min-h-[300px]">
                 <div id="map-wrapper" class="rounded overflow-hidden border border-slate-200 bg-[#e2f0f5]">
                     <div id="map"></div>
                 </div>
@@ -118,11 +117,11 @@
     </main>
 
     <script type="module">
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+        import { createClient } from '[https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm](https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm)';
 
         function updateParentStatus(html) { try { const parentStatus = window.parent.document.getElementById('tm-status'); if(parentStatus) parentStatus.innerHTML = html; } catch(e) { } }
 
-        const SUPABASE_URL = "https://yeoracoxyjzgpsyxgwri.supabase.co";
+        const SUPABASE_URL = "[https://yeoracoxyjzgpsyxgwri.supabase.co](https://yeoracoxyjzgpsyxgwri.supabase.co)";
         // --- PASTE YOUR SUPABASE ANON KEY HERE ---
         const SUPABASE_ANON_KEY = "PASTE_YOUR_COPIED_ANON_KEY_HERE";
         window.nanbiDB = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -248,7 +247,7 @@
                     layer.on('mouseover', function(e) {
                         e.target.bringToFront(); 
                         if (this.getTooltip()) {
-                            this.getTooltip().setContent('<span style="color:#D35400; font-size:11px; font-weight:800;">' + displayName + '</span>');
+                            this.getTooltip().setContent('<span style="color:#1E293B; font-size:11px; font-weight:800;">' + displayName + '</span>');
                         }
                     });
                     layer.on('mouseout', function() {
@@ -372,7 +371,7 @@
                 
                 circle.on('mouseover', (e) => {
                     e.target.bringToFront();
-                    if (circle.getTooltip()) { circle.getTooltip().setContent('<span style="color:#D35400; font-size:11px; font-weight:800;">' + item.territory_name + '</span>'); }
+                    if (circle.getTooltip()) { circle.getTooltip().setContent('<span style="color:#1E293B; font-size:11px; font-weight:800;">' + item.territory_name + '</span>'); }
                 });
                 circle.on('mouseout', () => { 
                     if (circle.getTooltip()) { circle.getTooltip().setContent('W-' + item.territory_no); }
