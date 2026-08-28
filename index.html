@@ -9,6 +9,26 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 <meta name="theme-color" content="#2C4653">
+
+<!-- FALLBACK UI CONFIGURATION (Overwritten instantly by your GitHub JSON) -->
+<script>
+  window.NANBI_CONFIG = {
+    "theme": { "mode": "light", "primary_color": "#D35400", "header_navy": "#1E293B" },
+    "navigation": {
+      "home": { "title": "Home", "icon": "fa-home" },
+      "orchestrator": { "title": "Orchestrator", "icon": "fa-network-wired" },
+      "registers": { "title": "Registers", "icon": "fa-book-open" },
+      "library": { "title": "Library", "icon": "fa-folder-open" },
+      "queue": { "title": "Task Queue", "icon": "fa-tasks" },
+      "atlas": { "title": "Atlas", "icon": "fa-map-marked-alt" }
+    },
+    "modules": {
+      "atlas": { "macro_label": "Regions", "micro_label": "Territories", "node_label": "Wards", "empty_state": "Territory operations for this region are currently pre-launch." },
+      "orchestrator": { "header": "Multi-Model Orchestrator", "description": "Deploy prompts across Claude, Gemini, and DeepSeek simultaneously. All outputs are version-controlled and preserved verbatim." }
+    }
+  };
+</script>
+
 <style>
 :root{
   --navy:#1E293B; --teal:#527C79; --coral:#D35400; --bg:#F8FAFC; --card:#FFFFFF;
@@ -100,8 +120,10 @@ nav.bottom a{flex:1;text-align:center;padding:8px 1px 6px;font-size:10.5px;color
 nav.bottom a .av{width:20px;height:20px;border-radius:50%;background:var(--teal);color:#fff;
   display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
   flex:none;line-height:1}
-nav.bottom a .ic{font-size:19px;line-height:1;width:22px;text-align:center;flex:none;
-  display:inline-flex;align-items:center;justify-content:center}
+
+/* Strict Square Icons fix */
+nav.bottom a .ic{font-size:19px;width:26px;height:26px;flex-shrink:0;text-align:center;
+  display:inline-flex;align-items:center;justify-content:center;border-radius:4px;}
 
 nav.bottom a.active{color:var(--coral) !important;font-weight:700;background:rgba(211,84,0,0.08) !important;}
 nav.bottom a.active .ic{color:var(--coral) !important;}
@@ -130,8 +152,8 @@ footer.diag{max-width:980px;margin:20px auto 8px;padding:0 16px;font-size:11.5px
   nav.bottom a{flex:0 0 auto;flex-direction:row;gap:12px;align-items:center;
     padding:11px 18px;margin:0 8px;border-radius:8px;font-size:14.5px;text-align:left; white-space:nowrap;}
   nav.bottom a:hover{background:rgba(82,124,121,.10)}
-  nav.bottom a.foot{margin-top:auto;border-top:1px solid var(--border);
-    border-radius:0;margin-left:0;margin-right:0;padding-top:14px}
+  nav.bottom a.foot{margin-top:auto !important;border-top:1px solid var(--border);
+    border-radius:0;margin-left:0;margin-right:0;padding-top:14px; margin-bottom:12px;}
   nav.bottom a.foot:hover{background:rgba(82,124,121,.08)}
   header.app .brandbox{width:var(--rail);box-sizing:border-box}
   main{margin-left:var(--rail);max-width:1080px; width:calc(100% - var(--rail));}
@@ -140,7 +162,6 @@ footer.diag{max-width:980px;margin:20px auto 8px;padding:0 16px;font-size:11.5px
   body.sidebar-collapsed nav.bottom { width: var(--rail-collapsed); overflow: hidden; }
   body.sidebar-collapsed nav.bottom a { font-size: 0; justify-content: center; padding: 11px 0; margin: 0 8px; }
   body.sidebar-collapsed nav.bottom a .ic { font-size: 19px; margin: 0; }
-  body.sidebar-collapsed nav.bottom a.foot { margin-top: auto !important; margin-bottom: 12px; }
   body.sidebar-collapsed header.app .brandbox { width: var(--rail-collapsed); padding: 0 10px; justify-content: flex-start; gap: 6px; overflow: hidden; }
   body.sidebar-collapsed header.app .brandbox h1 { display: none; }
   body.sidebar-collapsed main, body.sidebar-collapsed footer.diag { margin-left: var(--rail-collapsed); max-width: none; width: auto; }
@@ -194,8 +215,9 @@ header.app button,header.app .conn{-webkit-app-region:no-drag;app-region:no-drag
 <body>
 <header class="app">
   <span class="brandbox">
-    <button class="sidebar-toggle" onclick="document.body.classList.toggle('sidebar-collapsed')" title="Toggle Sidebar"><i class="fas fa-bars"></i></button>
-    <img src="data:image/png;base64,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" style="height:28px;width:auto;flex:none" alt=""><h1 class="link-text">Nanbi Studio</h1>
+    <button onclick="document.body.classList.toggle('sidebar-collapsed')" style="background:transparent; border:none; color:white; cursor:pointer; font-size:18px; margin-right:8px; padding:4px;" title="Toggle Sidebar"><i class="fas fa-bars"></i></button>
+    <img src="data:image/png;base64,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" style="height:28px;width:auto;flex:none" alt="">
+    <h1 class="link-text">Nanbi Studio</h1>
   </span>
   <span class="navbtns"><button onclick="history.back()" title="Back" aria-label="Back">&#8592;</button><button onclick="history.forward()" title="Forward" aria-label="Forward">&#8594;</button></span>
   <span class="spacer"></span><span class="conn" id="conn">offline</span>
@@ -203,13 +225,13 @@ header.app button,header.app .conn{-webkit-app-region:no-drag;app-region:no-drag
 <div id="updatebar" hidden>A newer version is ready
   <button onclick="location.reload()">Reload</button></div>
 <nav class="bottom" id="nav" hidden>
-  <a href="#/" title="Home"><span class="ic"><i class="fas fa-home"></i></span><span class="link-text">Home</span></a>
-  <a href="#/studio" title="Orchestrator"><span class="ic"><i class="fas fa-network-wired"></i></span><span class="link-text">Orchestrator</span></a>
-  <a href="#/registers" title="Registers"><span class="ic"><i class="fas fa-book-open"></i></span><span class="link-text">Registers</span></a>
-  <a href="#/library" title="Library"><span class="ic"><i class="fas fa-folder-open"></i></span><span class="link-text">Library</span></a>
-  <a href="#/queue" title="Task Queue"><span class="ic"><i class="fas fa-tasks"></i></span><span class="link-text">Task Queue</span></a>
-  <a href="#/territories" id="matrixLink" title="Atlas" onclick="event.preventDefault(); loadMatrix();"><span class="ic"><i class="fas fa-map-marked-alt"></i></span><span class="link-text">Atlas</span></a>
-  <a href="#/settings" class="foot" title="Account Settings"><span class="av" id="avatar">R</span><span class="link-text" id="whoami">Account</span></a>
+  <a href="#/" title="Home" id="nav-home"><span class="ic"><i class="fas fa-home"></i></span><span class="link-text">Home</span></a>
+  <a href="#/studio" title="Orchestrator" id="nav-studio"><span class="ic"><i class="fas fa-network-wired"></i></span><span class="link-text">Orchestrator</span></a>
+  <a href="#/registers" title="Registers" id="nav-registers"><span class="ic"><i class="fas fa-book-open"></i></span><span class="link-text">Registers</span></a>
+  <a href="#/library" title="Library" id="nav-library"><span class="ic"><i class="fas fa-folder-open"></i></span><span class="link-text">Library</span></a>
+  <a href="#/queue" title="Task Queue" id="nav-queue"><span class="ic"><i class="fas fa-tasks"></i></span><span class="link-text">Task Queue</span></a>
+  <a href="#/territories" id="matrixLink" title="Atlas"><span class="ic"><i class="fas fa-map-marked-alt"></i></span><span class="link-text">Atlas</span></a>
+  <a href="#/settings" class="foot" title="Account Settings" id="nav-settings"><span class="av" id="avatar">R</span><span class="link-text" id="whoami">Account</span></a>
 </nav>
 <main id="main"><div class="card"><span class="spin"></span> Starting…</div></main>
 <footer class="diag" id="diag"></footer>
@@ -429,9 +451,11 @@ function boot(){
         '<button onclick="authScreen()">Change token</button></div>');
   });
 }
+
 function loadAll(){
   S.parseNotes=[];
   var reads = {
+    uiLabels:"config/ui/global_labels.json",
     cfg:"webapp/config/app.json", theme:"webapp/config/theme.json",
     statuses:"webapp/config/statuses.json", models:"webapp/config/models.json",
     draft:"wiki/core-rules/CONSTITUTION-DRAFT.md",
@@ -453,7 +477,8 @@ function loadAll(){
     rs.forEach(function(r){
       if (!r.f) return;
       try{
-        if (r.k==="cfg"||r.k==="theme"||r.k==="statuses"||r.k==="models"||r.k==="decisions"||r.k==="routing"||r.k==="split")
+        if (r.k==="uiLabels"){ window.NANBI_CONFIG=JSON.parse(r.f.text); }
+        else if (r.k==="cfg"||r.k==="theme"||r.k==="statuses"||r.k==="models"||r.k==="decisions"||r.k==="routing"||r.k==="split")
           S[r.k]=JSON.parse(r.f.text);
         else if (r.k==="draft"){ S.draft=parseDraft(r.f.text); S.parseNotes.push.apply(S.parseNotes,S.draft.notes); }
         else if (r.k==="approved") S.approved=parseApproved(r.f.text);
@@ -464,9 +489,33 @@ function loadAll(){
         else if (r.k==="vgCheckpoints") S.vgCheckpoints=parseJsonl(r.f.text,"vg_checkpoints");
       }catch(e){ S.parseNotes.push(r.k+" — parse failed: "+e.message); }
     });
-    applyTheme(); diag();
+    applyLabels(); applyTheme(); diag();
   });
 }
+
+function applyLabels() {
+    var c = window.NANBI_CONFIG;
+    if (!c || !c.navigation) return;
+    var nav = c.navigation;
+    var updateNav = function(id, data) {
+        var el = document.getElementById('nav-' + id) || (id==='atlas' ? document.getElementById('matrixLink') : null);
+        if(el && data) {
+            el.title = data.title || el.title;
+            var ic = el.querySelector('.ic i');
+            if(ic && data.icon) ic.className = 'fas ' + data.icon;
+            var txt = el.querySelector('.link-text');
+            if(txt && data.title) txt.innerText = data.title;
+        }
+    };
+    updateNav('home', nav.home);
+    updateNav('studio', nav.orchestrator);
+    updateNav('registers', nav.registers);
+    updateNav('library', nav.library);
+    updateNav('queue', nav.queue);
+    updateNav('atlas', nav.atlas);
+    route(); // Refresh breadcrumbs based on new config
+}
+
 function applyTheme(){
   var t=S.theme; if(!t) return;
   var r=document.documentElement.style;
@@ -547,7 +596,7 @@ function diag(){
 function authScreen(msg){
   document.getElementById("nav").hidden=true; setConn("offline"); setCrumb("");
   render(
-  '<div class="card"><h2>Connect to the SSOT</h2>'+
+  '<div class="card"><h2 style="margin-top:0;">Connect to the SSOT</h2>'+
   (msg?'<div class="err">'+esc(msg)+'</div>':"")+
   '<p class="small">One-time on this device. The token stays in this browser only, is sent only to '+
   'api.github.com, and is never written into any file. Revoke it any time from GitHub → Settings → '+
@@ -597,7 +646,7 @@ function route(){
   if ((m=h.match(/^#\/library(?:\?q=([^&]*))?$/))) return vLibrary(m[1]?decodeURIComponent(m[1]):"");
   if ((m=h.match(/^#\/doc\/(.+)$/))) return vDoc(decodeURIComponent(m[1]));
   if ((m=h.match(/^#\/code\/(.+)$/))) return vCode(decodeURIComponent(m[1]));
-  if (h==="#/queue") return vStub("Task Queue","");
+  if (h==="#/queue") return vStub(window.NANBI_CONFIG?.navigation?.queue?.title || "Task Queue","");
   if (h==="#/studio") return vStudio();
   if ((m=h.match(/^#\/studio\/run\/(.+)$/))) return vResults(decodeURIComponent(m[1]));
   if (h==="#/territories") return loadMatrix();
@@ -606,11 +655,11 @@ function route(){
 }
 
 function vHome(){
-  setCrumb("Home","");
+  setCrumb(window.NANBI_CONFIG?.navigation?.home?.title || "Home","");
   var ruled=ruledKeys(), ruledN=Object.keys(ruled).length;
   var exp=(S.cfg&&S.cfg.expected)||{elements:S.draft?S.draft.total:0,nn:71,wp:48};
   var conN=(S.approved||[]).length, nnN=(S.nnApproved||[]).length;
-  var h='<div class="card"><h2>Where things stand</h2><div class="kpis">'+
+  var h='<div class="card"><h2 style="margin-top:0; margin-bottom:12px;">Where things stand right now</h2><div class="kpis">'+
     '<div class="kpi"><div class="n">'+(conN+nnN)+'</div><div class="k">Ratified</div></div>'+
     '<div class="kpi"><div class="n">'+(S.draft?S.draft.total:"—")+'</div><div class="k">Elements drafted</div></div>'+
     '<div class="kpi"><div class="n">'+(S.register?S.register.nn.length:"—")+'</div><div class="k">Non-negotiables</div></div>'+
@@ -841,12 +890,12 @@ function appendLedger(rec){
   return attempt(0);
 }
 function vRegisters(which,q){
-  setCrumb("Registers","");
+  setCrumb(window.NANBI_CONFIG?.navigation?.registers?.title || "Registers","");
   q=q||"";
   if(!S.register) return render('<div class="card"><div class="err">REGISTER.md could not be loaded — see Settings.</div></div>');
   var vgN=(S.vgCheckpoints||[]).length;
   var conN=S.draft?S.draft.total:0;
-  var h='<div class="card"><h2>Master Register — every governed class, live</h2>'+
+  var h='<div class="card"><h2 style="margin-top:0;">Master Register</h2><p class="small" style="margin-top:-4px; margin-bottom:16px;">Every governed class, live — Constitution, Non-negotiables, Working Protocols, and the Validation Gateway.</p>'+
     '<div class="tabs">'+
     '<button class="'+(which==="const"?"primary":"")+'" onclick="location.hash=\'#/registers/const\'">Constitution ('+conN+')</button>'+
     '<button class="'+(which==="nn"?"primary":"")+'" onclick="location.hash=\'#/registers/nn\'">Non-negotiables ('+S.register.nn.length+')</button>'+
@@ -974,8 +1023,28 @@ function regTable(which,q){
 
 function vStub(title,body){
   setCrumb(title, "");
-  render('<div class="card"><h2>'+esc(title)+'</h2><div class="empty">'+esc(body)+'</div></div>');
+  render('<div class="card"><h2 style="margin-top:0;">'+esc(title)+'</h2>'+
+    (body ? '<p class="small" style="margin-top:-4px; margin-bottom:12px;">'+esc(body)+'</p>' : '')+'</div>');
 }
+
+window.saveConfig = function() {
+    var btn = document.getElementById("btn-save-config");
+    var status = document.getElementById("config-status");
+    var val = document.getElementById("config-editor").value;
+    try { JSON.parse(val); } catch(e) { status.innerHTML = '<div class="err">Invalid JSON: ' + esc(e.message) + '</div>'; return; }
+    btn.disabled = true;
+    status.innerHTML = '<p class="small"><span class="spin"></span> Committing to repository...</p>';
+    putFile("config/ui/global_labels.json", val, "Update global_labels.json via Studio PMS")
+    .then(function(){
+        status.innerHTML = '<p class="small" style="color:var(--ok)">✅ Saved successfully! Reloading data...</p>';
+        return loadAll();
+    })
+    .then(function(){ route(); })
+    .catch(function(e){
+        btn.disabled = false;
+        status.innerHTML = '<div class="err">' + esc(e.message) + '</div>';
+    });
+};
 
 function putFile(path, content, message){
   var why = guardWrite(content);
@@ -1029,7 +1098,7 @@ function mdBlocks(text){
 }
 var STUDIO = { running:null };
 function vStudio(){
-  setCrumb("Orchestrator","");
+  setCrumb(window.NANBI_CONFIG?.navigation?.orchestrator?.title || "Orchestrator","");
   var roles = {};
   try { roles = S.routing ? S.routing.roles : {}; } catch(e){}
   var roleOpts = Object.keys(roles).map(function(k){
@@ -1038,10 +1107,12 @@ function vStudio(){
   var finals = (S.models && S.models.finals || []).map(function(f){
     return '<option value="'+esc(f)+'">'+esc(f)+'</option>';
   }).join("");
-  var h = '<div class="card"><h2>Multi-Model Orchestration</h2>'+
-    '<p class="small">Your prompt is filed in the repository, every model is fed the SSOT first, and every '+
-    'answer lands in <code>raw/model-runs/</code> with the prompt’s SHA-256 — traceable forever. '+
-    'Answers are never merged; disagreement is carried, not smoothed.</p>'+
+  
+  var hdr = window.NANBI_CONFIG?.modules?.orchestrator?.header || "Multi-Model Orchestration";
+  var dsc = window.NANBI_CONFIG?.modules?.orchestrator?.description || "Deploy prompts across Claude, Gemini, and DeepSeek simultaneously. All outputs are version-controlled and preserved verbatim.";
+  
+  var h = '<div class="card"><h2 style="margin-top:0;">'+esc(hdr)+'</h2>'+
+    '<p class="small" style="margin-top:-4px; margin-bottom:16px;">'+esc(dsc)+'</p>'+
     '<label>Title (becomes the prompt id)</label><input id="st-title" placeholder="e.g. Challenge the EWS free-access wording">'+
     '<label>The prompt</label><textarea id="st-body" rows="7" placeholder="Ask exactly what you want ruled, challenged or researched…"></textarea>'+
     '<label>Mode</label>'+
@@ -1262,8 +1333,8 @@ function loadGraph(){
   });
 }
 function vLibrary(q){
-  setCrumb("Library","");
-  render('<div class="card"><span class="spin"></span> Reading the repository…</div>');
+  setCrumb(window.NANBI_CONFIG?.navigation?.library?.title || "Library","");
+  render('<div class="card"><h2 style="margin-top:0;">SSOT Library</h2><p class="small" style="margin-top:-4px; margin-bottom:16px;">Every page in the repository. Nothing is reachable only by the agents; human operators have full visibility.</p><span class="spin"></span> Reading the repository…</div>');
   loadGraph().then(function(g){
     if(g._err) return render('<div class="card"><div class="err">linkgraph.json could not be read — '+
       esc(g._err)+'. It is built by .github/scripts/build_linkgraph.py.</div></div>');
@@ -1277,7 +1348,7 @@ function vLibrary(q){
     g.edges.forEach(function(e){ if(e.kind==="link") inbound[e.to]=(inbound[e.to]||0)+1; });
     var dirs={};
     hits.forEach(function(n){ (dirs[n.dir]=dirs[n.dir]||[]).push(n); });
-    var h='<div class="card"><div class="kpis">'+
+    var h='<div class="card"><h2 style="margin-top:0;">SSOT Library</h2><p class="small" style="margin-top:-4px; margin-bottom:16px;">Every page in the repository. Nothing is reachable only by the agents; human operators have full visibility.</p><div class="kpis">'+
       '<div class="kpi"><div class="n">'+(c.nodes||0)+'</div><div class="k">Documents</div></div>'+
       '<div class="kpi"><div class="n">'+(c.edges||0)+'</div><div class="k">Links</div></div>'+
       '<div class="kpi"><div class="n">'+(c.codes||0)+'</div><div class="k">Rule codes</div></div>'+
@@ -1379,6 +1450,14 @@ function vSettings(){
     '<p class="small">API calls remaining this hour: '+(S.rate||"—")+'</p>'+
     '<div class="row"><button onclick="forget()">Forget this device</button>'+
     '<button onclick="loadAll().then(route)">Reload data</button></div></div>';
+    
+  var configStr = window.NANBI_CONFIG ? JSON.stringify(window.NANBI_CONFIG, null, 2) : "{\n  // Config loading...\n}";
+  h+='<div class="card"><h2 style="margin-top:0;">Studio Configuration (ui_config.json)</h2>'+
+     '<p class="small" style="margin-top:-4px; margin-bottom:12px;">Edit the Global UI Configuration directly. Changes are committed to your SSOT.</p>'+
+     '<textarea id="config-editor" rows="15" style="font-family:monospace; font-size:12px; background:#f1f5f9;">'+esc(configStr)+'</textarea>'+
+     '<div class="row" style="margin-top:8px;"><button class="primary" onclick="saveConfig()" id="btn-save-config">Save to GitHub</button></div>'+
+     '<div id="config-status" style="margin-top:8px;"></div></div>';
+
   h+='<div class="card"><h2>Parser diagnostics</h2>';
   if (S.parseNotes.length){
     h+='<p class="small">Anything the parsers could not read is listed here rather than silently dropped:</p>';
@@ -1423,7 +1502,7 @@ if (window.matchMedia("(display-mode: standalone)").matches ||
 </script>
 <script>
     function loadMatrix() {
-        setCrumb("Atlas", "");
+        setCrumb(window.NANBI_CONFIG?.navigation?.atlas?.title || "Atlas", "");
         document.querySelectorAll('nav.bottom a').forEach(function(a) { a.classList.remove('active'); });
         var activeLink = document.getElementById('matrixLink');
         if(activeLink) activeLink.classList.add('active');
@@ -1439,7 +1518,7 @@ if (window.matchMedia("(display-mode: standalone)").matches ||
             else header.appendChild(tmStatus);
         }
         tmStatus.style.display = 'flex';
-        tmStatus.innerHTML = 'Booting Matrix...';
+        tmStatus.innerHTML = 'Booting Map Engine...';
 
         var mainView = document.getElementById('main');
         mainView.innerHTML = '<iframe src="Territory-Matrix.html" style="width: 100%; height: 100%; min-height: 86vh; border: none; background: transparent;"></iframe>';
