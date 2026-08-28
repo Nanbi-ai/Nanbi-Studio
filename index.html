@@ -735,7 +735,7 @@ function route(){
 
 /* ================= views ================= */
 function vHome(){
-  setCrumb("Home","where things stand right now");
+  setCrumb("Home","");
   var ruled=ruledKeys(), ruledN=Object.keys(ruled).length;
   var exp=(S.cfg&&S.cfg.expected)||{elements:S.draft?S.draft.total:0,nn:71,wp:48};
   var conN=(S.approved||[]).length, nnN=(S.nnApproved||[]).length;
@@ -970,7 +970,7 @@ function appendLedger(rec){
   return attempt(0);
 }
 function vRegisters(which,q){
-  setCrumb("Registers","Constitution · NNs · WPs · Validation Gateway");
+  setCrumb("Registers","");
   q=q||"";
   if(!S.register) return render('<div class="card"><div class="err">REGISTER.md could not be loaded — see Settings.</div></div>');
   var vgN=(S.vgCheckpoints||[]).length;
@@ -1102,7 +1102,7 @@ function regTable(which,q){
 }
 
 function vStub(title,body){
-  setCrumb(title);
+  setCrumb(title,"");
   render('<div class="card"><h2>'+esc(title)+'</h2><div class="empty">'+esc(body)+'</div></div>');
 }
 
@@ -1158,7 +1158,7 @@ function mdBlocks(text){
 }
 var STUDIO = { running:null };
 function vStudio(){
-  setCrumb("Studio","ask every model — free-standing");
+  setCrumb("Orchestrator","");
   var roles = {};
   try { roles = S.routing ? S.routing.roles : {}; } catch(e){}
   var roleOpts = Object.keys(roles).map(function(k){
@@ -1167,7 +1167,7 @@ function vStudio(){
   var finals = (S.models && S.models.finals || []).map(function(f){
     return '<option value="'+esc(f)+'">'+esc(f)+'</option>';
   }).join("");
-  var h = '<div class="card"><h2>Ask the models</h2>'+
+  var h = '<div class="card"><h2>Multi-Model Orchestration</h2>'+
     '<p class="small">Your prompt is filed in the repository, every model is fed the SSOT first, and every '+
     'answer lands in <code>raw/model-runs/</code> with the prompt’s SHA-256 — traceable forever. '+
     'Answers are never merged; disagreement is carried, not smoothed.</p>'+
@@ -1391,7 +1391,7 @@ function loadGraph(){
   });
 }
 function vLibrary(q){
-  setCrumb("Library","every page in the SSOT — nothing reachable only by Claude");
+  setCrumb("Library","");
   render('<div class="card"><span class="spin"></span> Reading the repository…</div>');
   loadGraph().then(function(g){
     if(g._err) return render('<div class="card"><div class="err">linkgraph.json could not be read — '+
@@ -1556,7 +1556,7 @@ if (window.matchMedia("(display-mode: standalone)").matches ||
 </script>
 <script>
     function loadMatrix() {
-        setCrumb("Territories", "Matrix Overview");
+        setCrumb("Territories", "");
         var header = document.querySelector('header.app');
         var tmStatus = document.getElementById('tm-status');
         if(!tmStatus) {
