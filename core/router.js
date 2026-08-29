@@ -3,62 +3,68 @@
 // =======================================================================
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inllb3JhY294eWp6Z3BzeXhnd3JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3MzgzNzUsImV4cCI6MjEwMzMxNDM3NX0.rNcvhRCw4KyfNpsWH6IYxlQT07zJ7i68Zg5jnpqj9yc";
 
-// 1. Define the Global UI Shell
+// 1. Define the Global UI Shell (Fully driven by JSON Variables)
 const UI_SHELL = `
   <style>
+    /* Universal fluid resets */
     html, body { background:var(--bg); color:var(--text); font-size:var(--font-base); font-family:system-ui,-apple-system,sans-serif; height: 100vh; margin: 0; overflow: hidden; display: flex; flex-direction: column; transition: background 0.3s, color 0.3s; }
     
     .surface-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; transition: background 0.3s, border-color 0.3s; }
-    
-    /* Highlight Card using Light Orange for alerts/locked states */
-    .alert-card { background: var(--coral-light); border: 1px solid var(--coral); border-radius: 8px; transition: background 0.3s, border-color 0.3s; }
-    
     .text-main { color: var(--text); }
     .text-sub { color: var(--muted); }
     
-    header.app { background:var(--navy); color:#fff; height:var(--bar); display:flex; align-items:center; padding:0 16px; flex-shrink: 0; z-index: 50; transition: background 0.3s; }
-    header.app .brandbox { display:flex; align-items:center; gap:12px; width:200px; }
-    header.app .brandbox img { height: 26px; width: auto; }
-    header.app h1 { font-size:1.0625rem; margin:0; font-weight:600; white-space:nowrap; }
+    /* Header Alignment Fixes */
+    header.app { background:var(--header-bg); color:var(--header-text); height:var(--bar); display:flex; align-items:center; padding:0 20px; flex-shrink: 0; z-index: 50; transition: background 0.3s; }
+    header.app .brandbox { display:flex; align-items:center; gap:12px; }
+    header.app .brandbox img { height: 28px; width: auto; }
+    header.app h1 { font-size:1.1rem; margin:0; font-weight:600; white-space:nowrap; line-height: 1; }
     
-    header.app .section-crumb { font-weight:700; font-size:1rem; margin-left: 8px; padding-left: 20px; border-left: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; }
+    /* Perfectly centered divider and section crumb */
+    header.app .section-crumb { font-weight:700; font-size:0.95rem; margin-left: 20px; padding-left: 20px; border-left: 1px solid rgba(255,255,255,0.25); height: 24px; display: flex; align-items: center; color: var(--header-text); opacity: 0.9; }
     header.app .spacer { flex: 1; }
     
-    .avatar-wrapper { position: relative; }
-    .avatar-btn { background: var(--coral); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; margin-left: 12px; }
+    header.app .header-actions { display: flex; gap: 12px; align-items: center; }
     
-    .dropdown-menu { display: none; position: absolute; right: 0; top: 44px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 240px; z-index: 100; flex-direction: column; overflow: hidden; }
+    /* Dropdown Architecture */
+    .avatar-wrapper { position: relative; }
+    .avatar-btn { background: var(--brand-orange-dark); color: #FFF; border: none; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; font-weight: 700; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; margin-left: 12px; transition: transform 0.2s; }
+    .avatar-btn:hover { transform: scale(1.05); }
+    
+    .dropdown-menu { display: none; position: absolute; right: 0; top: 48px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); width: 250px; z-index: 100; flex-direction: column; overflow: hidden; }
     .dropdown-menu.show { display: flex; }
     
     .dropdown-header { padding: 16px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 4px; }
-    .dropdown-header .d-name { font-weight: 700; font-size: 0.9rem; color: var(--text); }
-    .dropdown-header .d-email { font-size: 0.75rem; color: var(--muted); }
+    .dropdown-header .d-name { font-weight: 700; font-size: 0.95rem; color: var(--text); }
+    .dropdown-header .d-email { font-size: 0.8rem; color: var(--muted); }
     
-    /* Dropdown uses Light Teal Green for highlights */
-    .dropdown-item { padding: 10px 16px; font-size: 0.85rem; color: var(--text); text-decoration: none; display: flex; align-items: center; gap: 12px; transition: all 0.2s; cursor: pointer; }
+    /* Dropdown Hover States */
+    .dropdown-item { padding: 12px 16px; font-size: 0.85rem; color: var(--text); text-decoration: none; display: flex; align-items: center; gap: 12px; transition: all 0.2s; cursor: pointer; }
     .dropdown-item i { width: 16px; text-align: center; color: var(--muted); transition: color 0.2s; }
-    .dropdown-item:hover { background: var(--hover-menu); color: var(--teal); }
-    .dropdown-item:hover i { color: var(--teal); }
+    .dropdown-item:hover { background: var(--hover-bg); color: var(--hover-text); }
+    .dropdown-item:hover i { color: var(--hover-text); }
     
     .dropdown-divider { height: 1px; background: var(--border); margin: 4px 0; }
     
     .app-body { display: flex; flex: 1; overflow: hidden; height: calc(100vh - var(--bar)); }
     
-    nav.sidebar { width: 64px; background:var(--card); border-right:1px solid var(--border); display:flex; flex-direction:column; transition: width 0.2s ease, box-shadow 0.2s ease, background 0.3s, border-color 0.3s; overflow-x: hidden; white-space: nowrap; z-index: 40; height: 100%; }
-    nav.sidebar:hover { width: 240px; box-shadow: 4px 0 15px rgba(0,0,0,0.1); }
+    /* Hover Sidebar */
+    nav.sidebar { width: 72px; background:var(--card); border-right:1px solid var(--border); display:flex; flex-direction:column; transition: width 0.2s ease, box-shadow 0.2s ease, background 0.3s, border-color 0.3s; overflow-x: hidden; white-space: nowrap; z-index: 40; height: 100%; padding-top: 8px; }
+    nav.sidebar:hover { width: 250px; box-shadow: 4px 0 20px rgba(0,0,0,0.05); }
     
-    /* Sidebar uses Brick Orange and Light Orange for navigation */
-    nav.sidebar a { display:flex; align-items:center; padding:10px 0; margin: 8px; border-radius:8px; color:var(--muted); text-decoration:none; transition: all 0.2s; }
-    nav.sidebar a .icon-box { width: 48px; display: flex; justify-content: center; align-items: center; font-size: 1.15rem; flex-shrink: 0; transition: color 0.2s; }
-    nav.sidebar a .nav-label { font-size: 0.9rem; opacity: 0; transition: opacity 0.2s ease; pointer-events: none; }
+    /* Sidebar Navigation Links */
+    nav.sidebar a { display:flex; align-items:center; padding:10px 0; margin: 4px 12px; border-radius:8px; color:var(--muted); text-decoration:none; transition: all 0.2s; }
+    nav.sidebar a .icon-box { width: 48px; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; flex-shrink: 0; transition: color 0.2s; }
+    nav.sidebar a .nav-label { font-size: 0.95rem; opacity: 0; transition: opacity 0.2s ease; pointer-events: none; font-weight: 500; }
     nav.sidebar:hover a .nav-label { opacity: 1; transition-delay: 0.1s; }
     
-    nav.sidebar a:hover { background:var(--hover-nav); color: var(--coral); }
-    nav.sidebar a:hover .icon-box { color: var(--coral); }
-    nav.sidebar a.active { color:var(--coral); font-weight:700; background:var(--hover-nav); }
-    nav.sidebar a.active .icon-box { color:var(--coral); }
+    /* Crisp Hover States derived from JSON */
+    nav.sidebar a:hover { background:var(--hover-bg); color: var(--hover-text); }
+    nav.sidebar a:hover .icon-box { color: var(--hover-text); }
+    nav.sidebar a.active { color:var(--brand-orange-dark); font-weight:700; background:var(--hover-bg); }
+    nav.sidebar a.active .icon-box { color:var(--brand-orange-dark); }
     
-    nav.sidebar .bottom-pin { margin-top: auto !important; margin-bottom: 0 !important; border-top: 1px solid var(--border); border-radius: 0; padding: 16px 0; }
+    /* Settings Pinned to Bottom - Fixed Soft Edges */
+    nav.sidebar .bottom-pin { margin-top: auto !important; margin-bottom: 16px !important; }
     
     main { flex: 1; padding: 24px; overflow-y: auto; background: var(--bg); display: flex; flex-direction: column; transition: background 0.3s; }
   </style>
@@ -96,7 +102,7 @@ const UI_SHELL = `
             
             <div class="dropdown-divider"></div>
             
-            <a class="dropdown-item" onclick="closeDropdown()" style="color: #EF4444;"><i class="fas fa-sign-out-alt" style="color: #EF4444;"></i> Disconnect Node</a>
+            <a class="dropdown-item" onclick="closeDropdown()" style="color: var(--brand-orange-dark);"><i class="fas fa-sign-out-alt" style="color: var(--brand-orange-dark);"></i> Disconnect Node</a>
         </div>
       </div>
     </div>
@@ -208,24 +214,24 @@ function router() {
 
     if (hash === "#/") {
         setCrumb("Home");
-        renderView('<div class="surface-card p-5 flex-1 shadow-sm"><h2 class="text-xl font-bold text-main">Home</h2><p class="text-sm mt-2 text-sub">V5.0 Modular Architecture active.</p></div>');
+        renderView('<div class="surface-card p-6 flex-1 shadow-sm"><h2 class="text-2xl font-bold text-main">Home</h2><p class="text-base mt-2 text-sub">V5.0 Modular Architecture active. Layout optimized with pure Nanbi brand colors.</p></div>');
     } 
     else if (hash === "#/config") {
         setCrumb("Global Configuration");
-        renderView('<div class="surface-card p-5 flex-1 shadow-sm"><h2 class="text-xl font-bold text-main">Governance & Config</h2><p class="text-sm mt-2 text-sub">Ready to establish the Multilingual Regional Hierarchy JSON ledger.</p></div>');
+        renderView('<div class="surface-card p-6 flex-1 shadow-sm"><h2 class="text-2xl font-bold text-main">Governance & Config</h2><p class="text-base mt-2 text-sub">Ready to establish the Multilingual Regional Hierarchy JSON ledger.</p></div>');
     }
     else if (hash === "#/regions") {
         setCrumb("Regions");
-        // Using the new alert-card and Light Orange for the locked module view
-        renderView('<div class="alert-card p-5 flex-1 shadow-sm"><h2 class="text-xl font-bold" style="color:var(--coral);"><i class="fas fa-lock mr-2"></i>Module Locked</h2><p class="text-sm mt-2" style="color:var(--coral);">Awaiting Configuration Engine initialization for dynamic taxonomy.</p></div>');
+        // Removed giant background. Applied clean left border using dynamic brand color.
+        renderView('<div class="surface-card p-6 flex-1 shadow-sm" style="border-left: 4px solid var(--brand-orange-light);"><h2 class="text-2xl font-bold" style="color:var(--brand-orange-dark);"><i class="fas fa-lock mr-2"></i>Module Locked</h2><p class="text-base mt-2 text-sub">Awaiting Configuration Engine initialization for dynamic taxonomy.</p></div>');
     }
     else if (hash === "#/settings") {
         setCrumb("Studio Settings");
-        renderView('<div class="surface-card p-5 flex-1 shadow-sm"><h2 class="text-xl font-bold text-main">System Settings</h2><p class="text-sm mt-2 text-sub">Platform-level configurations will be managed here.</p></div>');
+        renderView('<div class="surface-card p-6 flex-1 shadow-sm"><h2 class="text-2xl font-bold text-main">System Settings</h2><p class="text-base mt-2 text-sub">Platform-level configurations will be managed here.</p></div>');
     }
     else if (hash === "#/account") {
         setCrumb("Account Profile");
-        renderView('<div class="surface-card p-5 flex-1 shadow-sm"><h2 class="text-xl font-bold text-main">Data Sovereignty & Access</h2><p class="text-sm mt-2 text-sub">Manage node configurations, local memory sync rules, and cryptographic credentials.</p></div>');
+        renderView('<div class="surface-card p-6 flex-1 shadow-sm"><h2 class="text-2xl font-bold text-main">Data Sovereignty & Access</h2><p class="text-base mt-2 text-sub">Manage node configurations, local memory sync rules, and cryptographic credentials.</p></div>');
     }
 }
 
