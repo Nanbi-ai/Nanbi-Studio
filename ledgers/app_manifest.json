@@ -1,0 +1,12 @@
+{
+  "brand_name": "nanbi",
+  "header_title": "nanbi studio",
+  "nav_home_icon": "fas fa-home",
+  "nav_home_label": "Home",
+  "nav_config_icon": "fas fa-palette",
+  "nav_config_label": "Configuration",
+  "nav_regions_icon": "fas fa-map-marked-alt",
+  "nav_regions_label": "Regions",
+  "nav_settings_icon": "fas fa-cog",
+  "nav_settings_label": "Studio Settings"
+}
