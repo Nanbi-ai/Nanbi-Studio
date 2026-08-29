@@ -5,7 +5,7 @@
       "name": "Light Mode",
       "icon": "fa-sun",
       "variables": {
-        "--navy": "#1E293B",
+        "--navy": "#2C4653", 
         "--teal": "#527C79",
         "--coral": "#D35400",
         "--bg": "#F8FAFC",
@@ -13,7 +13,7 @@
         "--text": "#0F172A",
         "--muted": "#475569",
         "--border": "#CBD5E1",
-        "--hover": "rgba(82,124,121,0.10)",
+        "--hover": "rgba(211,84,0,0.08)",
         "--font-base": "16px",
         "--bar": "56px"
       }
@@ -30,7 +30,7 @@
         "--text": "#F5F5F5",
         "--muted": "#A3A3A3",
         "--border": "#262626",
-        "--hover": "rgba(255,255,255,0.08)",
+        "--hover": "rgba(211,84,0,0.12)",
         "--font-base": "16px",
         "--bar": "56px"
       }
