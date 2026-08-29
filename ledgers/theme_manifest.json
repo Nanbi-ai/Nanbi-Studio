@@ -18,6 +18,8 @@
         "--hover-text": "#D35400",
         "--header-bg": "#FFFFFF",
         "--active-bg": "#EEF2F2",
+        "--font-main": "'Nunito', system-ui, sans-serif",
+        "--font-brand": "'Nunito', system-ui, sans-serif",
         "--font-base": "16px",
         "--bar": "60px"
       }
@@ -39,6 +41,8 @@
         "--hover-text": "#E08A6D",
         "--header-bg": "#121214",
         "--active-bg": "#1A2225",
+        "--font-main": "'Nunito', system-ui, sans-serif",
+        "--font-brand": "'Nunito', system-ui, sans-serif",
         "--font-base": "16px",
         "--bar": "60px"
       }
