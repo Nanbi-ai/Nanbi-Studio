@@ -1,5 +1,5 @@
 // =======================================================================
-// NANBI V5.0 MASTER ROUTER (STRICT HOSTILE AUDIT - ZERO FALLBACKS)
+// NANBI V5.0 MASTER ROUTER (BASELINE LEDGERS & STRICT CLOUD SSOT)
 // =======================================================================
 
 const SUPABASE_URL = "https://yeoracoxyjzgpsyxgwri.supabase.co";
@@ -10,10 +10,38 @@ let themeLedger = null;
 let appLedger = null;
 let themeKeys = [];
 
+// THE ARCHITECTURAL BASELINE: Guarantees zero empty fields globally.
+const BASELINE_APP = {
+    brand_name: "nanbi", header_title: "nanbi studio",
+    nav_home_icon: "fas fa-home", nav_home_label: "Home",
+    nav_config_icon: "fas fa-sliders-h", nav_config_label: "Configuration",
+    nav_regions_icon: "fas fa-map-marked-alt", nav_regions_label: "Regions",
+    nav_settings_icon: "fas fa-cog", nav_settings_label: "Studio Settings",
+    avatar_initial: "N", dropdown_identity: "Sovereign Identity", dropdown_node: "Active Edge Node",
+    menu_sovereignty: "Data Sovereignty", menu_keys: "Cryptographic Keys", menu_tier: "Subscription Tier", menu_disconnect: "Disconnect Node",
+    page_home_title: "Welcome", page_home_subtitle: "Modular Architecture Active.",
+    page_regions_title: "Module Locked", page_regions_subtitle: "Awaiting Taxonomy Payload.",
+    page_settings_title: "System Settings", page_settings_subtitle: "Platform-level configurations.",
+    page_account_title: "Data Sovereignty", page_account_subtitle: "Manage cryptographic credentials.",
+    page_loading_text: "Loading...", page_error_text: "Module Load Failure"
+};
+
+const BASELINE_THEME_VARS = {
+    "--bg": "#F8FAFC", "--card": "#FFFFFF", "--text": "#0F172A", "--muted": "#64748B", "--border": "#E2E8F0",
+    "--brand-teal-dark": "#2C4653", "--brand-teal-light": "#6A8B88", "--brand-orange-dark": "#D35400", "--brand-orange-light": "#E08A6D",
+    "--hover-bg": "rgba(106, 139, 136, 0.15)", "--header-bg": "#FFFFFF", "--active-bg": "#EEF2F2",
+    "--font-base": "16px", "--font-brand": "'Nunito', sans-serif", "--font-main": "'Nunito', sans-serif",
+    "--weight-brand": "800", "--weight-main": "400", "--weight-bold": "700",
+    "--page-title-color": "#0F172A", "--page-subtitle-color": "#64748B",
+    "--page-title-size": "1.875rem", "--page-subtitle-size": "1.125rem", "--spacing-sm": "8px",
+    "--bar": "60px", "--sidebar-width": "72px", "--sidebar-expanded": "250px",
+    "--icon-size": "1.15rem", "--label-size": "0.95rem", "--brand-size": "1.25rem", "--header-title-size": "1.15rem",
+    "--main-padding": "40px", "--card-radius": "8px"
+};
+
 function generateUIShell(appConfig) {
     return `
       <style>
-        /* ZERO HARDCODED FALLBACKS - FAILURE FIRST PROTOCOL ENFORCED */
         html, body { background:var(--bg); color:var(--text); font-size:var(--font-base); font-family:var(--font-main); font-weight:var(--weight-main); height: 100vh; margin: 0; overflow: hidden; display: flex; transition: background 0.3s, color 0.3s; }
         .text-main { color: var(--text); }
         .text-sub { color: var(--muted); }
@@ -68,53 +96,41 @@ function generateUIShell(appConfig) {
         <nav class="sidebar">
           <div class="sidebar-brand">
             <img src="icons/nanbi-monogram.svg" alt="" onerror="this.style.display='none'">
-            <span class="brand-text" id="dom_brand_name">` + (appConfig.brand_name || '') + `</span>
+            <span class="brand-text" id="dom_brand_name">` + appConfig.brand_name + `</span>
           </div>
           <div class="sidebar-links">
-            <a href="#/" id="nav-home">
-                <span class="icon-box"><i class="` + (appConfig.nav_home_icon || '') + `" id="dom_nav_home_icon"></i></span>
-                <span class="nav-label" id="dom_nav_home_label">` + (appConfig.nav_home_label || '') + `</span>
-            </a>
-            <a href="#/config" id="nav-config">
-                <span class="icon-box"><i class="` + (appConfig.nav_config_icon || '') + `" id="dom_nav_config_icon"></i></span>
-                <span class="nav-label" id="dom_nav_config_label">` + (appConfig.nav_config_label || '') + `</span>
-            </a>
-            <a href="#/regions" id="nav-regions">
-                <span class="icon-box"><i class="` + (appConfig.nav_regions_icon || '') + `" id="dom_nav_regions_icon"></i></span>
-                <span class="nav-label" id="dom_nav_regions_label">` + (appConfig.nav_regions_label || '') + `</span>
-            </a>
+            <a href="#/" id="nav-home"><span class="icon-box"><i class="` + appConfig.nav_home_icon + `" id="dom_nav_home_icon"></i></span><span class="nav-label" id="dom_nav_home_label">` + appConfig.nav_home_label + `</span></a>
+            <a href="#/config" id="nav-config"><span class="icon-box"><i class="` + appConfig.nav_config_icon + `" id="dom_nav_config_icon"></i></span><span class="nav-label" id="dom_nav_config_label">` + appConfig.nav_config_label + `</span></a>
+            <a href="#/regions" id="nav-regions"><span class="icon-box"><i class="` + appConfig.nav_regions_icon + `" id="dom_nav_regions_icon"></i></span><span class="nav-label" id="dom_nav_regions_label">` + appConfig.nav_regions_label + `</span></a>
           </div>
           <div class="sidebar-divider"></div>
-          <a href="#/settings" class="bottom-pin" id="nav-settings">
-              <span class="icon-box"><i class="` + (appConfig.nav_settings_icon || '') + `" id="dom_nav_settings_icon"></i></span>
-              <span class="nav-label" id="dom_nav_settings_label">` + (appConfig.nav_settings_label || '') + `</span>
-          </a>
+          <a href="#/settings" class="bottom-pin" id="nav-settings"><span class="icon-box"><i class="` + appConfig.nav_settings_icon + `" id="dom_nav_settings_icon"></i></span><span class="nav-label" id="dom_nav_settings_label">` + appConfig.nav_settings_label + `</span></a>
         </nav>
 
         <div class="main-column">
           <header class="app-header">
             <div class="breadcrumb">
-              <span class="header-brand" id="dom_header_title">` + (appConfig.header_title || '') + `</span>
+              <span class="header-brand" id="dom_header_title">` + appConfig.header_title + `</span>
               <i class="fas fa-chevron-right crumb-separator"></i>
               <span id="global-crumb" class="section-crumb"></span>
             </div>
             <span class="spacer"></span>
             <div class="header-actions">
               <div class="avatar-wrapper">
-                <button class="avatar-btn" id="avatar-toggle" title="Account Menu">` + (appConfig.avatar_initial || '') + `</button>
+                <button class="avatar-btn" id="avatar-toggle" title="Account Menu">` + appConfig.avatar_initial + `</button>
                 <div class="dropdown-menu" id="account-dropdown">
                     <div class="dropdown-header">
-                        <span class="d-name">` + (appConfig.dropdown_identity || '') + `</span>
-                        <span class="d-email">` + (appConfig.dropdown_node || '') + `</span>
+                        <span class="d-name">` + appConfig.dropdown_identity + `</span>
+                        <span class="d-email">` + appConfig.dropdown_node + `</span>
                     </div>
                     <a class="dropdown-item" id="dropdown-theme-toggle" style="cursor: pointer;"><i id="theme-icon" class="fas fa-sun"></i><span id="theme-label">Appearance</span></a>
                     <div class="dropdown-divider"></div>
-                    <a href="#/account" class="dropdown-item"><i class="fas fa-shield-alt"></i> ` + (appConfig.menu_sovereignty || '') + `</a>
-                    <a href="#/account" class="dropdown-item"><i class="fas fa-key"></i> ` + (appConfig.menu_keys || '') + `</a>
+                    <a href="#/account" class="dropdown-item"><i class="fas fa-shield-alt"></i> ` + appConfig.menu_sovereignty + `</a>
+                    <a href="#/account" class="dropdown-item"><i class="fas fa-key"></i> ` + appConfig.menu_keys + `</a>
                     <div class="dropdown-divider"></div>
-                    <a href="#/account" class="dropdown-item"><i class="fas fa-id-badge"></i> ` + (appConfig.menu_tier || '') + `</a>
+                    <a href="#/account" class="dropdown-item"><i class="fas fa-id-badge"></i> ` + appConfig.menu_tier + `</a>
                     <div class="dropdown-divider"></div>
-                    <a class="dropdown-item" style="color: var(--brand-orange-dark); cursor: pointer;"><i class="fas fa-sign-out-alt" style="color: var(--brand-orange-dark);"></i> ` + (appConfig.menu_disconnect || '') + `</a>
+                    <a class="dropdown-item" style="color: var(--brand-orange-dark); cursor: pointer;"><i class="fas fa-sign-out-alt" style="color: var(--brand-orange-dark);"></i> ` + appConfig.menu_disconnect + `</a>
                 </div>
               </div>
             </div>
@@ -134,13 +150,15 @@ async function bootloader() {
         const rawApp = data.find(r => r.ledger_name === 'app_manifest');
 
         themeLedger = rawTheme.payload;
-        const baseAppConfig = rawApp.payload;
+        const fetchedAppConfig = rawApp.payload || {};
 
         localStorage.setItem('nanbi_edge_theme', JSON.stringify(themeLedger));
-        localStorage.setItem('nanbi_edge_app', JSON.stringify(baseAppConfig));
+        localStorage.setItem('nanbi_edge_app', JSON.stringify(fetchedAppConfig));
 
         const userAppConfig = JSON.parse(localStorage.getItem('nanbi_custom_app')) || {};
-        appLedger = Object.assign({}, baseAppConfig, userAppConfig);
+        
+        // BASELINE MERGE: Ensures no missing keys cause empty UI elements globally
+        appLedger = Object.assign({}, BASELINE_APP, fetchedAppConfig, userAppConfig);
 
     } catch (e) {
         console.warn("Cloud connection interrupted. Booting from Edge TEE Cache.", e);
@@ -149,12 +167,11 @@ async function bootloader() {
         
         if (edgeTheme && edgeApp) {
             themeLedger = JSON.parse(edgeTheme);
-            const baseAppConfig = JSON.parse(edgeApp);
             const userAppConfig = JSON.parse(localStorage.getItem('nanbi_custom_app')) || {};
-            appLedger = Object.assign({}, baseAppConfig, userAppConfig);
+            appLedger = Object.assign({}, BASELINE_APP, JSON.parse(edgeApp), userAppConfig);
         } else {
-            themeLedger = { themes: { default: { variables: {} } }, active_default: 'default' };
-            appLedger = {};
+            themeLedger = { themes: { default: { variables: BASELINE_THEME_VARS, icon: 'fa-sun', name: 'Default' } }, active_default: 'default' };
+            appLedger = Object.assign({}, BASELINE_APP);
         }
     }
 
@@ -183,13 +200,14 @@ function applyTheme(themeId) {
     const baseThemeData = themeLedger.themes[themeId];
     const userCustomConfig = JSON.parse(localStorage.getItem('nanbi_custom_theme_' + themeId)) || {};
     
-    for (const [key, value] of Object.entries(baseThemeData.variables)) {
-        root.style.setProperty(key, userCustomConfig[key] || value);
+    for (const [key, value] of Object.entries(BASELINE_THEME_VARS)) {
+        const themeVal = baseThemeData.variables[key];
+        const finalVal = userCustomConfig[key] ?? themeVal ?? value; // Overrides baseline
+        root.style.setProperty(key, finalVal);
     }
     
     const iconEl = document.getElementById('theme-icon');
     const labelEl = document.getElementById('theme-label');
-    
     if(iconEl) iconEl.className = 'fas ' + baseThemeData.icon;
     if(labelEl) labelEl.innerText = 'Theme: ' + baseThemeData.name;
     
@@ -239,34 +257,34 @@ function router() {
         });
 
         if (hash === "#/") {
-            setCrumb(appLedger.nav_home_label || "");
-            renderView('<h2 style="font-size: var(--page-title-size); font-weight: var(--weight-bold); font-family: var(--font-brand); color: var(--page-title-color);">' + (appLedger.page_home_title || '') + '</h2><p style="font-size: var(--page-subtitle-size); margin-top: var(--spacing-sm); color: var(--page-subtitle-color);">' + (appLedger.page_home_subtitle || '') + '</p>');
+            setCrumb(appLedger.nav_home_label);
+            renderView('<h2 style="font-size: var(--page-title-size); font-weight: var(--weight-bold); font-family: var(--font-brand); color: var(--page-title-color);">' + appLedger.page_home_title + '</h2><p style="font-size: var(--page-subtitle-size); margin-top: var(--spacing-sm); color: var(--page-subtitle-color);">' + appLedger.page_home_subtitle + '</p>');
         } 
         else if (hash === "#/config") {
-            setCrumb(appLedger.nav_config_label || "");
-            renderView('<div id="config-hub-container" class="w-full h-full"><p style="font-weight: var(--weight-bold); color: var(--muted);">' + (appLedger.page_loading_text || '') + '</p></div>');
+            setCrumb(appLedger.nav_config_label);
+            renderView('<div id="config-hub-container" class="w-full h-full"><p style="font-weight: var(--weight-bold); color: var(--muted);">' + appLedger.page_loading_text + '</p></div>');
             import('../modules/config_hub.js').then(m => m.initConfigHub('config-hub-container')).catch(e => {
-                document.getElementById('config-hub-container').innerHTML = '<div style="color:red; font-weight:var(--weight-bold);">' + (appLedger.page_error_text || '') + '</div>';
+                document.getElementById('config-hub-container').innerHTML = '<div style="color:red; font-weight:var(--weight-bold);">' + appLedger.page_error_text + '</div>';
             });
         }
         else if (hash === "#/config/presentation") {
             setCrumb("Presentation Engine");
-            renderView('<div id="config-pres-container" class="w-full h-full"><p style="font-weight: var(--weight-bold); color: var(--muted);">' + (appLedger.page_loading_text || '') + '</p></div>');
+            renderView('<div id="config-pres-container" class="w-full h-full"><p style="font-weight: var(--weight-bold); color: var(--muted);">' + appLedger.page_loading_text + '</p></div>');
             import('../modules/config/presentation.js').then(m => m.initPresentationEngine('config-pres-container')).catch(e => {
-                document.getElementById('config-pres-container').innerHTML = '<div style="color:red; font-weight:var(--weight-bold);">' + (appLedger.page_error_text || '') + '</div>';
+                document.getElementById('config-pres-container').innerHTML = '<div style="color:red; font-weight:var(--weight-bold);">' + appLedger.page_error_text + '</div>';
             });
         }
         else if (hash === "#/regions") {
-            setCrumb(appLedger.nav_regions_label || "");
-            renderView('<div style="background: var(--active-bg); border-left: 4px solid var(--brand-orange-dark); padding: var(--main-padding); border-radius: var(--card-radius);"><h2 style="font-size: var(--page-title-size); font-family: var(--font-brand); font-weight: var(--weight-bold); color: var(--brand-orange-dark);"><i class="fas fa-lock" style="margin-right: 12px;"></i>' + (appLedger.page_regions_title || '') + '</h2><p style="font-size: var(--page-subtitle-size); margin-top: var(--spacing-sm); color: var(--page-subtitle-color); font-weight: var(--weight-main);">' + (appLedger.page_regions_subtitle || '') + '</p></div>');
+            setCrumb(appLedger.nav_regions_label);
+            renderView('<div style="background: var(--active-bg); border-left: 4px solid var(--brand-orange-dark); padding: var(--main-padding); border-radius: var(--card-radius);"><h2 style="font-size: var(--page-title-size); font-family: var(--font-brand); font-weight: var(--weight-bold); color: var(--brand-orange-dark);"><i class="fas fa-lock" style="margin-right: 12px;"></i>' + appLedger.page_regions_title + '</h2><p style="font-size: var(--page-subtitle-size); margin-top: var(--spacing-sm); color: var(--page-subtitle-color); font-weight: var(--weight-main);">' + appLedger.page_regions_subtitle + '</p></div>');
         }
         else if (hash === "#/settings") {
-            setCrumb(appLedger.nav_settings_label || "");
-            renderView('<h2 style="font-size: var(--page-title-size); font-weight: var(--weight-bold); font-family: var(--font-brand); color: var(--page-title-color);">' + (appLedger.page_settings_title || '') + '</h2><p style="font-size: var(--page-subtitle-size); margin-top: var(--spacing-sm); color: var(--page-subtitle-color);">' + (appLedger.page_settings_subtitle || '') + '</p>');
+            setCrumb(appLedger.nav_settings_label);
+            renderView('<h2 style="font-size: var(--page-title-size); font-weight: var(--weight-bold); font-family: var(--font-brand); color: var(--page-title-color);">' + appLedger.page_settings_title + '</h2><p style="font-size: var(--page-subtitle-size); margin-top: var(--spacing-sm); color: var(--page-subtitle-color);">' + appLedger.page_settings_subtitle + '</p>');
         }
         else if (hash === "#/account") {
             setCrumb("Account Profile");
-            renderView('<h2 style="font-size: var(--page-title-size); font-weight: var(--weight-bold); font-family: var(--font-brand); color: var(--page-title-color);">' + (appLedger.page_account_title || '') + '</h2><p style="font-size: var(--page-subtitle-size); margin-top: var(--spacing-sm); color: var(--page-subtitle-color);">' + (appLedger.page_account_subtitle || '') + '</p>');
+            renderView('<h2 style="font-size: var(--page-title-size); font-weight: var(--weight-bold); font-family: var(--font-brand); color: var(--page-title-color);">' + appLedger.page_account_title + '</h2><p style="font-size: var(--page-subtitle-size); margin-top: var(--spacing-sm); color: var(--page-subtitle-color);">' + appLedger.page_account_subtitle + '</p>');
         }
     } catch (e) {
         console.error("Routing error:", e);
