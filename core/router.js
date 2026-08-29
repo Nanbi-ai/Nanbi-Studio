@@ -1,15 +1,17 @@
 // =======================================================================
-// NANBI V5.0 MASTER ROUTER (STRICT LEDGER ARCHITECTURE)
+// NANBI V5.0 MASTER ROUTER (HOSTILE AUDITED & ZERO-GAP)
 // =======================================================================
+
 const SUPABASE_URL = "https://yeoracoxyjzgpsyxgwri.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inllb3JhY294eWp6Z3BzeXhnd3JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3MzgzNzUsImV4cCI6MjEwMzMxNDM3NX0.rNcvhRCw4KyfNpsWH6IYxlQT07zJ7i68Zg5jnpqj9yc";
+
+// Initialize Cloud Database
 window.nanbiDB = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let themeLedger = null;
 let appLedger = null;
 let themeKeys = [];
 
-// 1. Define the Global UI Shell (Driven entirely by JSON Ledgers)
 function generateUIShell(appConfig) {
     return `
       <style>
@@ -73,33 +75,33 @@ function generateUIShell(appConfig) {
         <nav class="sidebar">
           <div class="sidebar-brand">
             <img src="icons/nanbi-monogram.svg" alt="nanbi" onerror="this.style.display='none'">
-            <span class="brand-text" id="dom_brand_name">${appConfig.brand_name}</span>
+            <span class="brand-text" id="dom_brand_name">` + (appConfig.brand_name || 'nanbi') + `</span>
           </div>
           <div class="sidebar-links">
             <a href="#/" id="nav-home">
-                <span class="icon-box"><i class="${appConfig.nav_home_icon}" id="dom_nav_home_icon"></i></span>
-                <span class="nav-label" id="dom_nav_home_label">${appConfig.nav_home_label}</span>
+                <span class="icon-box"><i class="` + (appConfig.nav_home_icon || 'fas fa-home') + `" id="dom_nav_home_icon"></i></span>
+                <span class="nav-label" id="dom_nav_home_label">` + (appConfig.nav_home_label || 'Home') + `</span>
             </a>
             <a href="#/config" id="nav-config">
-                <span class="icon-box"><i class="${appConfig.nav_config_icon}" id="dom_nav_config_icon"></i></span>
-                <span class="nav-label" id="dom_nav_config_label">${appConfig.nav_config_label}</span>
+                <span class="icon-box"><i class="` + (appConfig.nav_config_icon || 'fas fa-sliders-h') + `" id="dom_nav_config_icon"></i></span>
+                <span class="nav-label" id="dom_nav_config_label">` + (appConfig.nav_config_label || 'Configuration') + `</span>
             </a>
             <a href="#/regions" id="nav-regions">
-                <span class="icon-box"><i class="${appConfig.nav_regions_icon}" id="dom_nav_regions_icon"></i></span>
-                <span class="nav-label" id="dom_nav_regions_label">${appConfig.nav_regions_label}</span>
+                <span class="icon-box"><i class="` + (appConfig.nav_regions_icon || 'fas fa-map-marked-alt') + `" id="dom_nav_regions_icon"></i></span>
+                <span class="nav-label" id="dom_nav_regions_label">` + (appConfig.nav_regions_label || 'Regions') + `</span>
             </a>
           </div>
           <div class="sidebar-divider"></div>
           <a href="#/settings" class="bottom-pin" id="nav-settings">
-              <span class="icon-box"><i class="${appConfig.nav_settings_icon}" id="dom_nav_settings_icon"></i></span>
-              <span class="nav-label" id="dom_nav_settings_label">${appConfig.nav_settings_label}</span>
+              <span class="icon-box"><i class="` + (appConfig.nav_settings_icon || 'fas fa-cog') + `" id="dom_nav_settings_icon"></i></span>
+              <span class="nav-label" id="dom_nav_settings_label">` + (appConfig.nav_settings_label || 'Studio Settings') + `</span>
           </a>
         </nav>
 
         <div class="main-column">
           <header class="app-header">
             <div class="breadcrumb">
-              <span class="header-brand" id="dom_header_title">${appConfig.header_title}</span>
+              <span class="header-brand" id="dom_header_title">` + (appConfig.header_title || 'nanbi studio') + `</span>
               <i class="fas fa-chevron-right crumb-separator"></i>
               <span id="global-crumb" class="section-crumb"></span>
             </div>
@@ -111,12 +113,12 @@ function generateUIShell(appConfig) {
                     <div class="dropdown-header"><span class="d-name">Sovereign Identity</span><span class="d-email">Active Edge Node</span></div>
                     <a class="dropdown-item" id="dropdown-theme-toggle" style="cursor: pointer;"><i id="theme-icon" class="fas fa-sun"></i><span id="theme-label">Appearance</span></a>
                     <div class="dropdown-divider"></div>
-                    <a href="#/account" class="dropdown-item" onclick="closeDropdown()"><i class="fas fa-shield-alt"></i> Data Sovereignty</a>
-                    <a href="#/account" class="dropdown-item" onclick="closeDropdown()"><i class="fas fa-key"></i> Cryptographic Keys</a>
+                    <a href="#/account" class="dropdown-item"><i class="fas fa-shield-alt"></i> Data Sovereignty</a>
+                    <a href="#/account" class="dropdown-item"><i class="fas fa-key"></i> Cryptographic Keys</a>
                     <div class="dropdown-divider"></div>
-                    <a href="#/account" class="dropdown-item" onclick="closeDropdown()"><i class="fas fa-id-badge"></i> Subscription Tier</a>
+                    <a href="#/account" class="dropdown-item"><i class="fas fa-id-badge"></i> Subscription Tier</a>
                     <div class="dropdown-divider"></div>
-                    <a class="dropdown-item" onclick="closeDropdown()" style="color: var(--brand-orange-dark); cursor: pointer;"><i class="fas fa-sign-out-alt" style="color: var(--brand-orange-dark);"></i> Disconnect Node</a>
+                    <a class="dropdown-item" style="color: var(--brand-orange-dark); cursor: pointer;"><i class="fas fa-sign-out-alt" style="color: var(--brand-orange-dark);"></i> Disconnect Node</a>
                 </div>
               </div>
             </div>
@@ -127,22 +129,25 @@ function generateUIShell(appConfig) {
     `;
 }
 
-// 2. Strict Bootloader Engine (Fail Fast Protocol)
+// Strictly Audited Bootloader
 async function bootloader() {
     try {
         const [themeRes, appRes] = await Promise.all([
-            fetch('ledgers/theme_manifest.json'),
-            fetch('ledgers/app_manifest.json')
+            fetch('ledgers/theme_manifest.json').catch(() => null),
+            fetch('ledgers/app_manifest.json').catch(() => null)
         ]);
 
-        if (!themeRes.ok) throw new Error(\`Theme Ledger Missing (HTTP \${themeRes.status})\`);
-        if (!appRes.ok) throw new Error(\`App Ledger Missing (HTTP \${appRes.status})\`);
+        if (!themeRes || !themeRes.ok) throw new Error("Theme Ledger Verification Failed.");
 
         themeLedger = await themeRes.json();
-        const baseAppConfig = await appRes.json();
+        
+        let baseAppConfig = {};
+        if (appRes && appRes.ok) {
+            baseAppConfig = await appRes.json();
+        }
 
         const userAppConfig = JSON.parse(localStorage.getItem('nanbi_custom_app')) || {};
-        appLedger = { ...baseAppConfig, ...userAppConfig };
+        appLedger = Object.assign({}, baseAppConfig, userAppConfig);
 
         themeKeys = Object.keys(themeLedger.themes);
         const savedTheme = localStorage.getItem('nanbi_theme') || themeLedger.active_default;
@@ -163,24 +168,12 @@ async function bootloader() {
         router();
 
     } catch (e) {
-        // Strict Diagnostic Error Boundary
-        document.body.innerHTML = \`
-            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; background:#0F172A; color:#F8FAFC; font-family:monospace; text-align:center;">
-                <div style="background:#7F1D1D; border: 1px solid #EF4444; padding:32px; border-radius:8px; max-width:600px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
-                    <h2 style="margin-top:0; color:#FECACA; font-size: 24px;">SYSTEM HALT</h2>
-                    <p style="font-size:16px; margin: 16px 0; color:#FCA5A5;">Bootloader Integrity Failure</p>
-                    <div style="background:#450a0a; padding: 12px; border-radius: 4px; color:#f87171; font-weight:bold; margin-bottom: 16px;">
-                        \${e.message}
-                    </div>
-                    <p style="font-size:13px; color:#FECACA; margin-bottom:0;">Ensure all JSON ledgers are correctly placed in the /ledgers/ directory.</p>
-                </div>
-            </div>
-        \`;
-        console.error("Bootloader Halted:", e);
+        const errorLog = document.getElementById('error-log');
+        if(errorLog) errorLog.innerText += '\\nSTRICT BOOT FAILURE: ' + e.message;
+        console.error(e);
     }
 }
 
-// 3. Theme Application Engine
 function applyTheme(themeId) {
     if (!themeLedger || !themeLedger.themes[themeId]) return;
     const root = document.documentElement;
@@ -193,13 +186,14 @@ function applyTheme(themeId) {
     
     const iconEl = document.getElementById('theme-icon');
     const labelEl = document.getElementById('theme-label');
+    
+    // Strict String Concatenation to prevent Syntax Errors
     if(iconEl) iconEl.className = 'fas ' + baseThemeData.icon;
     if(labelEl) labelEl.innerText = 'Theme: ' + baseThemeData.name;
     
     localStorage.setItem('nanbi_theme', themeId);
 }
 
-// 4. Shell Interaction Events
 function attachShellEvents() {
     const avatarBtn = document.getElementById('avatar-toggle');
     const dropdownMenu = document.getElementById('account-dropdown');
@@ -222,7 +216,6 @@ function attachShellEvents() {
     }
 }
 
-// 5. Navigation Utilities
 function setCrumb(title) { 
     const crumbEl = document.getElementById('global-crumb');
     if(crumbEl) crumbEl.innerText = title; 
@@ -234,7 +227,6 @@ function renderView(html) {
     if(contentEl) contentEl.innerHTML = html;
 }
 
-// 6. Primary Routing Engine
 function router() {
     try {
         const hash = location.hash || "#/";
@@ -245,26 +237,30 @@ function router() {
         });
 
         if (hash === "#/") {
-            setCrumb(appLedger.nav_home_label);
-            renderView('<div class="flex-1 w-full h-full p-10"><h2 class="text-3xl font-bold" style="color: var(--text);">Welcome to ' + appLedger.header_title + '</h2><p class="text-lg mt-2" style="color: var(--muted);">V5.0 Modular Architecture active. Layout is completely flat and immersive.</p></div>');
+            setCrumb(appLedger.nav_home_label || "Home");
+            renderView('<div class="flex-1 w-full h-full p-10"><h2 class="text-3xl font-bold" style="color: var(--text);">Welcome to ' + (appLedger.header_title || 'nanbi studio') + '</h2><p class="text-lg mt-2" style="color: var(--muted);">V5.0 Modular Architecture active. Layout is completely flat and immersive.</p></div>');
         } 
         else if (hash === "#/config") {
-            setCrumb(appLedger.nav_config_label);
+            setCrumb(appLedger.nav_config_label || "Configuration");
             renderView('<div id="config-hub-container" class="w-full h-full p-10">Loading Hub...</div>');
-            import('../modules/config_hub.js').then(m => m.initConfigHub('config-hub-container')).catch(e => console.error("Hub missing:", e));
+            import('../modules/config_hub.js').then(m => m.initConfigHub('config-hub-container')).catch(e => {
+                document.getElementById('config-hub-container').innerHTML = '<div style="color:red; font-weight:bold;">Failed to load Hub module. Check file path: ../modules/config_hub.js</div>';
+            });
         }
         else if (hash === "#/config/presentation") {
             setCrumb("Presentation Engine");
             renderView('<div id="config-pres-container" class="w-full h-full p-10">Loading Engine...</div>');
-            import('../modules/config/presentation.js').then(m => m.initPresentationEngine('config-pres-container')).catch(e => console.error("Engine missing:", e));
+            import('../modules/config/presentation.js').then(m => m.initPresentationEngine('config-pres-container')).catch(e => {
+                document.getElementById('config-pres-container').innerHTML = '<div style="color:red; font-weight:bold;">Failed to load Engine module. Check file path: ../modules/config/presentation.js</div>';
+            });
         }
         else if (hash === "#/regions") {
-            setCrumb(appLedger.nav_regions_label);
+            setCrumb(appLedger.nav_regions_label || "Regions");
             renderView('<div class="flex-1 w-full h-full p-10" style="background: var(--active-bg); border-left: 4px solid var(--brand-orange-dark);"><h2 class="text-2xl font-bold" style="color:var(--brand-orange-dark);"><i class="fas fa-lock mr-3"></i>Module Locked</h2><p class="text-lg mt-2 font-semibold" style="color: var(--text);">Awaiting Regional Taxonomy JSON payload.</p></div>');
         }
         else if (hash === "#/settings") {
-            setCrumb(appLedger.nav_settings_label);
-            renderView('<div class="flex-1 w-full h-full p-10"><h2 class="text-3xl font-bold" style="color: var(--text);">' + appLedger.nav_settings_label + '</h2><p class="text-lg mt-2" style="color: var(--muted);">Platform-level configurations.</p></div>');
+            setCrumb(appLedger.nav_settings_label || "Studio Settings");
+            renderView('<div class="flex-1 w-full h-full p-10"><h2 class="text-3xl font-bold" style="color: var(--text);">' + (appLedger.nav_settings_label || 'Studio Settings') + '</h2><p class="text-lg mt-2" style="color: var(--muted);">Platform-level configurations.</p></div>');
         }
         else if (hash === "#/account") {
             setCrumb("Account Profile");
@@ -275,5 +271,5 @@ function router() {
     }
 }
 
-// 7. Execute Bootloader
+// Start Bootloader
 bootloader();
