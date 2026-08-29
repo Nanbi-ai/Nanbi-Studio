@@ -21,11 +21,9 @@ const UI_SHELL = `
     header.app .section-crumb { font-weight:700; font-size:1rem; margin-left: 8px; padding-left: 20px; border-left: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; }
     header.app .spacer { flex: 1; }
     
-    header.app .header-actions { display: flex; gap: 12px; align-items: center; }
-    
     /* Dropdown Architecture */
     .avatar-wrapper { position: relative; }
-    .avatar-btn { background: var(--coral); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; }
+    .avatar-btn { background: var(--coral); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; margin-left: 12px; }
     
     .dropdown-menu { display: none; position: absolute; right: 0; top: 44px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 240px; z-index: 100; flex-direction: column; overflow: hidden; }
     .dropdown-menu.show { display: flex; }
@@ -34,20 +32,27 @@ const UI_SHELL = `
     .dropdown-header .d-name { font-weight: 700; font-size: 0.9rem; color: var(--text); }
     .dropdown-header .d-email { font-size: 0.75rem; color: var(--muted); }
     
-    .dropdown-item { padding: 10px 16px; font-size: 0.85rem; color: var(--text); text-decoration: none; display: flex; align-items: center; gap: 12px; transition: background 0.2s; cursor: pointer; }
-    .dropdown-item:hover { background: var(--hover); }
-    .dropdown-item i { width: 16px; text-align: center; color: var(--muted); }
+    /* Hover states updated to use Brick Orange text and background tint */
+    .dropdown-item { padding: 10px 16px; font-size: 0.85rem; color: var(--text); text-decoration: none; display: flex; align-items: center; gap: 12px; transition: all 0.2s; cursor: pointer; }
+    .dropdown-item i { width: 16px; text-align: center; color: var(--muted); transition: color 0.2s; }
+    .dropdown-item:hover { background: var(--hover); color: var(--coral); }
+    .dropdown-item:hover i { color: var(--coral); }
+    
     .dropdown-divider { height: 1px; background: var(--border); margin: 4px 0; }
     
     .app-body { display: flex; flex: 1; overflow: hidden; height: calc(100vh - var(--bar)); }
     
     nav.sidebar { width: 64px; background:var(--card); border-right:1px solid var(--border); display:flex; flex-direction:column; transition: width 0.2s ease, box-shadow 0.2s ease, background 0.3s, border-color 0.3s; overflow-x: hidden; white-space: nowrap; z-index: 40; height: 100%; }
     nav.sidebar:hover { width: 240px; box-shadow: 4px 0 15px rgba(0,0,0,0.1); }
-    nav.sidebar a { display:flex; align-items:center; padding:10px 0; margin: 8px; border-radius:8px; color:var(--muted); text-decoration:none; transition: background 0.1s, color 0.3s; }
-    nav.sidebar a .icon-box { width: 48px; display: flex; justify-content: center; align-items: center; font-size: 1.15rem; flex-shrink: 0; }
+    
+    /* Sidebar hovers updated to use Brick Orange */
+    nav.sidebar a { display:flex; align-items:center; padding:10px 0; margin: 8px; border-radius:8px; color:var(--muted); text-decoration:none; transition: all 0.2s; }
+    nav.sidebar a .icon-box { width: 48px; display: flex; justify-content: center; align-items: center; font-size: 1.15rem; flex-shrink: 0; transition: color 0.2s; }
     nav.sidebar a .nav-label { font-size: 0.9rem; opacity: 0; transition: opacity 0.2s ease; pointer-events: none; }
     nav.sidebar:hover a .nav-label { opacity: 1; transition-delay: 0.1s; }
-    nav.sidebar a:hover { background:var(--hover); }
+    
+    nav.sidebar a:hover { background:var(--hover); color: var(--coral); }
+    nav.sidebar a:hover .icon-box { color: var(--coral); }
     nav.sidebar a.active { color:var(--coral); font-weight:700; background:rgba(211,84,0,0.08); }
     nav.sidebar a.active .icon-box { color:var(--coral); }
     
@@ -73,7 +78,6 @@ const UI_SHELL = `
                 <span class="d-email">Active Edge Node</span>
             </div>
             
-            <!-- Appearance Toggle inside User Preferences -->
             <a class="dropdown-item" id="dropdown-theme-toggle">
                 <i id="theme-icon" class="fas fa-sun"></i> 
                 <span id="theme-label">Appearance</span>
@@ -171,9 +175,8 @@ function applyTheme(themeId) {
     localStorage.setItem('nanbi_theme', themeId);
 }
 
-// Intercept clicks on the new dropdown theme toggle
 document.getElementById('dropdown-theme-toggle').addEventListener('click', (e) => {
-    e.stopPropagation(); // Prevents the dropdown from closing so the user can cycle
+    e.stopPropagation();
     if (!themeLedger) return;
     const currentTheme = localStorage.getItem('nanbi_theme');
     const currentIndex = themeKeys.indexOf(currentTheme);
