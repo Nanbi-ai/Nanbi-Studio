@@ -8,7 +8,7 @@ export async function initPresentationEngine(containerId) {
         themeLedger = data.find(r => r.ledger_name === 'theme_manifest')?.payload;
         appLedger = data.find(r => r.ledger_name === 'app_manifest')?.payload || {};
     } catch(err) {
-        container.innerHTML = `<div style="color:red; font-weight:bold;">Failed to load Cloud Ledgers.</div>`;
+        container.innerHTML = `<div style="color:red; font-weight:bold;">Gateway Error: Cloud Ledgers Offline.</div>`;
         return;
     }
 
@@ -18,11 +18,10 @@ export async function initPresentationEngine(containerId) {
     const customVars = JSON.parse(localStorage.getItem('nanbi_custom_theme_' + currentTheme)) || {};
     const customAppVars = JSON.parse(localStorage.getItem('nanbi_custom_app')) || {};
     
-    // Default retrieval logic
     const getVal = (key, defVal) => customVars[key] ?? baseVars[key] ?? defVal;
     const getAppVal = (key, defVal) => customAppVars[key] ?? appLedger[key] ?? defVal;
 
-    // GATEWAY DOM GENERATORS
+    // SMART GATEWAY DOM GENERATORS
     const makeThemeInput = (label, key, rules, defVal, width="w-20") => {
         const valStr = JSON.stringify(rules).replace(/"/g, '&quot;');
         return `
@@ -33,7 +32,7 @@ export async function initPresentationEngine(containerId) {
     };
 
     const makeColor = (label, key, defVal) => {
-        const valStr = JSON.stringify({ type: 'color' }).replace(/"/g, '&quot;');
+        const valStr = JSON.stringify({ type: 'color', allowEmpty: false }).replace(/"/g, '&quot;');
         return `
         <div class="flex justify-between items-center py-2 border-b border-[color:var(--border)]">
             <span class="font-bold text-main" style="font-size: 0.85rem;">${label}</span>
@@ -56,18 +55,18 @@ export async function initPresentationEngine(containerId) {
             <button onclick="history.back()" class="w-8 h-8 rounded flex items-center justify-center cursor-pointer transition-colors" style="background: var(--card); border: 1px solid var(--border); color: var(--text);">
                 <i class="fas fa-arrow-left"></i>
             </button>
-            <h2 style="font-size: var(--header-title-size); font-weight: var(--weight-bold); font-family: var(--font-brand); color: var(--text);">Presentation & Validation Gateway</h2>
+            <h2 style="font-size: var(--header-title-size, 1.15rem); font-weight: var(--weight-bold, 700); font-family: var(--font-brand); color: var(--text);">Presentation & Validation Gateway</h2>
         </div>
         
         <div class="mb-8 p-3 rounded" style="background: var(--active-bg); border-left: 3px solid var(--brand-orange-dark); margin-left: 48px;">
-            <p style="font-size: var(--label-size); font-weight: var(--weight-bold); color: var(--text);">Editing Theme: <span style="color: var(--brand-orange-dark); text-transform: uppercase;">${currentTheme}</span></p>
-            <p style="font-size: 0.8rem; margin-top: 4px; color: var(--muted);">Validation Gateway Active. Invalid formats or empty mandatory fields are instantly rejected.</p>
+            <p style="font-size: var(--label-size, 0.95rem); font-weight: var(--weight-bold, 700); color: var(--text);">Editing Theme: <span style="color: var(--brand-orange-dark); text-transform: uppercase;">${currentTheme}</span></p>
+            <p style="font-size: 0.8rem; margin-top: 4px; color: var(--muted);">Smart Gateway Active: Auto-correcting units, enforcing min/max bounds, and strictly validating data types at the entry point.</p>
         </div>
         
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-6" style="margin-left: 48px;">
             
             <div class="flex flex-col gap-6">
-                <div class="p-5" style="background: var(--card); border: 1px solid var(--border); border-radius: var(--card-radius);">
+                <div class="p-5" style="background: var(--card); border: 1px solid var(--border); border-radius: var(--card-radius, 8px);">
                     <h3 class="font-bold text-main mb-4" style="font-size: 1rem;"><i class="fas fa-palette mr-2"></i>Brand Colors</h3>
                     ${makeColor("Dark Teal", "--brand-teal-dark", "#2C4653")}
                     ${makeColor("Light Teal", "--brand-teal-light", "#6A8B88")}
@@ -75,7 +74,7 @@ export async function initPresentationEngine(containerId) {
                     ${makeColor("Light Orange", "--brand-orange-light", "#E08A6D")}
                 </div>
 
-                <div class="p-5" style="background: var(--card); border: 1px solid var(--border); border-radius: var(--card-radius);">
+                <div class="p-5" style="background: var(--card); border: 1px solid var(--border); border-radius: var(--card-radius, 8px);">
                     <h3 class="font-bold text-main mb-4" style="font-size: 1rem;"><i class="fas fa-layer-group mr-2"></i>Interface Colors</h3>
                     ${makeColor("Main BG", "--bg", "#F8FAFC")}
                     ${makeColor("Card BG", "--card", "#FFFFFF")}
@@ -86,9 +85,9 @@ export async function initPresentationEngine(containerId) {
             </div>
 
             <div class="flex flex-col gap-6">
-                <div class="p-5" style="background: var(--card); border: 1px solid var(--border); border-radius: var(--card-radius);">
+                <div class="p-5" style="background: var(--card); border: 1px solid var(--border); border-radius: var(--card-radius, 8px);">
                     <h3 class="font-bold text-main mb-4" style="font-size: 1rem;"><i class="fas fa-font mr-2"></i>Global Typography</h3>
-                    ${makeThemeInput("Base Size", "--font-base", {type:"size", min:10, max:32}, "16px")}
+                    ${makeThemeInput("Base Size", "--font-base", {type:"size", min:10, max:32, defaultUnit:"px"}, "16px")}
                     ${makeThemeInput("Brand Font", "--font-brand", {type:"text", allowEmpty:false}, "'Nunito', sans-serif", "w-32")}
                     ${makeThemeInput("Main Font", "--font-main", {type:"text", allowEmpty:false}, "'Nunito', sans-serif", "w-32")}
                     ${makeThemeInput("Brand Weight", "--weight-brand", {type:"weight"}, "800", "w-16")}
@@ -102,56 +101,56 @@ export async function initPresentationEngine(containerId) {
             </div>
 
             <div class="flex flex-col gap-6">
-                <div class="p-5" style="background: var(--card); border: 1px solid var(--border); border-radius: var(--card-radius);">
+                <div class="p-5" style="background: var(--card); border: 1px solid var(--border); border-radius: var(--card-radius, 8px);">
                     <h3 class="font-bold text-main mb-4" style="font-size: 1rem;"><i class="fas fa-expand-arrows-alt mr-2"></i>Sizing Engine</h3>
-                    ${makeThemeInput("Page Title", "--page-title-size", {type:"size", min:12, max:64}, "1.875rem")}
-                    ${makeThemeInput("Page Sub", "--page-subtitle-size", {type:"size", min:10, max:32}, "1.125rem")}
-                    ${makeThemeInput("Spacing Unit", "--spacing-sm", {type:"size", min:0, max:64}, "8px")}
-                    ${makeThemeInput("Main Pad", "--main-padding", {type:"size", min:0, max:120}, "40px")}
-                    ${makeThemeInput("Radius", "--card-radius", {type:"size", min:0, max:40}, "8px")}
-                    ${makeThemeInput("Sidebar", "--sidebar-width", {type:"size", min:60, max:120}, "72px")}
-                    ${makeThemeInput("Logo Size", "--brand-size", {type:"size", min:10, max:48}, "1.25rem")}
-                    ${makeThemeInput("Header Size", "--header-title-size", {type:"size", min:10, max:40}, "1.15rem")}
-                    ${makeThemeInput("Label Size", "--label-size", {type:"size", min:10, max:24}, "0.95rem")}
-                    ${makeThemeInput("Icon Size", "--icon-size", {type:"size", min:10, max:40}, "1.15rem")}
+                    ${makeThemeInput("Page Title", "--page-title-size", {type:"size", min:12, max:64, defaultUnit:"px"}, "30px")}
+                    ${makeThemeInput("Page Sub", "--page-subtitle-size", {type:"size", min:10, max:32, defaultUnit:"px"}, "18px")}
+                    ${makeThemeInput("Spacing Unit", "--spacing-sm", {type:"size", min:0, max:64, defaultUnit:"px"}, "8px")}
+                    ${makeThemeInput("Main Pad", "--main-padding", {type:"size", min:0, max:120, defaultUnit:"px"}, "40px")}
+                    ${makeThemeInput("Radius", "--card-radius", {type:"size", min:0, max:40, defaultUnit:"px"}, "8px")}
+                    ${makeThemeInput("Sidebar", "--sidebar-width", {type:"size", min:60, max:300, defaultUnit:"px"}, "72px")}
+                    ${makeThemeInput("Logo Size", "--brand-size", {type:"size", min:10, max:48, defaultUnit:"px"}, "20px")}
+                    ${makeThemeInput("Header Size", "--header-title-size", {type:"size", min:10, max:40, defaultUnit:"px"}, "18px")}
+                    ${makeThemeInput("Label Size", "--label-size", {type:"size", min:10, max:24, defaultUnit:"px"}, "15px")}
+                    ${makeThemeInput("Icon Size", "--icon-size", {type:"size", min:10, max:40, defaultUnit:"px"}, "18px")}
                 </div>
             </div>
 
             <div class="flex flex-col gap-6">
-                <div class="p-5" style="background: var(--card); border: 1px solid var(--border); border-radius: var(--card-radius); height: 600px; overflow-y: auto;">
+                <div class="p-5" style="background: var(--card); border: 1px solid var(--border); border-radius: var(--card-radius, 8px); height: 600px; overflow-y: auto;">
                     <h3 class="font-bold text-main mb-4" style="font-size: 1rem;"><i class="fas fa-list mr-2"></i>Content & Menus</h3>
                     ${makeAppInput("Brand Name", "brand_name", {type:"text", allowEmpty:false}, "nanbi")}
                     ${makeAppInput("Header Core", "header_title", {type:"text", allowEmpty:true}, "nanbi studio")}
                     
                     <div class="flex justify-between items-center py-2 border-b border-[color:var(--border)] mt-2">
-                        <input type="text" class="w-10 p-1 border rounded gateway-input text-xs font-bold text-center" style="background:var(--bg); color:var(--text); border-color:var(--border);" data-target="app" data-key="avatar_initial" data-validation='{"type":"text","allowEmpty":false}' data-default="N" value="${getAppVal('avatar_initial', 'N')}">
+                        <input type="text" class="w-10 p-1 border rounded gateway-input text-xs font-bold text-center" style="background:var(--bg); color:var(--text); border-color:var(--border);" data-target="app" data-key="avatar_initial" data-validation='{"type":"text","allowEmpty":false,"maxLen":2}' data-default="N" value="${getAppVal('avatar_initial', 'N')}">
                         <div class="flex flex-col gap-1 w-40">
                             <input type="text" class="w-full p-1 border rounded gateway-input text-xs" style="background:var(--bg); color:var(--text); border-color:var(--border);" data-target="app" data-key="dropdown_identity" data-validation='{"type":"text","allowEmpty":false}' data-default="Sovereign Identity" value="${getAppVal('dropdown_identity', 'Sovereign Identity')}">
                             <input type="text" class="w-full p-1 border rounded gateway-input text-xs" style="background:var(--bg); color:var(--text); border-color:var(--border);" data-target="app" data-key="dropdown_node" data-validation='{"type":"text","allowEmpty":false}' data-default="Active Edge Node" value="${getAppVal('dropdown_node', 'Active Edge Node')}">
                         </div>
                     </div>
                     
-                    <!-- Navigation Elements directly mapped -->
                     <div class="mt-4">
                         <span class="font-bold text-main" style="font-size: 0.85rem;">Navigation Items</span>
                         ${makeAppInput("Home Label", "nav_home_label", {type:"text", allowEmpty:false}, "Home")}
                         ${makeAppInput("Config Label", "nav_config_label", {type:"text", allowEmpty:false}, "Configuration")}
                         ${makeAppInput("Regions Label", "nav_regions_label", {type:"text", allowEmpty:false}, "Regions")}
+                        ${makeAppInput("Settings Label", "nav_settings_label", {type:"text", allowEmpty:false}, "Studio Settings")}
                     </div>
                 </div>
             </div>
         </div>
         
         <div class="mt-6 flex gap-4 pb-12" style="margin-left: 48px;">
-            <button id="btn-save-theme" class="px-6 py-3 rounded font-bold transition-all shadow-sm hover:opacity-90" style="background: var(--brand-orange-dark); color: #FFF; border-radius: var(--card-radius);">
+            <button id="btn-save-theme" class="px-6 py-3 rounded font-bold transition-all shadow-sm hover:opacity-90" style="background: var(--brand-orange-dark); color: #FFF; border-radius: var(--card-radius, 8px);">
                 <i class="fas fa-cloud-upload-alt mr-2"></i> Save to Cloud (Supabase)
             </button>
-            <button id="btn-reset-theme" class="px-6 py-3 rounded font-bold transition-all hover:opacity-75" style="background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: var(--card-radius);">Reset Local Cache</button>
+            <button id="btn-reset-theme" class="px-6 py-3 rounded font-bold transition-all hover:opacity-75" style="background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: var(--card-radius, 8px);">Reset Local Cache</button>
         </div>
       </div>
     `;
     
-    // THE NANBI VALIDATION GATEWAY
+    // SMART VALIDATION GATEWAY LOGIC
     container.querySelectorAll('.gateway-input').forEach(input => {
         input.addEventListener('change', (e) => {
             const el = e.target;
@@ -166,30 +165,60 @@ export async function initPresentationEngine(containerId) {
 
             // 1. Mandatory/Empty Check
             if (val === '') {
-                if (rules.allowEmpty === false) { isValid = false; errorMsg = "This field is mandatory and cannot be empty."; }
+                if (rules.allowEmpty === false) { 
+                    isValid = false; 
+                    errorMsg = "GATEWAY BLOCK: This field is mandatory and cannot be empty."; 
+                }
             } else {
-                // 2. Type & Bounds Check
+                // 2. Type & Characteristics Evaluation
                 if (rules.type === 'size') {
                     const num = parseFloat(val);
-                    if (isNaN(num)) { isValid = false; errorMsg = "Must be a number with a valid unit."; }
-                    else if (rules.min !== undefined && num < rules.min) { isValid = false; errorMsg = "Minimum allowed size is " + rules.min; }
-                    else if (rules.max !== undefined && num > rules.max) { isValid = false; errorMsg = "Maximum allowed size is " + rules.max; }
-                    else if (!/^[0-9.]+(px|rem|em|vh|vw|%)$/.test(val)) { isValid = false; errorMsg = "Requires a valid CSS unit (px, rem, %, vh, vw)."; }
+                    if (isNaN(num)) { 
+                        isValid = false; 
+                        errorMsg = "GATEWAY BLOCK: Input must be a numerical size."; 
+                    } else {
+                        // Min & Max Parameter Check
+                        if (rules.min !== undefined && num < rules.min) { 
+                            isValid = false; errorMsg = "GATEWAY BLOCK: Minimum allowed size is " + rules.min; 
+                        } else if (rules.max !== undefined && num > rules.max) { 
+                            isValid = false; errorMsg = "GATEWAY BLOCK: Maximum allowed size is " + rules.max; 
+                        } else {
+                            // Smart Auto-Correction: Appends explicit default unit if user omitted it
+                            const hasUnit = /[a-zA-Z%]+$/.test(val);
+                            if (!hasUnit && rules.defaultUnit) {
+                                val = num + rules.defaultUnit;
+                            }
+                            if (!/^[0-9.]+(px|rem|em|vh|vw|%)$/.test(val)) { 
+                                isValid = false; errorMsg = "GATEWAY BLOCK: Requires a valid CSS unit (e.g. px, rem, %)."; 
+                            }
+                        }
+                    }
                 } else if (rules.type === 'color') {
-                    if (!/^#[0-9A-Fa-f]{6}$/.test(val)) { isValid = false; errorMsg = "Must be a valid 6-character Hex code."; }
+                    // Smart Auto-Correction: Adds missing # for hex codes
+                    if (!val.startsWith('#') && val.length === 6) val = '#' + val;
+                    if (!/^#[0-9A-Fa-f]{6}$/.test(val)) { 
+                        isValid = false; errorMsg = "GATEWAY BLOCK: Must be a valid 6-character Hex code."; 
+                    }
                 } else if (rules.type === 'weight') {
-                    if (!/^([1-9]00|normal|bold|bolder|lighter)$/.test(val)) { isValid = false; errorMsg = "Must be a valid CSS font-weight (e.g., 400, 700, bold)."; }
+                    if (!/^([1-9]00|normal|bold|bolder|lighter)$/i.test(val)) { 
+                        isValid = false; errorMsg = "GATEWAY BLOCK: Must be a valid CSS font-weight (e.g., 400, 700, bold)."; 
+                    }
+                } else if (rules.type === 'text') {
+                    if (rules.maxLen && val.length > rules.maxLen) {
+                        isValid = false; errorMsg = "GATEWAY BLOCK: Maximum length exceeded. Allowed: " + rules.maxLen;
+                    }
                 }
             }
 
-            // Failure Rejection
+            // The Rejection Protocol
             if (!isValid) {
-                alert("GATEWAY REJECTION:\\n\\n" + errorMsg + "\\n\\nReverting to baseline default: " + defaultVal);
+                alert(errorMsg + "\\n\\nReverting to baseline default: " + defaultVal);
                 val = defaultVal;
-                el.value = val;
             }
 
-            // Validated Save
+            // Syncing Validated Data
+            el.value = val; // Instantly updates DOM with auto-corrected or reverted data
+            
             if (target === 'theme') {
                 document.documentElement.style.setProperty(key, val);
                 const activeTheme = localStorage.getItem('nanbi_theme') || 'light';
