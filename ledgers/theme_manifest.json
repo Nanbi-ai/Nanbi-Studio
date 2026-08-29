@@ -21,7 +21,13 @@
         "--font-main": "'Nunito', system-ui, sans-serif",
         "--font-brand": "'Nunito', system-ui, sans-serif",
         "--font-base": "16px",
-        "--bar": "60px"
+        "--bar": "60px",
+        "--sidebar-width": "72px",
+        "--sidebar-expanded": "250px",
+        "--icon-size": "1.15rem",
+        "--label-size": "0.95rem",
+        "--brand-size": "1.25rem",
+        "--header-title-size": "1.15rem"
       }
     },
     "dark": {
@@ -44,7 +50,13 @@
         "--font-main": "'Nunito', system-ui, sans-serif",
         "--font-brand": "'Nunito', system-ui, sans-serif",
         "--font-base": "16px",
-        "--bar": "60px"
+        "--bar": "60px",
+        "--sidebar-width": "72px",
+        "--sidebar-expanded": "250px",
+        "--icon-size": "1.15rem",
+        "--label-size": "0.95rem",
+        "--brand-size": "1.25rem",
+        "--header-title-size": "1.15rem"
       }
     }
   }
