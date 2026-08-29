@@ -61,7 +61,8 @@ const UI_SHELL = `
     
     <div class="header-actions">
       <button id="theme-toggle" class="icon-btn" title="Cycle System Theme"><i id="theme-icon" class="fas fa-sun"></i></button>
-      <button class="avatar-btn" title="Account Settings" onclick="location.hash='#/settings'">N</button>
+      <!-- Avatar now explicitly maps to the #/account route -->
+      <button class="avatar-btn" title="User Profile & Account" onclick="location.hash='#/account'">N</button>
     </div>
   </header>
   
@@ -80,9 +81,10 @@ const UI_SHELL = `
         <span class="nav-label">Regions</span>
       </a>
       
+      <!-- System Settings stays pinned cleanly to the bottom left -->
       <a href="#/settings" class="bottom-pin" id="nav-settings">
         <span class="icon-box"><i class="fas fa-cog"></i></span>
-        <span class="nav-label">Settings</span>
+        <span class="nav-label">Studio Settings</span>
       </a>
     </nav>
     
@@ -119,7 +121,8 @@ function applyTheme(themeId) {
         root.style.setProperty(key, value);
     }
     
-    document.getElementById('theme-icon').className = \`fas \${themeData.icon}\`;
+    // Fixed syntax error here
+    document.getElementById('theme-icon').className = `fas ${themeData.icon}`;
     localStorage.setItem('nanbi_theme', themeId);
 }
 
@@ -164,8 +167,12 @@ function router() {
         renderView('<div class="surface-card p-5 flex-1 shadow-sm"><h2 class="text-xl font-bold text-main"><i class="fas fa-lock mr-2" style="color:var(--coral);"></i>Module Locked</h2><p class="text-sm mt-2 text-sub">Awaiting Configuration Engine initialization for dynamic taxonomy.</p></div>');
     }
     else if (hash === "#/settings") {
-        setCrumb("System Settings");
-        renderView('<div class="surface-card p-5 flex-1 shadow-sm"><h2 class="text-xl font-bold text-main">System Settings</h2><p class="text-sm mt-2 text-sub">Platform-level configurations and account preferences will be managed here.</p></div>');
+        setCrumb("Studio Settings");
+        renderView('<div class="surface-card p-5 flex-1 shadow-sm"><h2 class="text-xl font-bold text-main">System Settings</h2><p class="text-sm mt-2 text-sub">Platform-level configurations will be managed here.</p></div>');
+    }
+    else if (hash === "#/account") {
+        setCrumb("User Profile");
+        renderView('<div class="surface-card p-5 flex-1 shadow-sm"><h2 class="text-xl font-bold text-main">Account & Cryptographic Identity</h2><p class="text-sm mt-2 text-sub">User localized preferences and Role-Based Access profiles are managed here.</p></div>');
     }
 }
 
