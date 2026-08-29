@@ -5,19 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Nanbi Studio</title>
     
-    <!-- External Dependencies -->
+    <!-- Exact Logo Font Loaded Securely -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    
     <link rel="icon" type="image/svg+xml" href="icons/nanbi-monogram.svg">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-slate-50 text-slate-900 m-0 p-0 h-full">
-    <!-- The entire Studio layout injects dynamically into this single div -->
+<body class="m-0 p-0 h-full overflow-hidden bg-slate-50 text-slate-900">
     <div id="nanbi-root"></div>
-    
-    <!-- The Master Edge Router Engine -->
     <script type="module" src="core/router.js"></script>
 </body>
 </html>
