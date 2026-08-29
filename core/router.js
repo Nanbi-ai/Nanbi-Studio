@@ -5,23 +5,24 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const UI_SHELL = `
   <style>
-    /* Font inherited natively from index.html */
-    html, body { background:var(--bg); color:var(--text); font-size:var(--font-base); font-family:'Nunito', system-ui, sans-serif; height: 100vh; margin: 0; overflow: hidden; display: flex; transition: background 0.3s, color 0.3s; }
+    /* Google Fonts imported securely */
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Quicksand:wght@400;600;700&family=Montserrat:wght@400;600;700;800&display=swap');
     
+    html, body { background:var(--bg); color:var(--text); font-size:var(--font-base); font-family: var(--font-main); height: 100vh; margin: 0; overflow: hidden; display: flex; transition: background 0.3s, color 0.3s; }
+    
+    .text-main { color: var(--text); }
+    .text-sub { color: var(--muted); }
     .app-wrapper { display: flex; width: 100vw; height: 100vh; overflow: hidden; }
     
-    /* Strictly Locked Sidebar Geometry */
     nav.sidebar { width: 72px; min-width: 72px; background:var(--card); border-right:1px solid var(--border); display:flex; flex-direction:column; transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s; overflow-x: hidden; white-space: nowrap; z-index: 60; height: 100%; }
     nav.sidebar:hover { width: 250px; box-shadow: 4px 0 24px rgba(0,0,0,0.1); }
     
     .sidebar-brand { height: var(--bar); display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid var(--border); margin-bottom: 8px; flex-shrink: 0; }
     .sidebar-brand img { height: 26px; width: auto; flex-shrink: 0; }
-    .brand-text { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; margin-left: 12px; color: var(--brand-teal-dark); opacity: 0; transition: opacity 0.2s; }
+    .brand-text { font-family: var(--font-brand); font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; margin-left: 12px; color: var(--brand-teal-dark); opacity: 0; transition: opacity 0.2s; }
     nav.sidebar:hover .sidebar-brand .brand-text { opacity: 1; transition-delay: 0.05s; }
     
     .sidebar-links { flex: 1; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
-    
-    /* Icon and Label Alignment Fixed */
     nav.sidebar a { display:flex; align-items:center; height: 44px; margin: 8px 12px; border-radius:6px; color:var(--brand-teal-dark); text-decoration:none; font-weight: 700; overflow: hidden; transition: background 0.15s; }
     nav.sidebar a .icon-box { width: 48px; min-width: 48px; display: flex; justify-content: center; align-items: center; font-size: 1.15rem; transition: color 0.15s; }
     nav.sidebar a .nav-label { font-size: 0.95rem; opacity: 0; transition: opacity 0.2s ease; }
@@ -38,9 +39,8 @@ const UI_SHELL = `
     .main-column { display: flex; flex-direction: column; flex: 1; overflow: hidden; background: var(--bg); transition: background 0.3s; }
     header.app-header { height: var(--bar); background: var(--header-bg); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 24px; flex-shrink: 0; z-index: 40; transition: background 0.3s; }
     
-    /* Exact Hierarchy Formatting */
     header.app-header .breadcrumb { display: flex; align-items: center; height: 100%; }
-    .header-brand { font-weight: 900; font-size: 1.25rem; color: var(--brand-teal-dark); letter-spacing: -0.03em; }
+    .header-brand { font-family: var(--font-brand); font-weight: 800; font-size: 1.15rem; color: var(--brand-teal-dark); letter-spacing: -0.02em; }
     .crumb-separator { font-size: 0.8rem; color: var(--muted); margin: 0 16px; opacity: 0.6; }
     header.app-header .section-crumb { font-weight: 700; font-size: 1.05rem; color: var(--text); }
     header.app-header .spacer { flex: 1; }
@@ -48,7 +48,7 @@ const UI_SHELL = `
     header.app-header .header-actions { display: flex; gap: 12px; align-items: center; }
     
     .avatar-wrapper { position: relative; }
-    .avatar-btn { background: var(--brand-orange-dark); color: #FFF; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; margin-left: 8px; transition: transform 0.2s; }
+    .avatar-btn { background: var(--brand-orange-dark); color: #FFF; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-family: var(--font-brand); font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; margin-left: 8px; transition: transform 0.2s; }
     .avatar-btn:hover { transform: scale(1.05); }
     .dropdown-menu { display: none; position: absolute; right: 0; top: 44px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); width: 250px; z-index: 100; flex-direction: column; overflow: hidden; }
     .dropdown-menu.show { display: flex; }
@@ -61,7 +61,6 @@ const UI_SHELL = `
     .dropdown-item:hover i { color: var(--brand-orange-dark); }
     .dropdown-divider { height: 1px; background: var(--border); margin: 4px 0; }
     
-    /* Removed padding from main to allow edge-to-edge views */
     main { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
   </style>
   
@@ -153,7 +152,9 @@ document.getElementById('dropdown-theme-toggle').addEventListener('click', (e) =
     const currentTheme = localStorage.getItem('nanbi_theme');
     const currentIndex = themeKeys.indexOf(currentTheme);
     applyTheme(themeKeys[(currentIndex + 1) % themeKeys.length]);
-    if(location.hash.includes("#/config")) window.location.reload(); 
+    
+    // If the presentation editor is open, reload to show the correct theme's variables
+    if(location.hash === "#/config/presentation") window.location.reload(); 
 });
 
 function setCrumb(title) { document.getElementById('global-crumb').innerText = title; }
@@ -162,7 +163,6 @@ function renderView(html) {
     document.getElementById('app-content').innerHTML = html;
 }
 
-// 4. Corrected Sub-Routing Logic
 function router() {
     const hash = location.hash || "#/";
     
@@ -173,25 +173,21 @@ function router() {
 
     if (hash === "#/") {
         setCrumb("Home");
-        // Padding applied directly to the view for edge-to-edge flexibility
         renderView('<div class="flex-1 w-full h-full p-10"><h2 class="text-3xl font-bold" style="color: var(--text);">Welcome to nanbi studio</h2><p class="text-lg mt-2" style="color: var(--muted);">V5.0 Modular Architecture active. Layout is completely flat and immersive.</p></div>');
     } 
     else if (hash === "#/config") {
         setCrumb("Configuration Hub");
         renderView('<div id="config-hub-container" class="w-full h-full p-10">Loading Hub...</div>');
-        // Fixed dynamic path
         import('../modules/config_hub.js').then(m => m.initConfigHub('config-hub-container')).catch(e => console.error("Hub Error:", e));
     }
     else if (hash === "#/config/presentation") {
         setCrumb("Presentation Engine");
         renderView('<div id="config-pres-container" class="w-full h-full p-10">Loading Engine...</div>');
-        // Fixed dynamic path
         import('../modules/config/presentation.js').then(m => m.initPresentationEngine('config-pres-container')).catch(e => console.error("Presentation Error:", e));
     }
     else if (hash === "#/regions") {
         setCrumb("Regions");
-        // Completely flat, edge-to-edge tinted background with zero padding on parent
-        renderView('<div class="flex-1 w-full h-full p-10" style="background: var(--hover-bg); border-left: 4px solid var(--brand-orange-dark);"><h2 class="text-2xl font-bold" style="color:var(--brand-orange-dark);"><i class="fas fa-lock mr-3"></i>Module Locked</h2><p class="text-lg mt-2 font-semibold" style="color: var(--text);">Awaiting Regional Taxonomy JSON payload.</p></div>');
+        renderView('<div class="flex-1 w-full h-full p-10" style="background: var(--active-bg); border-left: 4px solid var(--brand-orange-dark);"><h2 class="text-2xl font-bold" style="color:var(--brand-orange-dark);"><i class="fas fa-lock mr-3"></i>Module Locked</h2><p class="text-lg mt-2 font-semibold" style="color: var(--text);">Awaiting Regional Taxonomy JSON payload.</p></div>');
     }
     else if (hash === "#/settings") {
         setCrumb("Studio Settings");
@@ -203,6 +199,5 @@ function router() {
     }
 }
 
-// 5. Boot
 window.addEventListener("hashchange", router);
 initializeThemeEngine().then(router);
