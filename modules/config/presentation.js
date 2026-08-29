@@ -3,7 +3,7 @@ export async function initPresentationEngine(containerId) {
     
     let themeLedger;
     try {
-        const res = await fetch('config/theme_manifest.json');
+        const res = await fetch('ledgers/theme_manifest.json');
         themeLedger = await res.json();
     } catch(err) {
         container.innerHTML = `<div class="text-red-500 font-bold">Failed to load Theme Ledger.</div>`;
