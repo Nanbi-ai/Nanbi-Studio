@@ -6,6 +6,7 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // 1. Define the Global UI Shell
 const UI_SHELL = `
   <style>
+    /* Universal fluid resets */
     html, body { background:var(--bg); color:var(--text); font-size:var(--font-base); font-family:system-ui,-apple-system,sans-serif; height: 100vh; margin: 0; overflow: hidden; display: flex; flex-direction: column; transition: background 0.3s, color 0.3s; }
     
     .surface-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; transition: background 0.3s, border-color 0.3s; }
@@ -21,8 +22,6 @@ const UI_SHELL = `
     header.app .spacer { flex: 1; }
     
     header.app .header-actions { display: flex; gap: 12px; align-items: center; }
-    header.app .header-actions button.icon-btn { background: transparent; border: none; color: white; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-size: 1.1rem; }
-    header.app .header-actions button.icon-btn:hover { background: rgba(255,255,255,0.15); }
     
     /* Dropdown Architecture */
     .avatar-wrapper { position: relative; }
@@ -66,8 +65,6 @@ const UI_SHELL = `
     <span class="spacer"></span>
     
     <div class="header-actions">
-      <button id="theme-toggle" class="icon-btn" title="Cycle System Theme"><i id="theme-icon" class="fas fa-sun"></i></button>
-      
       <div class="avatar-wrapper">
         <button class="avatar-btn" id="avatar-toggle" title="Account Menu">N</button>
         <div class="dropdown-menu" id="account-dropdown">
@@ -75,11 +72,24 @@ const UI_SHELL = `
                 <span class="d-name">Sovereign Identity</span>
                 <span class="d-email">Active Edge Node</span>
             </div>
+            
+            <!-- Appearance Toggle inside User Preferences -->
+            <a class="dropdown-item" id="dropdown-theme-toggle">
+                <i id="theme-icon" class="fas fa-sun"></i> 
+                <span id="theme-label">Appearance</span>
+            </a>
+            
+            <div class="dropdown-divider"></div>
+            
             <a href="#/account" class="dropdown-item" onclick="closeDropdown()"><i class="fas fa-shield-alt"></i> Data Sovereignty</a>
             <a href="#/account" class="dropdown-item" onclick="closeDropdown()"><i class="fas fa-key"></i> Cryptographic Keys</a>
+            
             <div class="dropdown-divider"></div>
+            
             <a href="#/account" class="dropdown-item" onclick="closeDropdown()"><i class="fas fa-id-badge"></i> Subscription Tier</a>
+            
             <div class="dropdown-divider"></div>
+            
             <a class="dropdown-item" onclick="closeDropdown()" style="color: #EF4444;"><i class="fas fa-sign-out-alt" style="color: #EF4444;"></i> Disconnect Node</a>
         </div>
       </div>
@@ -157,10 +167,13 @@ function applyTheme(themeId) {
     }
     
     document.getElementById('theme-icon').className = `fas ${themeData.icon}`;
+    document.getElementById('theme-label').innerText = `Theme: ${themeData.name}`;
     localStorage.setItem('nanbi_theme', themeId);
 }
 
-document.getElementById('theme-toggle').addEventListener('click', () => {
+// Intercept clicks on the new dropdown theme toggle
+document.getElementById('dropdown-theme-toggle').addEventListener('click', (e) => {
+    e.stopPropagation(); // Prevents the dropdown from closing so the user can cycle
     if (!themeLedger) return;
     const currentTheme = localStorage.getItem('nanbi_theme');
     const currentIndex = themeKeys.indexOf(currentTheme);
