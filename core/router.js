@@ -8,7 +8,6 @@ const UI_SHELL = `
   <style>
     html, body { background:var(--bg); color:var(--text); font-size:var(--font-base); font-family:system-ui,-apple-system,sans-serif; height: 100vh; margin: 0; overflow: hidden; display: flex; transition: background 0.3s, color 0.3s; }
     
-    .surface-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; transition: background 0.3s, border-color 0.3s; }
     .text-main { color: var(--text); }
     .text-sub { color: var(--muted); }
     
@@ -18,20 +17,21 @@ const UI_SHELL = `
     nav.sidebar { width: 72px; background:var(--card); border-right:1px solid var(--border); display:flex; flex-direction:column; transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s; overflow-x: hidden; white-space: nowrap; z-index: 60; height: 100%; }
     nav.sidebar:hover { width: 250px; box-shadow: 4px 0 24px rgba(0,0,0,0.1); }
     
-    .sidebar-brand { height: var(--bar); display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid var(--border); margin-bottom: 8px; flex-shrink: 0; }
-    .sidebar-brand img { height: 26px; width: 26px; object-fit: contain; flex-shrink: 0; }
-    .sidebar-brand .brand-text { font-size: 1.05rem; font-weight: 700; margin-left: 16px; color: var(--text); opacity: 0; transition: opacity 0.2s; }
+    /* Reverted Brand Box to match original Logo styling */
+    .sidebar-brand { height: var(--bar); background: var(--header-bg); color: var(--header-text); display: flex; align-items: center; padding: 0 20px; margin-bottom: 8px; flex-shrink: 0; transition: background 0.3s; }
+    .sidebar-brand img { height: 26px; width: auto; flex-shrink: 0; }
+    .sidebar-brand .brand-text { font-size: 1.1rem; font-weight: 600; letter-spacing: 0.02em; margin-left: 12px; opacity: 0; transition: opacity 0.2s; }
     nav.sidebar:hover .sidebar-brand .brand-text { opacity: 1; transition-delay: 0.05s; }
     
     .sidebar-links { flex: 1; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
     
-    /* Flat Links (Accent lines stripped) */
+    /* Menu Links */
     nav.sidebar a { position: relative; display:flex; align-items:center; padding:10px 0; margin: 4px 12px; border-radius:6px; color:var(--muted); text-decoration:none; transition: all 0.15s ease; }
     nav.sidebar a .icon-box { width: 48px; display: flex; justify-content: center; align-items: center; font-size: 1.15rem; flex-shrink: 0; transition: color 0.15s; }
     nav.sidebar a .nav-label { font-size: 0.9rem; opacity: 0; transition: opacity 0.2s ease; font-weight: 500; }
     nav.sidebar:hover a .nav-label { opacity: 1; transition-delay: 0.05s; }
     
-    /* Hover applies Teal tint from JSON, text uses Orange */
+    /* Hover forces Light Teal background and Orange text/icon */
     nav.sidebar a:hover { background:var(--hover-bg); color: var(--hover-text); }
     nav.sidebar a:hover .icon-box { color: var(--hover-text); }
     
@@ -44,18 +44,15 @@ const UI_SHELL = `
     /* Main Right Column */
     .main-column { display: flex; flex-direction: column; flex: 1; overflow: hidden; background: var(--bg); transition: background 0.3s; }
     
-    /* Header aligned flawlessly to main content padding (24px) */
-    header.app-header { height: var(--bar); background: var(--header-bg); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 24px; flex-shrink: 0; z-index: 40; transition: background 0.3s; }
+    /* Header matched to brand */
+    header.app-header { height: var(--bar); background: var(--header-bg); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 24px 0 0; flex-shrink: 0; z-index: 40; transition: background 0.3s; }
     
-    header.app-header .breadcrumb { display: flex; align-items: center; }
-    header.app-header .crumb-separator { font-size: 0.75rem; color: var(--muted); margin: 0 12px 0 0; opacity: 0.6; }
-    header.app-header .section-crumb { font-weight: 600; font-size: 0.95rem; color: var(--text); }
+    /* Perfectly centered chevron breadcrumb separator */
+    .crumb-wrapper { width: 40px; display: flex; justify-content: center; align-items: center; color: rgba(255,255,255,0.4); font-size: 0.85rem; }
+    header.app-header .section-crumb { font-weight: 600; font-size: 0.95rem; color: var(--header-text); letter-spacing: 0.02em; }
     header.app-header .spacer { flex: 1; }
     
-    /* Header Actions & Dropdown */
-    header.app-header .header-actions { display: flex; gap: 12px; align-items: center; }
-    .icon-btn { background: transparent; border: none; color: var(--muted); width: 32px; height: 32px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-size: 1.1rem; }
-    .icon-btn:hover { background: var(--hover-bg); color: var(--hover-text); }
+    header.app-header .header-actions { display: flex; gap: 12px; align-items: center; padding-right: 24px; }
     
     .avatar-wrapper { position: relative; }
     .avatar-btn { background: var(--brand-orange-dark); color: #FFF; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; margin-left: 8px; transition: transform 0.2s; }
@@ -74,7 +71,8 @@ const UI_SHELL = `
     .dropdown-item:hover i { color: var(--hover-text); }
     .dropdown-divider { height: 1px; background: var(--border); margin: 4px 0; }
     
-    main { flex: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; }
+    /* Flat Workspace (No borders or shadows) */
+    main { flex: 1; padding: 32px 40px; overflow-y: auto; display: flex; flex-direction: column; }
   </style>
   
   <div class="app-wrapper">
@@ -108,10 +106,8 @@ const UI_SHELL = `
 
     <div class="main-column">
       <header class="app-header">
-        <div class="breadcrumb">
-          <i class="fas fa-chevron-right crumb-separator"></i>
-          <span id="global-crumb" class="section-crumb"></span>
-        </div>
+        <div class="crumb-wrapper"><i class="fas fa-chevron-right"></i></div>
+        <span id="global-crumb" class="section-crumb"></span>
         
         <span class="spacer"></span>
         
@@ -224,7 +220,7 @@ function renderView(html) {
     document.getElementById('app-content').innerHTML = html;
 }
 
-// 4. Core Routing Logic
+// 4. Core Routing Logic (Completely Flat UI)
 function router() {
     const hash = location.hash || "#/";
     
@@ -234,24 +230,24 @@ function router() {
 
     if (hash === "#/") {
         setCrumb("Home");
-        renderView('<div class="surface-card p-6 flex-1 shadow-sm"><h2 class="text-xl font-bold text-main">Home</h2><p class="text-base mt-2 text-sub">V5.0 Modular Architecture active. Layout optimized with flat UI and Teal/Orange interaction logic.</p></div>');
+        renderView('<div class="flex-1"><h2 class="text-2xl font-bold text-main">Home</h2><p class="text-base mt-2 text-sub">V5.0 Modular Architecture active. The UI is completely flat and immersed into the layout.</p></div>');
     } 
     else if (hash === "#/config") {
         setCrumb("Global Configuration");
-        renderView('<div class="surface-card p-6 flex-1 shadow-sm"><h2 class="text-xl font-bold text-main">Governance & Config</h2><p class="text-base mt-2 text-sub">Ready to establish the Multilingual Regional Hierarchy JSON ledger.</p></div>');
+        renderView('<div class="flex-1"><h2 class="text-2xl font-bold text-main">Governance & Config</h2><p class="text-base mt-2 text-sub">Ready to establish the Multilingual Regional Hierarchy JSON ledger.</p></div>');
     }
     else if (hash === "#/regions") {
         setCrumb("Regions");
-        // Completely flat alert card (borders removed)
-        renderView('<div class="surface-card p-6 flex-1 shadow-sm" style="background: rgba(224, 138, 109, 0.05);"><h2 class="text-xl font-bold" style="color:var(--brand-orange-dark);"><i class="fas fa-lock mr-2"></i>Module Locked</h2><p class="text-base mt-2 text-sub">Awaiting Configuration Engine initialization for dynamic taxonomy.</p></div>');
+        // Immersed alert with edge accent
+        renderView('<div class="flex-1 p-6" style="background: var(--hover-bg); border-left: 4px solid var(--brand-orange-dark);"><h2 class="text-xl font-bold" style="color:var(--brand-orange-dark);"><i class="fas fa-lock mr-2"></i>Module Locked</h2><p class="text-base mt-2" style="color:var(--text);">Awaiting Configuration Engine initialization for dynamic taxonomy.</p></div>');
     }
     else if (hash === "#/settings") {
         setCrumb("Studio Settings");
-        renderView('<div class="surface-card p-6 flex-1 shadow-sm"><h2 class="text-xl font-bold text-main">System Settings</h2><p class="text-base mt-2 text-sub">Platform-level configurations will be managed here.</p></div>');
+        renderView('<div class="flex-1"><h2 class="text-2xl font-bold text-main">System Settings</h2><p class="text-base mt-2 text-sub">Platform-level configurations will be managed here.</p></div>');
     }
     else if (hash === "#/account") {
         setCrumb("Account Profile");
-        renderView('<div class="surface-card p-6 flex-1 shadow-sm"><h2 class="text-xl font-bold text-main">Data Sovereignty & Access</h2><p class="text-base mt-2 text-sub">Manage node configurations, local memory sync rules, and cryptographic credentials.</p></div>');
+        renderView('<div class="flex-1"><h2 class="text-2xl font-bold text-main">Data Sovereignty & Access</h2><p class="text-base mt-2 text-sub">Manage node configurations, local memory sync rules, and cryptographic credentials.</p></div>');
     }
 }
 
