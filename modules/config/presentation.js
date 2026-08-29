@@ -5,61 +5,50 @@ export async function initPresentationEngine(containerId) {
     try {
         const { data, error } = await window.nanbiDB.from('nanbi_ledgers').select('*');
         if (error) throw error;
-        
         themeLedger = data.find(r => r.ledger_name === 'theme_manifest')?.payload;
-        appLedger = data.find(r => r.ledger_name === 'app_manifest')?.payload;
+        appLedger = data.find(r => r.ledger_name === 'app_manifest')?.payload || {};
     } catch(err) {
-        container.innerHTML = `<div style="color:red; font-weight:bold;">Gateway Error: Cloud Ledgers Offline.</div>`;
+        container.innerHTML = `<div style="color:red; font-weight:bold;">Failed to load Cloud Ledgers.</div>`;
         return;
     }
 
     const currentTheme = localStorage.getItem('nanbi_theme') || themeLedger.active_default;
     const baseVars = themeLedger.themes[currentTheme].variables;
     
-    // NANBI VALIDATION GATEWAY FRAMEWORK
-    const Gateway = {
-        size: { regex: "^\\\\d+(?:\\\\.\\\\d+)?(px|rem|em|vh|vw|%)$", msg: "Requires valid unit (px, rem, %)" },
-        weight: { regex: "^([1-9]00|normal|bold|bolder|lighter)$", msg: "Requires valid CSS weight (e.g., 400, 700)" },
-        font: { regex: "^[a-zA-Z0-9\\\\s,'\"-]+$", msg: "Requires valid font string" },
-        color: { regex: "^#[0-9A-Fa-f]{6}$", msg: "Requires 6-character Hex Code" },
-        textReq: { regex: "^(?!\\\\s*$).+", msg: "This field is mandatory and cannot be empty" },
-        textOpt: { regex: ".*", msg: "" },
-        icon: { regex: "^(fas|fab|far|fa-solid|fa-brands)\\\\sfa-[a-z0-9-]+$", msg: "Requires valid FontAwesome class" }
-    };
-
     const customVars = JSON.parse(localStorage.getItem('nanbi_custom_theme_' + currentTheme)) || {};
     const customAppVars = JSON.parse(localStorage.getItem('nanbi_custom_app')) || {};
+    
+    // Default retrieval logic
+    const getVal = (key, defVal) => customVars[key] ?? baseVars[key] ?? defVal;
+    const getAppVal = (key, defVal) => customAppVars[key] ?? appLedger[key] ?? defVal;
 
-    const getVal = (key, fallback) => customVars[key] ?? baseVars[key] ?? fallback;
-    const getAppVal = (key, fallback) => customAppVars[key] ?? appLedger[key] ?? fallback;
+    // GATEWAY DOM GENERATORS
+    const makeThemeInput = (label, key, rules, defVal, width="w-20") => {
+        const valStr = JSON.stringify(rules).replace(/"/g, '&quot;');
+        return `
+        <div class="flex justify-between items-center py-2 border-b border-[color:var(--border)]">
+            <span class="font-bold text-main" style="font-size: 0.85rem;">${label}</span>
+            <input type="text" class="${width} p-1 border rounded gateway-input font-mono text-xs" style="background:var(--bg); color:var(--text); border-color:var(--border);" data-target="theme" data-key="${key}" data-validation="${valStr}" data-default="${defVal}" value="${getVal(key, defVal)}">
+        </div>`;
+    };
 
-    // UI Generation Helpers
-    const makeThemeInput = (label, key, rule, defVal, width="w-20") => `
-    <div class="flex justify-between items-center py-2 border-b border-[color:var(--border)]">
-        <span class="font-bold text-main" style="font-size: 0.85rem;">${label}</span> 
-        <input type="text" class="${width} p-1 border rounded gateway-input font-mono text-xs" style="background:var(--bg); color:var(--text); border-color:var(--border);" data-target="theme" data-key="${key}" data-rule="${rule}" data-default="${defVal}" value="${getVal(key, defVal)}">
-    </div>`;
+    const makeColor = (label, key, defVal) => {
+        const valStr = JSON.stringify({ type: 'color' }).replace(/"/g, '&quot;');
+        return `
+        <div class="flex justify-between items-center py-2 border-b border-[color:var(--border)]">
+            <span class="font-bold text-main" style="font-size: 0.85rem;">${label}</span>
+            <input type="color" class="w-10 h-8 rounded gateway-input cursor-pointer border-0 bg-transparent" data-target="theme" data-key="${key}" data-validation="${valStr}" data-default="${defVal}" value="${getVal(key, defVal)}">
+        </div>`;
+    };
 
-    const makeColor = (label, key, defVal) => `
-    <div class="flex justify-between items-center py-2 border-b border-[color:var(--border)]">
-        <span class="font-bold text-main" style="font-size: 0.85rem;">${label}</span> 
-        <input type="color" class="w-10 h-8 rounded gateway-input cursor-pointer border-0 bg-transparent" data-target="theme" data-key="${key}" data-rule="color" data-default="${defVal}" value="${getVal(key, defVal)}">
-    </div>`;
-
-    const makeAppInput = (label, key, rule, defVal) => `
-    <div class="flex flex-col py-2 border-b border-[color:var(--border)]">
-        <span class="font-bold text-main mb-1" style="font-size: 0.85rem;">${label}</span>
-        <input type="text" class="w-full p-2 border rounded gateway-input text-xs" style="background:var(--bg); color:var(--text); border-color:var(--border);" data-target="app" data-key="${key}" data-rule="${rule}" data-default="${defVal}" value="${getAppVal(key, defVal)}">
-    </div>`;
-
-    const makeNavInput = (label, iconKey, textKey, defIcon, defText) => `
-    <div class="flex flex-col py-2 border-b border-[color:var(--border)]">
-        <span class="font-bold text-main mb-1" style="font-size: 0.85rem;">${label}</span>
-        <div class="flex gap-2">
-            <input type="text" class="w-1/3 p-1 border rounded gateway-input icon-input text-xs font-mono" style="background:var(--bg); color:var(--text); border-color:var(--border);" data-target="app" data-key="${iconKey}" data-rule="icon" data-default="${defIcon}" value="${getAppVal(iconKey, defIcon)}">
-            <input type="text" class="w-2/3 p-1 border rounded gateway-input text-xs" style="background:var(--bg); color:var(--text); border-color:var(--border);" data-target="app" data-key="${textKey}" data-rule="textReq" data-default="${defText}" value="${getAppVal(textKey, defText)}">
-        </div>
-    </div>`;
+    const makeAppInput = (label, key, rules, defVal) => {
+        const valStr = JSON.stringify(rules).replace(/"/g, '&quot;');
+        return `
+        <div class="flex flex-col py-2 border-b border-[color:var(--border)]">
+            <span class="font-bold text-main mb-1" style="font-size: 0.85rem;">${label}</span>
+            <input type="text" class="w-full p-2 border rounded gateway-input text-xs" style="background:var(--bg); color:var(--text); border-color:var(--border);" data-target="app" data-key="${key}" data-validation="${valStr}" data-default="${defVal}" value="${getAppVal(key, defVal)}">
+        </div>`;
+    };
 
     container.innerHTML = `
       <div class="flex-1 w-full max-w-[1400px]">
@@ -67,18 +56,18 @@ export async function initPresentationEngine(containerId) {
             <button onclick="history.back()" class="w-8 h-8 rounded flex items-center justify-center cursor-pointer transition-colors" style="background: var(--card); border: 1px solid var(--border); color: var(--text);">
                 <i class="fas fa-arrow-left"></i>
             </button>
-            <h2 style="font-size: var(--header-title-size, 1.15rem); font-weight: var(--weight-bold, 700); font-family: var(--font-brand); color: var(--text);">Presentation & Validation Gateway</h2>
+            <h2 style="font-size: var(--header-title-size); font-weight: var(--weight-bold); font-family: var(--font-brand); color: var(--text);">Presentation & Validation Gateway</h2>
         </div>
         
         <div class="mb-8 p-3 rounded" style="background: var(--active-bg); border-left: 3px solid var(--brand-orange-dark); margin-left: 48px;">
-            <p style="font-size: var(--label-size, 0.95rem); font-weight: var(--weight-bold, 700); color: var(--text);">Editing Theme: <span style="color: var(--brand-orange-dark); text-transform: uppercase;">${currentTheme}</span></p>
-            <p style="font-size: 0.8rem; margin-top: 4px; color: var(--muted);">Validation Gateway Active. Invalid entries or empty mandatory fields will be rejected instantly.</p>
+            <p style="font-size: var(--label-size); font-weight: var(--weight-bold); color: var(--text);">Editing Theme: <span style="color: var(--brand-orange-dark); text-transform: uppercase;">${currentTheme}</span></p>
+            <p style="font-size: 0.8rem; margin-top: 4px; color: var(--muted);">Validation Gateway Active. Invalid formats or empty mandatory fields are instantly rejected.</p>
         </div>
         
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-6" style="margin-left: 48px;">
             
             <div class="flex flex-col gap-6">
-                <div class="p-5" style="background: var(--card); border: 1px solid var(--border); border-radius: var(--card-radius, 8px);">
+                <div class="p-5" style="background: var(--card); border: 1px solid var(--border); border-radius: var(--card-radius);">
                     <h3 class="font-bold text-main mb-4" style="font-size: 1rem;"><i class="fas fa-palette mr-2"></i>Brand Colors</h3>
                     ${makeColor("Dark Teal", "--brand-teal-dark", "#2C4653")}
                     ${makeColor("Light Teal", "--brand-teal-light", "#6A8B88")}
@@ -86,7 +75,7 @@ export async function initPresentationEngine(containerId) {
                     ${makeColor("Light Orange", "--brand-orange-light", "#E08A6D")}
                 </div>
 
-                <div class="p-5" style="background: var(--card); border: 1px solid var(--border); border-radius: var(--card-radius, 8px);">
+                <div class="p-5" style="background: var(--card); border: 1px solid var(--border); border-radius: var(--card-radius);">
                     <h3 class="font-bold text-main mb-4" style="font-size: 1rem;"><i class="fas fa-layer-group mr-2"></i>Interface Colors</h3>
                     ${makeColor("Main BG", "--bg", "#F8FAFC")}
                     ${makeColor("Card BG", "--card", "#FFFFFF")}
@@ -97,14 +86,14 @@ export async function initPresentationEngine(containerId) {
             </div>
 
             <div class="flex flex-col gap-6">
-                <div class="p-5" style="background: var(--card); border: 1px solid var(--border); border-radius: var(--card-radius, 8px);">
+                <div class="p-5" style="background: var(--card); border: 1px solid var(--border); border-radius: var(--card-radius);">
                     <h3 class="font-bold text-main mb-4" style="font-size: 1rem;"><i class="fas fa-font mr-2"></i>Global Typography</h3>
-                    ${makeThemeInput("Base Size", "--font-base", "size", "16px")}
-                    ${makeThemeInput("Brand Font", "--font-brand", "font", "'Nunito', sans-serif", "w-32")}
-                    ${makeThemeInput("Main Font", "--font-main", "font", "'Nunito', sans-serif", "w-32")}
-                    ${makeThemeInput("Brand Weight", "--weight-brand", "weight", "800", "w-16")}
-                    ${makeThemeInput("Main Weight", "--weight-main", "weight", "400", "w-16")}
-                    ${makeThemeInput("Bold Weight", "--weight-bold", "weight", "700", "w-16")}
+                    ${makeThemeInput("Base Size", "--font-base", {type:"size", min:10, max:32}, "16px")}
+                    ${makeThemeInput("Brand Font", "--font-brand", {type:"text", allowEmpty:false}, "'Nunito', sans-serif", "w-32")}
+                    ${makeThemeInput("Main Font", "--font-main", {type:"text", allowEmpty:false}, "'Nunito', sans-serif", "w-32")}
+                    ${makeThemeInput("Brand Weight", "--weight-brand", {type:"weight"}, "800", "w-16")}
+                    ${makeThemeInput("Main Weight", "--weight-main", {type:"weight"}, "400", "w-16")}
+                    ${makeThemeInput("Bold Weight", "--weight-bold", {type:"weight"}, "700", "w-16")}
                     ${makeColor("Title Color", "--page-title-color", "#0F172A")}
                     ${makeColor("Sub Color", "--page-subtitle-color", "#64748B")}
                     ${makeColor("Text Color", "--text", "#0F172A")}
@@ -113,83 +102,94 @@ export async function initPresentationEngine(containerId) {
             </div>
 
             <div class="flex flex-col gap-6">
-                <div class="p-5" style="background: var(--card); border: 1px solid var(--border); border-radius: var(--card-radius, 8px);">
+                <div class="p-5" style="background: var(--card); border: 1px solid var(--border); border-radius: var(--card-radius);">
                     <h3 class="font-bold text-main mb-4" style="font-size: 1rem;"><i class="fas fa-expand-arrows-alt mr-2"></i>Sizing Engine</h3>
-                    ${makeThemeInput("Page Title", "--page-title-size", "size", "1.875rem")}
-                    ${makeThemeInput("Page Sub", "--page-subtitle-size", "size", "1.125rem")}
-                    ${makeThemeInput("Spacing Unit", "--spacing-sm", "size", "8px")}
-                    ${makeThemeInput("Main Pad", "--main-padding", "size", "40px")}
-                    ${makeThemeInput("Radius", "--card-radius", "size", "8px")}
-                    ${makeThemeInput("Sidebar", "--sidebar-width", "size", "72px")}
-                    ${makeThemeInput("Logo Size", "--brand-size", "size", "1.25rem")}
-                    ${makeThemeInput("Header Size", "--header-title-size", "size", "1.15rem")}
-                    ${makeThemeInput("Label Size", "--label-size", "size", "0.95rem")}
-                    ${makeThemeInput("Icon Size", "--icon-size", "size", "1.15rem")}
+                    ${makeThemeInput("Page Title", "--page-title-size", {type:"size", min:12, max:64}, "1.875rem")}
+                    ${makeThemeInput("Page Sub", "--page-subtitle-size", {type:"size", min:10, max:32}, "1.125rem")}
+                    ${makeThemeInput("Spacing Unit", "--spacing-sm", {type:"size", min:0, max:64}, "8px")}
+                    ${makeThemeInput("Main Pad", "--main-padding", {type:"size", min:0, max:120}, "40px")}
+                    ${makeThemeInput("Radius", "--card-radius", {type:"size", min:0, max:40}, "8px")}
+                    ${makeThemeInput("Sidebar", "--sidebar-width", {type:"size", min:60, max:120}, "72px")}
+                    ${makeThemeInput("Logo Size", "--brand-size", {type:"size", min:10, max:48}, "1.25rem")}
+                    ${makeThemeInput("Header Size", "--header-title-size", {type:"size", min:10, max:40}, "1.15rem")}
+                    ${makeThemeInput("Label Size", "--label-size", {type:"size", min:10, max:24}, "0.95rem")}
+                    ${makeThemeInput("Icon Size", "--icon-size", {type:"size", min:10, max:40}, "1.15rem")}
                 </div>
             </div>
 
             <div class="flex flex-col gap-6">
-                <div class="p-5" style="background: var(--card); border: 1px solid var(--border); border-radius: var(--card-radius, 8px); height: 600px; overflow-y: auto;">
+                <div class="p-5" style="background: var(--card); border: 1px solid var(--border); border-radius: var(--card-radius); height: 600px; overflow-y: auto;">
                     <h3 class="font-bold text-main mb-4" style="font-size: 1rem;"><i class="fas fa-list mr-2"></i>Content & Menus</h3>
-                    ${makeAppInput("Brand Name", "brand_name", "textReq", "nanbi")}
-                    ${makeAppInput("Header Core", "header_title", "textOpt", "nanbi studio")}
+                    ${makeAppInput("Brand Name", "brand_name", {type:"text", allowEmpty:false}, "nanbi")}
+                    ${makeAppInput("Header Core", "header_title", {type:"text", allowEmpty:true}, "nanbi studio")}
                     
                     <div class="flex justify-between items-center py-2 border-b border-[color:var(--border)] mt-2">
-                        <input type="text" class="w-10 p-1 border rounded gateway-input text-xs font-bold text-center" style="background:var(--bg); color:var(--text); border-color:var(--border);" data-target="app" data-key="avatar_initial" data-rule="textReq" data-default="N" value="${getAppVal('avatar_initial', 'N')}">
+                        <input type="text" class="w-10 p-1 border rounded gateway-input text-xs font-bold text-center" style="background:var(--bg); color:var(--text); border-color:var(--border);" data-target="app" data-key="avatar_initial" data-validation='{"type":"text","allowEmpty":false}' data-default="N" value="${getAppVal('avatar_initial', 'N')}">
                         <div class="flex flex-col gap-1 w-40">
-                            <input type="text" class="w-full p-1 border rounded gateway-input text-xs" style="background:var(--bg); color:var(--text); border-color:var(--border);" data-target="app" data-key="dropdown_identity" data-rule="textReq" data-default="Sovereign Identity" value="${getAppVal('dropdown_identity', 'Sovereign Identity')}">
-                            <input type="text" class="w-full p-1 border rounded gateway-input text-xs" style="background:var(--bg); color:var(--text); border-color:var(--border);" data-target="app" data-key="dropdown_node" data-rule="textReq" data-default="Active Edge Node" value="${getAppVal('dropdown_node', 'Active Edge Node')}">
+                            <input type="text" class="w-full p-1 border rounded gateway-input text-xs" style="background:var(--bg); color:var(--text); border-color:var(--border);" data-target="app" data-key="dropdown_identity" data-validation='{"type":"text","allowEmpty":false}' data-default="Sovereign Identity" value="${getAppVal('dropdown_identity', 'Sovereign Identity')}">
+                            <input type="text" class="w-full p-1 border rounded gateway-input text-xs" style="background:var(--bg); color:var(--text); border-color:var(--border);" data-target="app" data-key="dropdown_node" data-validation='{"type":"text","allowEmpty":false}' data-default="Active Edge Node" value="${getAppVal('dropdown_node', 'Active Edge Node')}">
                         </div>
                     </div>
-
-                    ${makeNavInput("Home Menu", "nav_home_icon", "nav_home_label", "fas fa-home", "Home")}
-                    ${makeNavInput("Config Menu", "nav_config_icon", "nav_config_label", "fas fa-sliders-h", "Configuration")}
-                    ${makeNavInput("Regions Menu", "nav_regions_icon", "nav_regions_label", "fas fa-map-marked-alt", "Regions")}
-                    ${makeNavInput("Settings Menu", "nav_settings_icon", "nav_settings_label", "fas fa-cog", "Studio Settings")}
-
+                    
+                    <!-- Navigation Elements directly mapped -->
                     <div class="mt-4">
-                        <span class="font-bold text-main" style="font-size: 0.85rem;">Dropdown Links</span>
-                        ${makeAppInput("", "menu_sovereignty", "textReq", "Data Sovereignty")}
-                        ${makeAppInput("", "menu_keys", "textReq", "Cryptographic Keys")}
-                        ${makeAppInput("", "menu_tier", "textReq", "Subscription Tier")}
-                        ${makeAppInput("", "menu_disconnect", "textReq", "Disconnect Node")}
+                        <span class="font-bold text-main" style="font-size: 0.85rem;">Navigation Items</span>
+                        ${makeAppInput("Home Label", "nav_home_label", {type:"text", allowEmpty:false}, "Home")}
+                        ${makeAppInput("Config Label", "nav_config_label", {type:"text", allowEmpty:false}, "Configuration")}
+                        ${makeAppInput("Regions Label", "nav_regions_label", {type:"text", allowEmpty:false}, "Regions")}
                     </div>
                 </div>
             </div>
-
         </div>
         
         <div class="mt-6 flex gap-4 pb-12" style="margin-left: 48px;">
-            <button id="btn-save-theme" class="px-6 py-3 rounded font-bold transition-all shadow-sm hover:opacity-90" style="background: var(--brand-orange-dark); color: #FFF; border-radius: var(--card-radius, 8px);">
+            <button id="btn-save-theme" class="px-6 py-3 rounded font-bold transition-all shadow-sm hover:opacity-90" style="background: var(--brand-orange-dark); color: #FFF; border-radius: var(--card-radius);">
                 <i class="fas fa-cloud-upload-alt mr-2"></i> Save to Cloud (Supabase)
             </button>
-            <button id="btn-reset-theme" class="px-6 py-3 rounded font-bold transition-all hover:opacity-75" style="background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: var(--card-radius, 8px);">Reset Local Cache</button>
+            <button id="btn-reset-theme" class="px-6 py-3 rounded font-bold transition-all hover:opacity-75" style="background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: var(--card-radius);">Reset Local Cache</button>
         </div>
       </div>
     `;
     
-    // Gateway Enforcement Logic
+    // THE NANBI VALIDATION GATEWAY
     container.querySelectorAll('.gateway-input').forEach(input => {
         input.addEventListener('change', (e) => {
             const el = e.target;
             const target = el.getAttribute('data-target');
             const key = el.getAttribute('data-key');
-            let val = el.value;
-            const ruleKey = el.getAttribute('data-rule');
+            let val = el.value.trim();
+            const rules = JSON.parse(el.getAttribute('data-validation') || '{}');
             const defaultVal = el.getAttribute('data-default');
 
-            // The Gateway Check
-            if (ruleKey && Gateway[ruleKey]) {
-                const regex = new RegExp(Gateway[ruleKey].regex);
-                if (!regex.test(val)) {
-                    // Gateway Rejection: Stops bad data instantly.
-                    alert("Gateway Rejected Entry:\\n\\n" + Gateway[ruleKey].msg + "\\n\\nReverting to baseline default: " + defaultVal);
-                    val = defaultVal;
-                    el.value = val;
+            let isValid = true;
+            let errorMsg = "";
+
+            // 1. Mandatory/Empty Check
+            if (val === '') {
+                if (rules.allowEmpty === false) { isValid = false; errorMsg = "This field is mandatory and cannot be empty."; }
+            } else {
+                // 2. Type & Bounds Check
+                if (rules.type === 'size') {
+                    const num = parseFloat(val);
+                    if (isNaN(num)) { isValid = false; errorMsg = "Must be a number with a valid unit."; }
+                    else if (rules.min !== undefined && num < rules.min) { isValid = false; errorMsg = "Minimum allowed size is " + rules.min; }
+                    else if (rules.max !== undefined && num > rules.max) { isValid = false; errorMsg = "Maximum allowed size is " + rules.max; }
+                    else if (!/^[0-9.]+(px|rem|em|vh|vw|%)$/.test(val)) { isValid = false; errorMsg = "Requires a valid CSS unit (px, rem, %, vh, vw)."; }
+                } else if (rules.type === 'color') {
+                    if (!/^#[0-9A-Fa-f]{6}$/.test(val)) { isValid = false; errorMsg = "Must be a valid 6-character Hex code."; }
+                } else if (rules.type === 'weight') {
+                    if (!/^([1-9]00|normal|bold|bolder|lighter)$/.test(val)) { isValid = false; errorMsg = "Must be a valid CSS font-weight (e.g., 400, 700, bold)."; }
                 }
             }
 
-            // Write to Edge Cache & DOM only if validated
+            // Failure Rejection
+            if (!isValid) {
+                alert("GATEWAY REJECTION:\\n\\n" + errorMsg + "\\n\\nReverting to baseline default: " + defaultVal);
+                val = defaultVal;
+                el.value = val;
+            }
+
+            // Validated Save
             if (target === 'theme') {
                 document.documentElement.style.setProperty(key, val);
                 const activeTheme = localStorage.getItem('nanbi_theme') || 'light';
