@@ -1,0 +1,56 @@
+{
+  "active_default": "light",
+  "themes": {
+    "light": {
+      "name": "Light Mode",
+      "icon": "fa-sun",
+      "variables": {
+        "--navy": "#1E293B",
+        "--teal": "#527C79",
+        "--coral": "#D35400",
+        "--bg": "#F8FAFC",
+        "--card": "#FFFFFF",
+        "--text": "#0F172A",
+        "--muted": "#475569",
+        "--border": "#CBD5E1",
+        "--hover": "rgba(82,124,121,0.10)",
+        "--font-base": "16px",
+        "--bar": "56px"
+      }
+    },
+    "dark": {
+      "name": "Dark Mode",
+      "icon": "fa-moon",
+      "variables": {
+        "--navy": "#0B0F19",
+        "--teal": "#4FD1C5",
+        "--coral": "#ED8936",
+        "--bg": "#0F172A",
+        "--card": "#1E293B",
+        "--text": "#F8FAFC",
+        "--muted": "#94A3B8",
+        "--border": "#334155",
+        "--hover": "rgba(255,255,255,0.05)",
+        "--font-base": "16px",
+        "--bar": "56px"
+      }
+    },
+    "ocean": {
+      "name": "Ocean Depth",
+      "icon": "fa-water",
+      "variables": {
+        "--navy": "#091422",
+        "--teal": "#38B2AC",
+        "--coral": "#F6AD55",
+        "--bg": "#12263F",
+        "--card": "#1A365D",
+        "--text": "#E2E8F0",
+        "--muted": "#A0AEC0",
+        "--border": "#2A4365",
+        "--hover": "rgba(56,178,172,0.15)",
+        "--font-base": "17px",
+        "--bar": "60px"
+      }
+    }
+  }
+}
