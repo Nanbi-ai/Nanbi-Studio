@@ -17,10 +17,10 @@ export async function initPresentationEngine(containerId) {
     const baseVars = themeLedger.themes[currentTheme].variables;
     
     const customVars = JSON.parse(localStorage.getItem('nanbi_custom_theme_' + currentTheme)) || {};
-    const getVal = (key) => customVars[key] ?? baseVars[key] ?? '';
+    const getVal = (key) => customVars[key] !== undefined ? customVars[key] : baseVars[key];
     
     const customAppVars = JSON.parse(localStorage.getItem('nanbi_custom_app')) || {};
-    const getAppVal = (key) => customAppVars[key] ?? appLedger[key] ?? '';
+    const getAppVal = (key) => customAppVars[key] !== undefined ? customAppVars[key] : appLedger[key];
     
     container.innerHTML = `
       <div class="flex-1 w-full max-w-7xl">
@@ -38,7 +38,6 @@ export async function initPresentationEngine(containerId) {
         
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8" style="margin-left: 48px;">
             
-            <!-- Column 1: Colors -->
             <div class="flex flex-col gap-8">
                 <div class="p-6" style="background: var(--card); border: 1px solid var(--border); border-radius: var(--card-radius);">
                     <h3 class="font-bold text-main mb-4" style="font-size: 1.05rem;"><i class="fas fa-palette mr-2"></i>Brand Colors</h3>
@@ -58,7 +57,6 @@ export async function initPresentationEngine(containerId) {
                 </div>
             </div>
 
-            <!-- Column 2: Typography & Sizing -->
             <div class="flex flex-col gap-8">
                 <div class="p-6" style="background: var(--card); border: 1px solid var(--border); border-radius: var(--card-radius);">
                     <h3 class="font-bold text-main mb-4" style="font-size: 1.05rem;"><i class="fas fa-font mr-2"></i>Typography</h3>
@@ -80,7 +78,6 @@ export async function initPresentationEngine(containerId) {
                 </div>
             </div>
 
-            <!-- Column 3: Application Content & Account Info -->
             <div class="flex flex-col gap-8">
                 <div class="p-6" style="background: var(--card); border: 1px solid var(--border); border-radius: var(--card-radius); height: 600px; overflow-y: auto;">
                     <h3 class="font-bold text-main mb-4" style="font-size: 1.05rem;"><i class="fas fa-comment-alt mr-2"></i>Global Text & Menus</h3>
