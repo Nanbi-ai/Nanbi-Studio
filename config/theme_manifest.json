@@ -5,15 +5,18 @@
       "name": "Light Mode",
       "icon": "fa-sun",
       "variables": {
-        "--navy": "#2C4653", 
+        "--navy": "#2C4653",
         "--teal": "#527C79",
+        "--teal-light": "#E2F0EF",
         "--coral": "#D35400",
+        "--coral-light": "#FBEAE0",
         "--bg": "#F8FAFC",
         "--card": "#FFFFFF",
         "--text": "#0F172A",
         "--muted": "#475569",
         "--border": "#CBD5E1",
-        "--hover": "rgba(211,84,0,0.08)",
+        "--hover-nav": "rgba(211,84,0,0.08)",
+        "--hover-menu": "rgba(82,124,121,0.12)",
         "--font-base": "16px",
         "--bar": "56px"
       }
@@ -24,13 +27,16 @@
       "variables": {
         "--navy": "#000000",
         "--teal": "#527C79",
+        "--teal-light": "rgba(82,124,121,0.2)",
         "--coral": "#D35400",
+        "--coral-light": "rgba(211,84,0,0.15)",
         "--bg": "#050505",
         "--card": "#121212",
         "--text": "#F5F5F5",
         "--muted": "#A3A3A3",
         "--border": "#262626",
-        "--hover": "rgba(211,84,0,0.12)",
+        "--hover-nav": "rgba(211,84,0,0.12)",
+        "--hover-menu": "rgba(82,124,121,0.18)",
         "--font-base": "16px",
         "--bar": "56px"
       }
