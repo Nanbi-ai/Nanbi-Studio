@@ -14,10 +14,9 @@
         "--brand-teal-light": "#6A8B88",
         "--brand-orange-dark": "#CD664D",
         "--brand-orange-light": "#E08A6D",
-        "--hover-bg": "linear-gradient(90deg, rgba(106, 139, 136, 0.12) 0%, rgba(106, 139, 136, 0.02) 100%)",
+        "--hover-bg": "rgba(0, 0, 0, 0.04)",
         "--hover-text": "#CD664D",
-        "--header-bg": "#364A53",
-        "--header-text": "#FFFFFF",
+        "--header-bg": "#FFFFFF",
         "--font-base": "16px",
         "--bar": "60px"
       }
@@ -35,10 +34,9 @@
         "--brand-teal-light": "#6A8B88",
         "--brand-orange-dark": "#CD664D",
         "--brand-orange-light": "#E08A6D",
-        "--hover-bg": "linear-gradient(90deg, rgba(205, 102, 77, 0.15) 0%, rgba(205, 102, 77, 0.01) 100%)",
+        "--hover-bg": "rgba(255, 255, 255, 0.05)",
         "--hover-text": "#E08A6D",
-        "--header-bg": "#000000",
-        "--header-text": "#FAFAFA",
+        "--header-bg": "#121214",
         "--font-base": "16px",
         "--bar": "60px"
       }
