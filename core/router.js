@@ -78,54 +78,54 @@ function generateUIShell(appConfig) {
       <div class="app-wrapper">
         <nav class="sidebar">
           <div class="sidebar-brand">
-            <img src="icons/nanbi-monogram.svg" alt="nanbi" onerror="this.style.display='none'">
-            <span class="brand-text" id="dom_brand_name">` + (appConfig.brand_name || 'nanbi') + `</span>
+            <img src="icons/nanbi-monogram.svg" alt="" onerror="this.style.display='none'">
+            <span class="brand-text" id="dom_brand_name">` + (appConfig.brand_name ?? 'nanbi') + `</span>
           </div>
           <div class="sidebar-links">
             <a href="#/" id="nav-home">
-                <span class="icon-box"><i class="` + (appConfig.nav_home_icon || 'fas fa-home') + `" id="dom_nav_home_icon"></i></span>
-                <span class="nav-label" id="dom_nav_home_label">` + (appConfig.nav_home_label || 'Home') + `</span>
+                <span class="icon-box"><i class="` + (appConfig.nav_home_icon ?? 'fas fa-home') + `" id="dom_nav_home_icon"></i></span>
+                <span class="nav-label" id="dom_nav_home_label">` + (appConfig.nav_home_label ?? 'Home') + `</span>
             </a>
             <a href="#/config" id="nav-config">
-                <span class="icon-box"><i class="` + (appConfig.nav_config_icon || 'fas fa-sliders-h') + `" id="dom_nav_config_icon"></i></span>
-                <span class="nav-label" id="dom_nav_config_label">` + (appConfig.nav_config_label || 'Configuration') + `</span>
+                <span class="icon-box"><i class="` + (appConfig.nav_config_icon ?? 'fas fa-sliders-h') + `" id="dom_nav_config_icon"></i></span>
+                <span class="nav-label" id="dom_nav_config_label">` + (appConfig.nav_config_label ?? 'Configuration') + `</span>
             </a>
             <a href="#/regions" id="nav-regions">
-                <span class="icon-box"><i class="` + (appConfig.nav_regions_icon || 'fas fa-map-marked-alt') + `" id="dom_nav_regions_icon"></i></span>
-                <span class="nav-label" id="dom_nav_regions_label">` + (appConfig.nav_regions_label || 'Regions') + `</span>
+                <span class="icon-box"><i class="` + (appConfig.nav_regions_icon ?? 'fas fa-map-marked-alt') + `" id="dom_nav_regions_icon"></i></span>
+                <span class="nav-label" id="dom_nav_regions_label">` + (appConfig.nav_regions_label ?? 'Regions') + `</span>
             </a>
           </div>
           <div class="sidebar-divider"></div>
           <a href="#/settings" class="bottom-pin" id="nav-settings">
-              <span class="icon-box"><i class="` + (appConfig.nav_settings_icon || 'fas fa-cog') + `" id="dom_nav_settings_icon"></i></span>
-              <span class="nav-label" id="dom_nav_settings_label">` + (appConfig.nav_settings_label || 'Studio Settings') + `</span>
+              <span class="icon-box"><i class="` + (appConfig.nav_settings_icon ?? 'fas fa-cog') + `" id="dom_nav_settings_icon"></i></span>
+              <span class="nav-label" id="dom_nav_settings_label">` + (appConfig.nav_settings_label ?? 'Studio Settings') + `</span>
           </a>
         </nav>
 
         <div class="main-column">
           <header class="app-header">
             <div class="breadcrumb">
-              <span class="header-brand" id="dom_header_title">` + (appConfig.header_title || 'nanbi studio') + `</span>
+              <span class="header-brand" id="dom_header_title">` + (appConfig.header_title ?? 'nanbi studio') + `</span>
               <i class="fas fa-chevron-right crumb-separator"></i>
               <span id="global-crumb" class="section-crumb"></span>
             </div>
             <span class="spacer"></span>
             <div class="header-actions">
               <div class="avatar-wrapper">
-                <button class="avatar-btn" id="avatar-toggle" title="Account Menu">` + (appConfig.avatar_initial || 'N') + `</button>
+                <button class="avatar-btn" id="avatar-toggle" title="Account Menu">` + (appConfig.avatar_initial ?? 'N') + `</button>
                 <div class="dropdown-menu" id="account-dropdown">
                     <div class="dropdown-header">
-                        <span class="d-name">` + (appConfig.dropdown_identity || 'Sovereign Identity') + `</span>
-                        <span class="d-email">` + (appConfig.dropdown_node || 'Active Edge Node') + `</span>
+                        <span class="d-name">` + (appConfig.dropdown_identity ?? 'Sovereign Identity') + `</span>
+                        <span class="d-email">` + (appConfig.dropdown_node ?? 'Active Edge Node') + `</span>
                     </div>
                     <a class="dropdown-item" id="dropdown-theme-toggle" style="cursor: pointer;"><i id="theme-icon" class="fas fa-sun"></i><span id="theme-label">Appearance</span></a>
                     <div class="dropdown-divider"></div>
-                    <a href="#/account" class="dropdown-item"><i class="fas fa-shield-alt"></i> ` + (appConfig.menu_sovereignty || 'Data Sovereignty') + `</a>
-                    <a href="#/account" class="dropdown-item"><i class="fas fa-key"></i> ` + (appConfig.menu_keys || 'Cryptographic Keys') + `</a>
+                    <a href="#/account" class="dropdown-item"><i class="fas fa-shield-alt"></i> ` + (appConfig.menu_sovereignty ?? 'Data Sovereignty') + `</a>
+                    <a href="#/account" class="dropdown-item"><i class="fas fa-key"></i> ` + (appConfig.menu_keys ?? 'Cryptographic Keys') + `</a>
                     <div class="dropdown-divider"></div>
-                    <a href="#/account" class="dropdown-item"><i class="fas fa-id-badge"></i> ` + (appConfig.menu_tier || 'Subscription Tier') + `</a>
+                    <a href="#/account" class="dropdown-item"><i class="fas fa-id-badge"></i> ` + (appConfig.menu_tier ?? 'Subscription Tier') + `</a>
                     <div class="dropdown-divider"></div>
-                    <a class="dropdown-item" style="color: var(--brand-orange-dark); cursor: pointer;"><i class="fas fa-sign-out-alt" style="color: var(--brand-orange-dark);"></i> ` + (appConfig.menu_disconnect || 'Disconnect Node') + `</a>
+                    <a class="dropdown-item" style="color: var(--brand-orange-dark); cursor: pointer;"><i class="fas fa-sign-out-alt" style="color: var(--brand-orange-dark);"></i> ` + (appConfig.menu_disconnect ?? 'Disconnect Node') + `</a>
                 </div>
               </div>
             </div>
@@ -136,10 +136,8 @@ function generateUIShell(appConfig) {
     `;
 }
 
-// 2. Strict Cloud Bootloader Engine (Fail Fast Protocol)
 async function bootloader() {
     try {
-        // STRICT CLOUD AUDIT: Fetches exclusively from Supabase Database
         const { data, error } = await window.nanbiDB.from('nanbi_ledgers').select('*');
         if (error) throw new Error("Cloud DB Error: " + error.message);
         if (!data || data.length === 0) throw new Error("Ledgers missing in Supabase.");
@@ -175,13 +173,11 @@ async function bootloader() {
         router();
 
     } catch (e) {
-        // STRICT ERROR BOUNDARY
         document.body.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; background:#0F172A; color:#F8FAFC; font-family:monospace; text-align:center;"><div style="background:#7F1D1D; border: 1px solid #EF4444; padding:32px; border-radius:8px; max-width:600px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);"><h2 style="margin-top:0; color:#FECACA; font-size: 24px;">SYSTEM HALT</h2><p style="font-size:16px; margin: 16px 0; color:#FCA5A5;">Cloud Bootloader Integrity Failure</p><div style="background:#450a0a; padding: 12px; border-radius: 4px; color:#f87171; font-weight:bold; margin-bottom: 16px;">' + e.message + '</div></div></div>';
         console.error("Bootloader Halted:", e);
     }
 }
 
-// 3. Theme Application Engine
 function applyTheme(themeId) {
     if (!themeLedger || !themeLedger.themes[themeId]) return;
     const root = document.documentElement;
@@ -189,7 +185,7 @@ function applyTheme(themeId) {
     const userCustomConfig = JSON.parse(localStorage.getItem('nanbi_custom_theme_' + themeId)) || {};
     
     for (const [key, value] of Object.entries(baseThemeData.variables)) {
-        root.style.setProperty(key, userCustomConfig[key] || value);
+        root.style.setProperty(key, userCustomConfig[key] ?? value);
     }
     
     const iconEl = document.getElementById('theme-icon');
@@ -201,7 +197,6 @@ function applyTheme(themeId) {
     localStorage.setItem('nanbi_theme', themeId);
 }
 
-// 4. Shell Interaction Events
 function attachShellEvents() {
     const avatarBtn = document.getElementById('avatar-toggle');
     const dropdownMenu = document.getElementById('account-dropdown');
@@ -224,7 +219,6 @@ function attachShellEvents() {
     }
 }
 
-// 5. Navigation Utilities
 function setCrumb(title) { 
     const crumbEl = document.getElementById('global-crumb');
     if(crumbEl) crumbEl.innerText = title; 
@@ -236,7 +230,6 @@ function renderView(html) {
     if(contentEl) contentEl.innerHTML = '<div class="flex-1 w-full h-full" style="padding: var(--main-padding);">' + html + '</div>';
 }
 
-// 6. Primary Routing Engine
 function router() {
     try {
         const hash = location.hash || "#/";
@@ -247,11 +240,11 @@ function router() {
         });
 
         if (hash === "#/") {
-            setCrumb(appLedger.nav_home_label || "Home");
-            renderView('<h2 style="font-size: var(--header-title-size); font-weight: bold; color: var(--text);">Welcome to ' + (appLedger.header_title || 'nanbi studio') + '</h2><p style="font-size: var(--label-size); margin-top: 8px; color: var(--muted);">V5.0 Modular Architecture active. Layout is completely flat and immersive.</p>');
+            setCrumb(appLedger.nav_home_label ?? "Home");
+            renderView('<h2 style="font-size: var(--header-title-size); font-weight: bold; color: var(--text);">Welcome to ' + (appLedger.header_title ?? '') + '</h2><p style="font-size: var(--label-size); margin-top: 8px; color: var(--muted);">V5.0 Modular Architecture active. Layout is completely flat and immersive.</p>');
         } 
         else if (hash === "#/config") {
-            setCrumb(appLedger.nav_config_label || "Configuration");
+            setCrumb(appLedger.nav_config_label ?? "Configuration");
             renderView('<div id="config-hub-container" class="w-full h-full">Loading Hub...</div>');
             import('../modules/config_hub.js').then(m => m.initConfigHub('config-hub-container')).catch(e => {
                 document.getElementById('config-hub-container').innerHTML = '<div style="color:red; font-weight:bold;">Failed to load Hub module.</div>';
@@ -265,12 +258,12 @@ function router() {
             });
         }
         else if (hash === "#/regions") {
-            setCrumb(appLedger.nav_regions_label || "Regions");
+            setCrumb(appLedger.nav_regions_label ?? "Regions");
             renderView('<div style="background: var(--active-bg); border-left: 4px solid var(--brand-orange-dark); padding: var(--main-padding); border-radius: var(--card-radius);"><h2 style="font-size: var(--header-title-size); font-weight: bold; color: var(--brand-orange-dark);"><i class="fas fa-lock" style="margin-right: 12px;"></i>Module Locked</h2><p style="font-size: var(--label-size); margin-top: 8px; color: var(--text); font-weight: 600;">Awaiting Regional Taxonomy JSON payload.</p></div>');
         }
         else if (hash === "#/settings") {
-            setCrumb(appLedger.nav_settings_label || "Studio Settings");
-            renderView('<h2 style="font-size: var(--header-title-size); font-weight: bold; color: var(--text);">' + (appLedger.nav_settings_label || 'Studio Settings') + '</h2><p style="font-size: var(--label-size); margin-top: 8px; color: var(--muted);">Platform-level configurations.</p>');
+            setCrumb(appLedger.nav_settings_label ?? "Studio Settings");
+            renderView('<h2 style="font-size: var(--header-title-size); font-weight: bold; color: var(--text);">' + (appLedger.nav_settings_label ?? '') + '</h2><p style="font-size: var(--label-size); margin-top: 8px; color: var(--muted);">Platform-level configurations.</p>');
         }
         else if (hash === "#/account") {
             setCrumb("Account Profile");
@@ -281,5 +274,5 @@ function router() {
     }
 }
 
-// 7. Execute Bootloader
+// Execute Bootloader
 bootloader();
