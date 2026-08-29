@@ -15,11 +15,12 @@ export async function initPresentationEngine(containerId) {
 
     const currentTheme = localStorage.getItem('nanbi_theme') || themeLedger.active_default;
     const baseVars = themeLedger.themes[currentTheme].variables;
+    
     const customVars = JSON.parse(localStorage.getItem('nanbi_custom_theme_' + currentTheme)) || {};
-    const getVal = (key) => customVars[key] || baseVars[key];
+    const getVal = (key) => customVars[key] ?? baseVars[key] ?? '';
     
     const customAppVars = JSON.parse(localStorage.getItem('nanbi_custom_app')) || {};
-    const getAppVal = (key) => customAppVars[key] || appLedger[key];
+    const getAppVal = (key) => customAppVars[key] ?? appLedger[key] ?? '';
     
     container.innerHTML = `
       <div class="flex-1 w-full max-w-7xl">
@@ -94,7 +95,6 @@ export async function initPresentationEngine(containerId) {
                         <input type="text" class="w-full p-2 border rounded app-input text-sm font-semibold" style="background:var(--bg); color:var(--text); border-color:var(--border);" data-key="header_title" value="${getAppVal('header_title')}">
                     </div>
 
-                    <!-- Dropdown Identity Extracted -->
                     <div class="flex justify-between items-center py-3 border-b border-[color:var(--border)] mt-2">
                         <input type="text" class="w-12 p-1 border rounded app-input text-xs font-bold text-center" style="background:var(--bg); color:var(--text); border-color:var(--border);" data-key="avatar_initial" value="${getAppVal('avatar_initial')}" title="Avatar Initial">
                         <div class="flex flex-col gap-1 w-48">
@@ -103,7 +103,6 @@ export async function initPresentationEngine(containerId) {
                         </div>
                     </div>
 
-                    <!-- Navigation Items Extracted -->
                     <div class="flex justify-between items-center py-3 border-b border-[color:var(--border)]">
                         <input type="text" class="w-20 p-1 border rounded app-input icon-input text-xs font-mono" style="background:var(--bg); color:var(--text); border-color:var(--border);" data-key="nav_home_icon" value="${getAppVal('nav_home_icon')}">
                         <input type="text" class="w-32 p-1 border rounded app-input text-sm" style="background:var(--bg); color:var(--text); border-color:var(--border);" data-key="nav_home_label" value="${getAppVal('nav_home_label')}">
@@ -121,7 +120,6 @@ export async function initPresentationEngine(containerId) {
                         <input type="text" class="w-32 p-1 border rounded app-input text-sm" style="background:var(--bg); color:var(--text); border-color:var(--border);" data-key="nav_settings_label" value="${getAppVal('nav_settings_label')}">
                     </div>
                     
-                    <!-- Dropdown Links Extracted -->
                     <div class="flex flex-col py-3 gap-2">
                         <span class="font-bold text-main text-[0.85rem]">Dropdown Menu Labels</span>
                         <input type="text" class="w-full p-1 border rounded app-input text-sm" style="background:var(--bg); color:var(--text); border-color:var(--border);" data-key="menu_sovereignty" value="${getAppVal('menu_sovereignty')}">
@@ -142,7 +140,6 @@ export async function initPresentationEngine(containerId) {
       </div>
     `;
     
-    // Live Edge Sync Events
     container.querySelectorAll('.color-picker, .size-input').forEach(input => {
         input.addEventListener('input', (e) => {
             const varName = e.target.getAttribute('data-var');
@@ -165,7 +162,6 @@ export async function initPresentationEngine(containerId) {
             savedApp[key] = val;
             localStorage.setItem('nanbi_custom_app', JSON.stringify(savedApp));
             
-            // Note: Dropdown items won't instantly preview in the open menu since they are rerendered on boot, but they are tracked for saving.
             const targetDOM = document.getElementById('dom_' + key);
             if(targetDOM) {
                 if(e.target.classList.contains('icon-input')) targetDOM.className = val; 
@@ -174,7 +170,6 @@ export async function initPresentationEngine(containerId) {
         });
     });
 
-    // The Global Cloud Sync Pipeline
     container.querySelector('#btn-save-theme').addEventListener('click', async (e) => {
         const btn = e.target;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Syncing to Supabase...';
@@ -189,14 +184,12 @@ export async function initPresentationEngine(containerId) {
             const customAppVars = JSON.parse(localStorage.getItem('nanbi_custom_app')) || {};
             let exportAppLedger = { ...appLedger, ...customAppVars };
 
-            // Execute Live UPDATE to Supabase
             const { error: tErr } = await window.nanbiDB.from('nanbi_ledgers').update({ payload: exportThemeLedger }).eq('ledger_name', 'theme_manifest');
             if (tErr) throw tErr;
 
             const { error: aErr } = await window.nanbiDB.from('nanbi_ledgers').update({ payload: exportAppLedger }).eq('ledger_name', 'app_manifest');
             if (aErr) throw aErr;
 
-            // Clear the local edge cache to force a pure cloud reload
             localStorage.removeItem('nanbi_custom_theme_' + activeTheme);
             localStorage.removeItem('nanbi_custom_app');
 
