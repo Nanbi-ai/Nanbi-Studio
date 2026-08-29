@@ -1,8 +1,15 @@
 // =======================================================================
-// NANBI V5.0 MASTER ROUTER (SELF-HEALING)
+// NANBI V5.0 MASTER ROUTER (CLOUD CONNECTED & SELF-HEALING)
 // =======================================================================
 
-// Fail-safe CSS Guarantee - Prevents White Screen of Death permanently
+// 1. Initialize Live Cloud Database (Supabase)
+const SUPABASE_URL = "https://yeoracoxyjzgpsyxgwri.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inllb3JhY294eWp6Z3BzeXhnd3JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3MzgzNzUsImV4cCI6MjEwMzMxNDM3NX0.rNcvhRCw4KyfNpsWH6IYxlQT07zJ7i68Zg5jnpqj9yc";
+
+// Creates a global database client that all your config modules can use
+window.nanbiDB = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// 2. Fail-safe CSS Guarantee - Prevents White Screen of Death permanently
 const FALLBACK_CSS = `
     :root {
         --bg: #F8FAFC;
@@ -22,6 +29,7 @@ const FALLBACK_CSS = `
     }
 `;
 
+// 3. Define the Global UI Shell
 const UI_SHELL = `
   <style>
     ${FALLBACK_CSS}
@@ -135,7 +143,7 @@ const UI_SHELL = `
   </div>
 `;
 
-// Boot Execution Wrapper prevents White Screen
+// 4. Boot Execution Wrapper prevents White Screen
 try {
     let rootNode = document.getElementById('nanbi-root');
     if(!rootNode) {
@@ -157,7 +165,7 @@ try {
     document.getElementById('error-log').innerText = "Critical UI Shell Failure: " + e.message;
 }
 
-// 2. Theme Engine Bootloader
+// 5. Theme Engine Bootloader
 let themeLedger = null;
 let themeKeys = [];
 
@@ -215,7 +223,7 @@ function renderView(html) {
     if(contentEl) contentEl.innerHTML = html;
 }
 
-// 3. Routing Engine (Perfectly Flat)
+// 6. Routing Engine (Perfectly Flat & Dynamic Imports fixed)
 function router() {
     try {
         const hash = location.hash || "#/";
@@ -257,6 +265,6 @@ function router() {
     }
 }
 
-// 4. Boot Execution
+// 7. Boot Execution
 window.addEventListener("hashchange", router);
 initializeThemeEngine().then(router);
