@@ -1,7 +1,7 @@
 import { CryptoEngine } from './crypto_engine.js';
 
 // =======================================================================
-// NANBI V5.0 MASTER ROUTER (E2E CRYPTO BOOTLOADER)
+// NANBI V5.0 MASTER ROUTER (UNIVERSAL SWITCHBOARD & E2E CRYPTO)
 // =======================================================================
 
 const SUPABASE_URL = "https://yeoracoxyjzgpsyxgwri.supabase.co";
@@ -12,19 +12,19 @@ let themeLedger = null;
 let appLedger = null;
 let themeKeys = [];
 
-// THE ARCHITECTURAL BASELINE: Guarantees zero empty fields globally.
 const BASELINE_APP = {
     brand_name: "nanbi", header_title: "nanbi studio",
-    nav_home_icon: "fas fa-home", nav_home_label: "Home",
-    nav_config_icon: "fas fa-sliders-h", nav_config_label: "Configuration",
-    nav_regions_icon: "fas fa-map-marked-alt", nav_regions_label: "Regions",
-    nav_settings_icon: "fas fa-cog", nav_settings_label: "Studio Settings",
     avatar_initial: "N", dropdown_identity: "Sovereign Identity", dropdown_node: "Active Edge Node",
     page_home_title: "Welcome", page_home_subtitle: "Modular Architecture Active.",
     page_regions_title: "Module Locked", page_regions_subtitle: "Awaiting Taxonomy Payload.",
     page_settings_title: "System Settings", page_settings_subtitle: "Platform-level configurations.",
-    page_account_title: "Data Sovereignty", page_account_subtitle: "Manage cryptographic credentials.",
-    page_loading_text: "Loading...", page_error_text: "Module Load Failure"
+    page_loading_text: "Loading...", page_error_text: "Module Load Failure",
+    active_modules: [
+        { id: "home", path: "#/", icon: "fas fa-home", label: "Home", locked: true, sort_order: 0, access_level: ["Founder"] },
+        { id: "config", path: "#/config", icon: "fas fa-sliders-h", label: "Configuration", locked: false, sort_order: 1, access_level: ["Founder"] },
+        { id: "regions", path: "#/regions", icon: "fas fa-map-marked-alt", label: "Regions", locked: false, sort_order: 2, access_level: ["Founder"] },
+        { id: "settings", path: "#/settings", icon: "fas fa-cog", label: "Studio Settings", locked: false, sort_order: 99, access_level: ["Founder"] }
+    ]
 };
 
 const BASELINE_THEME_VARS = {
@@ -41,6 +41,24 @@ const BASELINE_THEME_VARS = {
 };
 
 function generateUIShell(appConfig) {
+    const sortedModules = (appConfig.active_modules || []).sort((a, b) => a.sort_order - b.sort_order);
+    
+    let dynamicLinksHTML = '';
+    let settingsLinkHTML = '';
+    
+    sortedModules.forEach(mod => {
+        const linkHTML = `<a href="${mod.path}" id="nav-${mod.id}">
+            <span class="icon-box"><i class="${mod.icon}" id="dom_nav_${mod.id}_icon"></i></span>
+            <span class="nav-label" id="dom_nav_${mod.id}_label">${mod.label}</span>
+        </a>`;
+        
+        if (mod.id === 'settings') {
+            settingsLinkHTML = linkHTML.replace('<a ', '<a class="bottom-pin" ');
+        } else {
+            dynamicLinksHTML += linkHTML;
+        }
+    });
+
     return `
       <style>
         html, body { background:var(--bg); color:var(--text); font-size:var(--font-base); font-family:var(--font-main); font-weight:var(--weight-main); height: 100vh; margin: 0; overflow: hidden; display: flex; transition: background 0.3s, color 0.3s; }
@@ -87,28 +105,28 @@ function generateUIShell(appConfig) {
         <nav class="sidebar">
           <div class="sidebar-brand">
             <img src="icons/nanbi-monogram.svg" alt="" onerror="this.style.display='none'">
-            <span class="brand-text" id="dom_brand_name">` + appConfig.brand_name + `</span>
+            <span class="brand-text" id="dom_brand_name">${appConfig.brand_name}</span>
           </div>
-          <div class="sidebar-links">
-            <a href="#/" id="nav-home"><span class="icon-box"><i class="` + appConfig.nav_home_icon + `" id="dom_nav_home_icon"></i></span><span class="nav-label" id="dom_nav_home_label">` + appConfig.nav_home_label + `</span></a>
-            <a href="#/config" id="nav-config"><span class="icon-box"><i class="` + appConfig.nav_config_icon + `" id="dom_nav_config_icon"></i></span><span class="nav-label" id="dom_nav_config_label">` + appConfig.nav_config_label + `</span></a>
-            <a href="#/regions" id="nav-regions"><span class="icon-box"><i class="` + appConfig.nav_regions_icon + `" id="dom_nav_regions_icon"></i></span><span class="nav-label" id="dom_nav_regions_label">` + appConfig.nav_regions_label + `</span></a>
+          
+          <div class="sidebar-links" id="dynamic-sidebar-links">
+            ${dynamicLinksHTML}
           </div>
+          
           <div class="sidebar-divider"></div>
-          <a href="#/settings" class="bottom-pin" id="nav-settings"><span class="icon-box"><i class="` + appConfig.nav_settings_icon + `" id="dom_nav_settings_icon"></i></span><span class="nav-label" id="dom_nav_settings_label">` + appConfig.nav_settings_label + `</span></a>
+          ${settingsLinkHTML}
         </nav>
 
         <div class="main-column">
           <header class="app-header">
             <div class="breadcrumb">
-              <span class="header-brand" id="dom_header_title">` + appConfig.header_title + `</span>
+              <span class="header-brand" id="dom_header_title">${appConfig.header_title}</span>
               <i class="fas fa-chevron-right crumb-separator"></i>
               <span id="global-crumb" class="section-crumb"></span>
             </div>
             <span class="spacer"></span>
             <div class="header-actions">
               <div class="avatar-wrapper">
-                <button class="avatar-btn" id="avatar-toggle" title="Account Menu">` + appConfig.avatar_initial + `</button>
+                <button class="avatar-btn" id="avatar-toggle" title="Account Menu">${appConfig.avatar_initial}</button>
               </div>
             </div>
           </header>
@@ -126,11 +144,10 @@ async function bootloader() {
         const rawTheme = data.find(r => r.ledger_name === 'theme_manifest');
         const rawApp = data.find(r => r.ledger_name === 'app_manifest');
 
-        // E2E DECRYPTION LAYER
         if (rawTheme?.iv_signature) {
             themeLedger = await CryptoEngine.decryptPayload(rawTheme.payload, rawTheme.iv_signature);
         } else {
-            themeLedger = rawTheme?.payload; // Fallback for legacy plaintext
+            themeLedger = rawTheme?.payload; 
         }
 
         let fetchedAppConfig = {};
@@ -211,12 +228,17 @@ function router() {
             a.classList.toggle("active", hash === path || (path !== "#/" && hash.startsWith(path)));
         });
 
+        const activeModule = (appLedger.active_modules || []).find(m => m.path === hash || (m.path !== "#/" && hash.startsWith(m.path)));
+        if (activeModule) {
+            setCrumb(activeModule.label);
+        } else {
+            setCrumb("");
+        }
+
         if (hash === "#/") {
-            setCrumb(appLedger.nav_home_label);
             renderView('<h2 style="font-size: var(--page-title-size); font-weight: var(--weight-bold); font-family: var(--font-brand); color: var(--page-title-color);">' + appLedger.page_home_title + '</h2><p style="font-size: var(--page-subtitle-size); margin-top: var(--spacing-sm); color: var(--page-subtitle-color);">' + appLedger.page_home_subtitle + '</p>');
         } 
         else if (hash === "#/config") {
-            setCrumb(appLedger.nav_config_label);
             renderView('<div id="config-hub-container" class="w-full h-full"><p style="font-weight: var(--weight-bold); color: var(--muted);">' + appLedger.page_loading_text + '</p></div>');
             import('../modules/config_hub.js').then(m => m.initConfigHub('config-hub-container')).catch(e => {
                 document.getElementById('config-hub-container').innerHTML = '<div style="color:red; font-weight:var(--weight-bold);">' + appLedger.page_error_text + '</div>';
@@ -230,7 +252,6 @@ function router() {
             });
         }
         else if (hash === "#/regions") {
-            setCrumb(appLedger.nav_regions_label);
             renderView('<div style="background: var(--active-bg); border-left: 4px solid var(--brand-orange-dark); padding: var(--main-padding); border-radius: var(--card-radius);"><h2 style="font-size: var(--page-title-size); font-family: var(--font-brand); font-weight: var(--weight-bold); color: var(--brand-orange-dark);"><i class="fas fa-lock" style="margin-right: 12px;"></i>' + appLedger.page_regions_title + '</h2></div>');
         }
     } catch (e) {
