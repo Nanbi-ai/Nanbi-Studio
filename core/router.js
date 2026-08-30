@@ -1,5 +1,7 @@
+import { CryptoEngine } from './crypto_engine.js';
+
 // =======================================================================
-// NANBI V5.0 MASTER ROUTER (BASELINE LEDGERS & STRICT CLOUD SSOT)
+// NANBI V5.0 MASTER ROUTER (E2E CRYPTO BOOTLOADER)
 // =======================================================================
 
 const SUPABASE_URL = "https://yeoracoxyjzgpsyxgwri.supabase.co";
@@ -18,7 +20,6 @@ const BASELINE_APP = {
     nav_regions_icon: "fas fa-map-marked-alt", nav_regions_label: "Regions",
     nav_settings_icon: "fas fa-cog", nav_settings_label: "Studio Settings",
     avatar_initial: "N", dropdown_identity: "Sovereign Identity", dropdown_node: "Active Edge Node",
-    menu_sovereignty: "Data Sovereignty", menu_keys: "Cryptographic Keys", menu_tier: "Subscription Tier", menu_disconnect: "Disconnect Node",
     page_home_title: "Welcome", page_home_subtitle: "Modular Architecture Active.",
     page_regions_title: "Module Locked", page_regions_subtitle: "Awaiting Taxonomy Payload.",
     page_settings_title: "System Settings", page_settings_subtitle: "Platform-level configurations.",
@@ -78,16 +79,6 @@ function generateUIShell(appConfig) {
         .avatar-wrapper { position: relative; display: flex; align-items: center; }
         .avatar-btn { background: var(--brand-orange-dark); color: var(--card); border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-family: var(--font-brand); font-weight: var(--weight-brand); font-size: var(--label-size); display: flex; align-items: center; justify-content: center; margin-left: 8px; transition: transform 0.2s; }
         .avatar-btn:hover { transform: scale(1.05); }
-        .dropdown-menu { display: none; position: absolute; right: 0; top: 44px; background: var(--card); border: 1px solid var(--border); border-radius: var(--card-radius); box-shadow: 0 8px 24px rgba(0,0,0,0.12); width: 250px; z-index: 100; flex-direction: column; overflow: hidden; }
-        .dropdown-menu.show { display: flex; }
-        .dropdown-header { padding: 16px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 4px; }
-        .dropdown-header .d-name { font-family: var(--font-brand); font-weight: var(--weight-brand); font-size: var(--label-size); color: var(--text); }
-        .dropdown-header .d-email { font-size: var(--font-base); color: var(--muted); }
-        .dropdown-item { padding: 12px 16px; font-size: var(--font-base); font-weight: var(--weight-main); color: var(--text); text-decoration: none; display: flex; align-items: center; gap: 12px; transition: all 0.2s; cursor: pointer; }
-        .dropdown-item i { width: 16px; text-align: center; color: var(--muted); transition: color 0.2s; }
-        .dropdown-item:hover { background: var(--active-bg); color: var(--brand-orange-dark); }
-        .dropdown-item:hover i { color: var(--brand-orange-dark); }
-        .dropdown-divider { height: 1px; background: var(--border); margin: 4px 0; }
         
         main { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
       </style>
@@ -118,20 +109,6 @@ function generateUIShell(appConfig) {
             <div class="header-actions">
               <div class="avatar-wrapper">
                 <button class="avatar-btn" id="avatar-toggle" title="Account Menu">` + appConfig.avatar_initial + `</button>
-                <div class="dropdown-menu" id="account-dropdown">
-                    <div class="dropdown-header">
-                        <span class="d-name">` + appConfig.dropdown_identity + `</span>
-                        <span class="d-email">` + appConfig.dropdown_node + `</span>
-                    </div>
-                    <a class="dropdown-item" id="dropdown-theme-toggle" style="cursor: pointer;"><i id="theme-icon" class="fas fa-sun"></i><span id="theme-label">Appearance</span></a>
-                    <div class="dropdown-divider"></div>
-                    <a href="#/account" class="dropdown-item"><i class="fas fa-shield-alt"></i> ` + appConfig.menu_sovereignty + `</a>
-                    <a href="#/account" class="dropdown-item"><i class="fas fa-key"></i> ` + appConfig.menu_keys + `</a>
-                    <div class="dropdown-divider"></div>
-                    <a href="#/account" class="dropdown-item"><i class="fas fa-id-badge"></i> ` + appConfig.menu_tier + `</a>
-                    <div class="dropdown-divider"></div>
-                    <a class="dropdown-item" style="color: var(--brand-orange-dark); cursor: pointer;"><i class="fas fa-sign-out-alt" style="color: var(--brand-orange-dark);"></i> ` + appConfig.menu_disconnect + `</a>
-                </div>
               </div>
             </div>
           </header>
@@ -149,15 +126,24 @@ async function bootloader() {
         const rawTheme = data.find(r => r.ledger_name === 'theme_manifest');
         const rawApp = data.find(r => r.ledger_name === 'app_manifest');
 
-        themeLedger = rawTheme.payload;
-        const fetchedAppConfig = rawApp.payload || {};
+        // E2E DECRYPTION LAYER
+        if (rawTheme?.iv_signature) {
+            themeLedger = await CryptoEngine.decryptPayload(rawTheme.payload, rawTheme.iv_signature);
+        } else {
+            themeLedger = rawTheme?.payload; // Fallback for legacy plaintext
+        }
+
+        let fetchedAppConfig = {};
+        if (rawApp?.iv_signature) {
+            fetchedAppConfig = await CryptoEngine.decryptPayload(rawApp.payload, rawApp.iv_signature);
+        } else {
+            fetchedAppConfig = rawApp?.payload || {}; 
+        }
 
         localStorage.setItem('nanbi_edge_theme', JSON.stringify(themeLedger));
         localStorage.setItem('nanbi_edge_app', JSON.stringify(fetchedAppConfig));
 
         const userAppConfig = JSON.parse(localStorage.getItem('nanbi_custom_app')) || {};
-        
-        // BASELINE MERGE: Ensures no missing keys cause empty UI elements globally
         appLedger = Object.assign({}, BASELINE_APP, fetchedAppConfig, userAppConfig);
 
     } catch (e) {
@@ -188,8 +174,6 @@ async function bootloader() {
     rootNode.innerHTML = generateUIShell(appLedger);
 
     applyTheme(savedTheme);
-    attachShellEvents();
-    
     window.addEventListener("hashchange", router);
     router();
 }
@@ -202,38 +186,10 @@ function applyTheme(themeId) {
     
     for (const [key, value] of Object.entries(BASELINE_THEME_VARS)) {
         const themeVal = baseThemeData.variables[key];
-        const finalVal = userCustomConfig[key] ?? themeVal ?? value; // Overrides baseline
+        const finalVal = userCustomConfig[key] ?? themeVal ?? value;
         root.style.setProperty(key, finalVal);
     }
-    
-    const iconEl = document.getElementById('theme-icon');
-    const labelEl = document.getElementById('theme-label');
-    if(iconEl) iconEl.className = 'fas ' + baseThemeData.icon;
-    if(labelEl) labelEl.innerText = 'Theme: ' + baseThemeData.name;
-    
     localStorage.setItem('nanbi_theme', themeId);
-}
-
-function attachShellEvents() {
-    const avatarBtn = document.getElementById('avatar-toggle');
-    const dropdownMenu = document.getElementById('account-dropdown');
-
-    if(avatarBtn && dropdownMenu) {
-        avatarBtn.addEventListener('click', (e) => { e.stopPropagation(); dropdownMenu.classList.toggle('show'); });
-        document.addEventListener('click', (e) => { if (!dropdownMenu.contains(e.target) && e.target !== avatarBtn) dropdownMenu.classList.remove('show'); });
-    }
-    
-    const themeToggleBtn = document.getElementById('dropdown-theme-toggle');
-    if(themeToggleBtn) {
-        themeToggleBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (!themeLedger) return;
-            const currentTheme = localStorage.getItem('nanbi_theme');
-            const currentIndex = themeKeys.indexOf(currentTheme);
-            applyTheme(themeKeys[(currentIndex + 1) % themeKeys.length]);
-            if(location.hash.includes("#/config")) window.location.reload(); 
-        });
-    }
 }
 
 function setCrumb(title) { 
@@ -242,7 +198,6 @@ function setCrumb(title) {
 }
 
 function renderView(html) {
-    if(window.nanbiActiveMap) { window.nanbiActiveMap.remove(); window.nanbiActiveMap = null; }
     const contentEl = document.getElementById('app-content');
     if(contentEl) contentEl.innerHTML = '<div class="flex-1 w-full h-full" style="padding: var(--main-padding);">' + html + '</div>';
 }
@@ -276,15 +231,7 @@ function router() {
         }
         else if (hash === "#/regions") {
             setCrumb(appLedger.nav_regions_label);
-            renderView('<div style="background: var(--active-bg); border-left: 4px solid var(--brand-orange-dark); padding: var(--main-padding); border-radius: var(--card-radius);"><h2 style="font-size: var(--page-title-size); font-family: var(--font-brand); font-weight: var(--weight-bold); color: var(--brand-orange-dark);"><i class="fas fa-lock" style="margin-right: 12px;"></i>' + appLedger.page_regions_title + '</h2><p style="font-size: var(--page-subtitle-size); margin-top: var(--spacing-sm); color: var(--page-subtitle-color); font-weight: var(--weight-main);">' + appLedger.page_regions_subtitle + '</p></div>');
-        }
-        else if (hash === "#/settings") {
-            setCrumb(appLedger.nav_settings_label);
-            renderView('<h2 style="font-size: var(--page-title-size); font-weight: var(--weight-bold); font-family: var(--font-brand); color: var(--page-title-color);">' + appLedger.page_settings_title + '</h2><p style="font-size: var(--page-subtitle-size); margin-top: var(--spacing-sm); color: var(--page-subtitle-color);">' + appLedger.page_settings_subtitle + '</p>');
-        }
-        else if (hash === "#/account") {
-            setCrumb("Account Profile");
-            renderView('<h2 style="font-size: var(--page-title-size); font-weight: var(--weight-bold); font-family: var(--font-brand); color: var(--page-title-color);">' + appLedger.page_account_title + '</h2><p style="font-size: var(--page-subtitle-size); margin-top: var(--spacing-sm); color: var(--page-subtitle-color);">' + appLedger.page_account_subtitle + '</p>');
+            renderView('<div style="background: var(--active-bg); border-left: 4px solid var(--brand-orange-dark); padding: var(--main-padding); border-radius: var(--card-radius);"><h2 style="font-size: var(--page-title-size); font-family: var(--font-brand); font-weight: var(--weight-bold); color: var(--brand-orange-dark);"><i class="fas fa-lock" style="margin-right: 12px;"></i>' + appLedger.page_regions_title + '</h2></div>');
         }
     } catch (e) {
         console.error("Routing error:", e);
