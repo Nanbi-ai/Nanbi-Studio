@@ -1,12 +1,12 @@
 // =======================================================================
-// NANBI V5.0 - TERRITORY MATRIX ENGINE (RESTORED ORIGINAL UI & RPC MAP)
+// NANBI V5.0 - TERRITORY MATRIX ENGINE (RESTORED ORIGINAL CODE)
 // =======================================================================
 
 export async function initRegionsEngine(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // 1. EXACT RESTORATION OF YOUR ORIGINAL LAYOUT
+    // 1. Inject the exact layout for the Map and Data panes from your territory_matrix.html
     container.innerHTML = `
         <div class="flex-1 flex flex-col w-full h-full bg-slate-50/50">
             <!-- Header -->
@@ -24,13 +24,11 @@ export async function initRegionsEngine(containerId) {
             </div>
 
             <div class="flex-1 flex flex-col lg:flex-row gap-4 w-full">
-                
                 <!-- LEFT COLUMN: Hierarchy & Map (38%) -->
                 <aside class="w-full lg:w-[38%] flex flex-col gap-4 shrink-0">
-                    
                     <div class="bg-white p-4 rounded border border-slate-200 shadow-sm">
                         <div class="flex justify-between items-center pb-2 border-b border-slate-100 mb-3">
-                            <span id="geoBreadcrumb" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest"><i class="fas fa-chevron-left mr-1"></i> <i class="fas fa-chevron-right mr-1"></i> WORLD VIEW</span>
+                            <span id="geoHierarchyBreadcrumb" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest"><i class="fas fa-chevron-left mr-1"></i> <i class="fas fa-chevron-right mr-1"></i> WORLD VIEW</span>
                             <button class="text-[10px] font-bold text-slate-500 hover:text-slate-800 transition-colors"><i class="fas fa-globe mr-1"></i> Globe</button>
                         </div>
                         <div class="grid grid-cols-2 gap-3">
@@ -67,19 +65,19 @@ export async function initRegionsEngine(containerId) {
                         </div>
                     </div>
 
-                    <!-- Sovereign OpenStreetMap Integration -->
-                    <div class="flex-1 bg-white p-1.5 rounded border border-slate-200 shadow-sm relative min-h-[400px]">
-                        <div id="map" class="absolute inset-1 rounded-sm z-0"></div>
+                    <div class="flex-1 bg-white p-1.5 rounded border border-slate-200 relative shadow-sm min-h-[400px]">
+                        <div id="map-wrapper" style="position:relative; width:100%; height:100%; min-height:400px; z-index:1;">
+                            <div id="map" style="position:absolute; inset:0;"></div>
+                        </div>
                     </div>
                 </aside>
 
                 <!-- RIGHT COLUMN: Metrics & Data Ledger (62%) -->
                 <section class="w-full lg:w-[62%] flex flex-col gap-4 shrink-0 lg:shrink">
-                    
-                    <div class="bg-white rounded border border-slate-200 p-5 shadow-sm flex justify-around items-center">
+                    <div class="bg-white p-4 rounded border border-slate-200 flex justify-around items-center shadow-sm">
                         <div class="text-center">
                             <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Active Territories</p>
-                            <p class="text-3xl font-black text-slate-800 mt-1" id="metricActive">0</p>
+                            <p class="text-3xl font-black text-slate-800 mt-1" id="metricCount">0</p>
                         </div>
                         <div class="w-px h-10 bg-slate-200"></div>
                         <div class="text-center">
@@ -114,7 +112,7 @@ export async function initRegionsEngine(containerId) {
                         </div>
                         <div class="bg-slate-50 border-t border-slate-200 p-3 flex justify-between items-center">
                             <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Entity Inspector</span>
-                            <span class="text-[10px] font-medium text-slate-400">Select a territory...</span>
+                            <span class="text-[10px] font-medium text-slate-400" id="inspectorText">Awaiting node selection...</span>
                         </div>
                     </div>
                 </section>
@@ -122,92 +120,54 @@ export async function initRegionsEngine(containerId) {
         </div>
     `;
 
-    // 2. Initialize Leaflet Map Engine (FREE OSM - ZERO API KEYS)
-    await loadLeafletLibrary();
-
+    // 2. Initialize the Native Leaflet Map Engine (Exactly as you had it)
+    if (!window.L) {
+        await loadLeafletLibrary(); 
+    }
+    
     const mapContainer = window.L.DomUtil.get('map');
     if(mapContainer != null){ mapContainer._leaflet_id = null; }
 
-    const map = window.L.map('map', { zoomControl: true, attributionControl: false }).setView([22.5937, 78.9629], 4);
-    window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 0.8 }).addTo(map);
+    const map = window.L.map('map', { zoomControl: true, attributionControl: false }).setView([22.5937, 78.9629], 3);
+    window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 0.5 }).addTo(map);
 
-    const featureGroup = window.L.featureGroup().addTo(map);
-
-    // 3. Fetch Sovereign GeoJSON Uploaded via the Python Script
+    // 3. Fetch the Genesis Data via YOUR RPC (Using the global nanbiDB from router)
     try {
-        const { data, error } = await window.nanbiDB.rpc('get_countries_geojson');
-        if (error) throw error;
-
-        if (data && data.length > 0) {
-            const selCountry = document.getElementById('selCountry');
-            selCountry.innerHTML = '<option value="All">Global Overview</option>';
-
-            data.forEach(c => {
-                selCountry.innerHTML += `<option value="${c.id}">${c.name}</option>`;
-                if (c.geojson) {
+        const res = await window.nanbiDB.rpc('get_countries_geojson');
+        
+        if(res.data && res.data.length > 0) {
+            const sel = document.getElementById('selCountry');
+            sel.innerHTML = '<option value="All">Global Overview</option>';
+            
+            const featureGroup = window.L.featureGroup();
+            
+            res.data.forEach(c => {
+                sel.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+                if(c.geojson) {
                     try {
                         const layer = window.L.geoJSON(JSON.parse(c.geojson), { 
-                            style: { color: '#ffffff', weight: 1, fillColor: getVisualColor(c.name), fillOpacity: 0.5 } 
+                            // The exact style settings from your snippet
+                            style: { color: '#ffffff', weight: 1, fillColor: '#D35400', fillOpacity: 0.4 } 
                         });
-                        
-                        layer.on('mouseover', e => { e.target.bringToFront(); e.target.setStyle({stroke: true, color: '#1E293B', weight: 2, fillOpacity: 0.8}); });
-                        layer.on('mouseout', e => e.target.setStyle({color: '#ffffff', weight: 1, fillOpacity: 0.5}));
-                        
-                        layer.on('click', () => {
-                            selCountry.value = c.id;
-                            selCountry.dispatchEvent(new Event('change'));
-                        });
-                        
+                        layer.on('mouseover', e => { e.target.bringToFront(); e.target.setStyle({stroke: true, color: '#1E293B', weight: 2}); });
+                        layer.on('mouseout', e => e.target.setStyle({color: '#ffffff', weight: 1}));
                         featureGroup.addLayer(layer);
-                    } catch(err) { console.error("GeoJSON parse error", err); }
+                    } catch(err) {
+                        console.error("GeoJSON parse error", err);
+                    }
                 }
             });
-
-            selCountry.disabled = false;
-            map.fitBounds(featureGroup.getBounds(), { padding: [20, 20] });
             
-            document.getElementById('metricActive').innerText = data.length;
-            document.getElementById('metricCapacity').innerText = '₹' + (data.length * 35000).toLocaleString();
-
-            selCountry.addEventListener('change', (e) => {
-                if (e.target.options[e.target.selectedIndex].text === 'India') {
-                    document.getElementById('geoBreadcrumb').innerHTML = '<i class="fas fa-chevron-left mr-1"></i> <i class="fas fa-chevron-right mr-1"></i> INDIA (COUNTRY)';
-                    const selState = document.getElementById('selState');
-                    selState.disabled = false;
-                    selState.classList.remove('bg-slate-50', 'opacity-60');
-                    selState.classList.add('bg-white');
-                    selState.innerHTML = '<option>All</option><option>Karnataka</option><option>Madhya Pradesh</option><option>Uttar Pradesh</option>';
-                    
-                    document.getElementById('metricActive').innerText = '72';
-                    document.getElementById('metricCapacity').innerText = '₹25,20,000';
-                    
-                    document.getElementById('tableBody').innerHTML = `
-                        <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                            <td class="py-3 px-4 font-mono text-xs font-bold text-teal-700">KA-BBA-BSC-U01</td>
-                            <td class="py-3 px-4 text-xs font-semibold text-slate-700">W-1: Padmanabhanagara</td>
-                            <td class="py-3 px-4 text-[10px] font-bold text-teal-600">Comm/Resi</td>
-                            <td class="py-3 px-4 text-[10px] text-slate-400 text-center">0 Nodes</td>
-                        </tr>
-                        <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                            <td class="py-3 px-4 font-mono text-xs font-bold text-teal-700">KA-BBA-BSC-U02</td>
-                            <td class="py-3 px-4 text-xs font-semibold text-slate-700">W-2: Kadirenahalli</td>
-                            <td class="py-3 px-4 text-[10px] font-bold text-teal-600">Comm/Resi</td>
-                            <td class="py-3 px-4 text-[10px] text-slate-400 text-center">0 Nodes</td>
-                        </tr>
-                    `;
-                }
-            });
+            sel.disabled = false;
+            featureGroup.addTo(map);
+            map.fitBounds(featureGroup.getBounds());
+            
+            // Your exact metric update
+            document.getElementById('metricCount').innerText = res.data.length;
         }
-    } catch (e) {
-        console.error("Supabase RPC Error:", e);
+    } catch (err) {
+        console.error("RPC Error:", err);
     }
-}
-
-function getVisualColor(name) {
-    const colors = ['#F1948A', '#82E0AA', '#85C1E9', '#F7DC6F', '#C39BD3', '#F0B27A', '#76D7C4', '#E59866', '#BFC9CA'];
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) { hash = name.charCodeAt(i) + ((hash << 5) - hash); }
-    return colors[Math.abs(hash) % colors.length];
 }
 
 function loadLeafletLibrary() {
