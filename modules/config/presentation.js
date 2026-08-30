@@ -1,3 +1,5 @@
+import { CryptoEngine } from '../../core/crypto_engine.js';
+
 export async function initPresentationEngine(containerId) {
     const container = document.getElementById(containerId);
     
@@ -5,10 +7,25 @@ export async function initPresentationEngine(containerId) {
     try {
         const { data, error } = await window.nanbiDB.from('nanbi_ledgers').select('*');
         if (error) throw error;
-        themeLedger = data.find(r => r.ledger_name === 'theme_manifest')?.payload;
-        appLedger = data.find(r => r.ledger_name === 'app_manifest')?.payload || {};
+        
+        const rawTheme = data.find(r => r.ledger_name === 'theme_manifest');
+        const rawApp = data.find(r => r.ledger_name === 'app_manifest');
+
+        // DECRYPT PAYLOADS (with fallback for legacy plaintext during transition)
+        if (rawTheme?.iv_signature) {
+            themeLedger = await CryptoEngine.decryptPayload(rawTheme.payload, rawTheme.iv_signature);
+        } else {
+            themeLedger = rawTheme?.payload;
+        }
+
+        if (rawApp?.iv_signature) {
+            appLedger = await CryptoEngine.decryptPayload(rawApp.payload, rawApp.iv_signature);
+        } else {
+            appLedger = rawApp?.payload || {};
+        }
+
     } catch(err) {
-        container.innerHTML = `<div style="color:red; font-weight:bold;">Gateway Error: Cloud Ledgers Offline.</div>`;
+        container.innerHTML = `<div style="color:red; font-weight:bold;">Gateway Error: Cloud Ledgers Offline or Decryption Failed.</div>`;
         return;
     }
 
@@ -60,7 +77,7 @@ export async function initPresentationEngine(containerId) {
         
         <div class="mb-8 p-3 rounded" style="background: var(--active-bg); border-left: 3px solid var(--brand-orange-dark); margin-left: 48px;">
             <p style="font-size: var(--label-size, 0.95rem); font-weight: var(--weight-bold, 700); color: var(--text);">Editing Theme: <span style="color: var(--brand-orange-dark); text-transform: uppercase;">${currentTheme}</span></p>
-            <p style="font-size: 0.8rem; margin-top: 4px; color: var(--muted);">Smart Gateway Active: Auto-correcting units, enforcing min/max bounds, and strictly validating data types at the entry point.</p>
+            <p style="font-size: 0.8rem; margin-top: 4px; color: var(--muted);">Smart Gateway & E2E Crypto Active: Data is validated at entry and encrypted locally prior to Supabase transit.</p>
         </div>
         
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-6" style="margin-left: 48px;">
@@ -129,21 +146,13 @@ export async function initPresentationEngine(containerId) {
                             <input type="text" class="w-full p-1 border rounded gateway-input text-xs" style="background:var(--bg); color:var(--text); border-color:var(--border);" data-target="app" data-key="dropdown_node" data-validation='{"type":"text","allowEmpty":false}' data-default="Active Edge Node" value="${getAppVal('dropdown_node', 'Active Edge Node')}">
                         </div>
                     </div>
-                    
-                    <div class="mt-4">
-                        <span class="font-bold text-main" style="font-size: 0.85rem;">Navigation Items</span>
-                        ${makeAppInput("Home Label", "nav_home_label", {type:"text", allowEmpty:false}, "Home")}
-                        ${makeAppInput("Config Label", "nav_config_label", {type:"text", allowEmpty:false}, "Configuration")}
-                        ${makeAppInput("Regions Label", "nav_regions_label", {type:"text", allowEmpty:false}, "Regions")}
-                        ${makeAppInput("Settings Label", "nav_settings_label", {type:"text", allowEmpty:false}, "Studio Settings")}
-                    </div>
                 </div>
             </div>
         </div>
         
         <div class="mt-6 flex gap-4 pb-12" style="margin-left: 48px;">
             <button id="btn-save-theme" class="px-6 py-3 rounded font-bold transition-all shadow-sm hover:opacity-90" style="background: var(--brand-orange-dark); color: #FFF; border-radius: var(--card-radius, 8px);">
-                <i class="fas fa-cloud-upload-alt mr-2"></i> Save to Cloud (Supabase)
+                <i class="fas fa-lock mr-2"></i> Encrypt & Save to Cloud
             </button>
             <button id="btn-reset-theme" class="px-6 py-3 rounded font-bold transition-all hover:opacity-75" style="background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: var(--card-radius, 8px);">Reset Local Cache</button>
         </div>
@@ -163,61 +172,35 @@ export async function initPresentationEngine(containerId) {
             let isValid = true;
             let errorMsg = "";
 
-            // 1. Mandatory/Empty Check
             if (val === '') {
-                if (rules.allowEmpty === false) { 
-                    isValid = false; 
-                    errorMsg = "GATEWAY BLOCK: This field is mandatory and cannot be empty."; 
-                }
+                if (rules.allowEmpty === false) { isValid = false; errorMsg = "GATEWAY BLOCK: This field is mandatory and cannot be empty."; }
             } else {
-                // 2. Type & Characteristics Evaluation
                 if (rules.type === 'size') {
                     const num = parseFloat(val);
-                    if (isNaN(num)) { 
-                        isValid = false; 
-                        errorMsg = "GATEWAY BLOCK: Input must be a numerical size."; 
-                    } else {
-                        // Min & Max Parameter Check
-                        if (rules.min !== undefined && num < rules.min) { 
-                            isValid = false; errorMsg = "GATEWAY BLOCK: Minimum allowed size is " + rules.min; 
-                        } else if (rules.max !== undefined && num > rules.max) { 
-                            isValid = false; errorMsg = "GATEWAY BLOCK: Maximum allowed size is " + rules.max; 
-                        } else {
-                            // Smart Auto-Correction: Appends explicit default unit if user omitted it
+                    if (isNaN(num)) { isValid = false; errorMsg = "GATEWAY BLOCK: Input must be a numerical size."; }
+                    else {
+                        if (rules.min !== undefined && num < rules.min) { isValid = false; errorMsg = "GATEWAY BLOCK: Minimum allowed size is " + rules.min; }
+                        else if (rules.max !== undefined && num > rules.max) { isValid = false; errorMsg = "GATEWAY BLOCK: Maximum allowed size is " + rules.max; }
+                        else {
                             const hasUnit = /[a-zA-Z%]+$/.test(val);
-                            if (!hasUnit && rules.defaultUnit) {
-                                val = num + rules.defaultUnit;
-                            }
-                            if (!/^[0-9.]+(px|rem|em|vh|vw|%)$/.test(val)) { 
-                                isValid = false; errorMsg = "GATEWAY BLOCK: Requires a valid CSS unit (e.g. px, rem, %)."; 
-                            }
+                            if (!hasUnit && rules.defaultUnit) val = num + rules.defaultUnit;
+                            if (!/^[0-9.]+(px|rem|em|vh|vw|%)$/.test(val)) { isValid = false; errorMsg = "GATEWAY BLOCK: Requires a valid CSS unit."; }
                         }
                     }
                 } else if (rules.type === 'color') {
-                    // Smart Auto-Correction: Adds missing # for hex codes
                     if (!val.startsWith('#') && val.length === 6) val = '#' + val;
-                    if (!/^#[0-9A-Fa-f]{6}$/.test(val)) { 
-                        isValid = false; errorMsg = "GATEWAY BLOCK: Must be a valid 6-character Hex code."; 
-                    }
+                    if (!/^#[0-9A-Fa-f]{6}$/.test(val)) { isValid = false; errorMsg = "GATEWAY BLOCK: Must be a valid 6-character Hex code."; }
                 } else if (rules.type === 'weight') {
-                    if (!/^([1-9]00|normal|bold|bolder|lighter)$/i.test(val)) { 
-                        isValid = false; errorMsg = "GATEWAY BLOCK: Must be a valid CSS font-weight (e.g., 400, 700, bold)."; 
-                    }
-                } else if (rules.type === 'text') {
-                    if (rules.maxLen && val.length > rules.maxLen) {
-                        isValid = false; errorMsg = "GATEWAY BLOCK: Maximum length exceeded. Allowed: " + rules.maxLen;
-                    }
+                    if (!/^([1-9]00|normal|bold|bolder|lighter)$/i.test(val)) { isValid = false; errorMsg = "GATEWAY BLOCK: Must be a valid CSS font-weight."; }
                 }
             }
 
-            // The Rejection Protocol
             if (!isValid) {
                 alert(errorMsg + "\\n\\nReverting to baseline default: " + defaultVal);
                 val = defaultVal;
             }
 
-            // Syncing Validated Data
-            el.value = val; // Instantly updates DOM with auto-corrected or reverted data
+            el.value = val;
             
             if (target === 'theme') {
                 document.documentElement.style.setProperty(key, val);
@@ -239,24 +222,34 @@ export async function initPresentationEngine(containerId) {
         });
     });
 
+    // E2E CRYPTO SAVE PROTOCOL
     container.querySelector('#btn-save-theme').addEventListener('click', async (e) => {
         const btn = e.target;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Syncing to Supabase...';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Encrypting & Syncing...';
         btn.style.opacity = '0.7';
 
         try {
             const activeTheme = localStorage.getItem('nanbi_theme') || themeLedger.active_default;
             const customThemeVars = JSON.parse(localStorage.getItem('nanbi_custom_theme_' + activeTheme)) || {};
-            let exportThemeLedger = JSON.parse(JSON.stringify(themeLedger));
-            exportThemeLedger.themes[activeTheme].variables = { ...exportThemeLedger.themes[activeTheme].variables, ...customThemeVars };
+            
+            let rawThemeLedger = JSON.parse(JSON.stringify(themeLedger));
+            rawThemeLedger.themes[activeTheme].variables = { ...rawThemeLedger.themes[activeTheme].variables, ...customThemeVars };
 
-            const customAppVars = JSON.parse(localStorage.getItem('nanbi_custom_app')) || {};
-            let exportAppLedger = { ...appLedger, ...customAppVars };
+            let rawAppLedger = { ...appLedger, ...(JSON.parse(localStorage.getItem('nanbi_custom_app')) || {}) };
 
-            const { error: tErr } = await window.nanbiDB.from('nanbi_ledgers').update({ payload: exportThemeLedger }).eq('ledger_name', 'theme_manifest');
+            // SHRED AND ENCRYPT BEFORE NETWORK TRANSIT
+            const encryptedTheme = await CryptoEngine.encryptPayload(rawThemeLedger);
+            const encryptedApp = await CryptoEngine.encryptPayload(rawAppLedger);
+
+            // DISPATCH BLIND CIPHERTEXT TO SUPABASE
+            const { error: tErr } = await window.nanbiDB.from('nanbi_ledgers')
+                .update({ payload: encryptedTheme.ciphertext, iv_signature: encryptedTheme.iv })
+                .eq('ledger_name', 'theme_manifest');
             if (tErr) throw tErr;
 
-            const { error: aErr } = await window.nanbiDB.from('nanbi_ledgers').update({ payload: exportAppLedger }).eq('ledger_name', 'app_manifest');
+            const { error: aErr } = await window.nanbiDB.from('nanbi_ledgers')
+                .update({ payload: encryptedApp.ciphertext, iv_signature: encryptedApp.iv })
+                .eq('ledger_name', 'app_manifest');
             if (aErr) throw aErr;
 
             localStorage.removeItem('nanbi_custom_theme_' + activeTheme);
@@ -264,13 +257,13 @@ export async function initPresentationEngine(containerId) {
             localStorage.removeItem('nanbi_edge_theme');
             localStorage.removeItem('nanbi_edge_app');
 
-            btn.innerHTML = '<i class="fas fa-check mr-2"></i> Success!';
+            btn.innerHTML = '<i class="fas fa-shield-check mr-2"></i> Secured in Cloud';
             setTimeout(() => window.location.reload(), 800);
 
         } catch(error) {
             console.error(error);
-            alert("Cloud Sync Failed: " + error.message);
-            btn.innerHTML = '<i class="fas fa-cloud-upload-alt mr-2"></i> Save to Cloud (Supabase)';
+            alert("E2E Sync Failed: " + error.message);
+            btn.innerHTML = '<i class="fas fa-lock mr-2"></i> Encrypt & Save to Cloud';
             btn.style.opacity = '1';
         }
     });
