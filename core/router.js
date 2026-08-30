@@ -18,6 +18,7 @@ const BASELINE_APP = {
     page_home_title: "Welcome", page_home_subtitle: "Modular Architecture Active.",
     page_regions_title: "Module Locked", page_regions_subtitle: "Awaiting Taxonomy Payload.",
     page_settings_title: "System Settings", page_settings_subtitle: "Platform-level configurations.",
+    page_account_title: "Data Sovereignty", page_account_subtitle: "Manage cryptographic credentials and session states.",
     page_loading_text: "Loading...", page_error_text: "Module Load Failure",
     active_modules: [
         { id: "home", path: "#/", icon: "fas fa-home", label: "Home", locked: true, sort_order: 0, access_level: ["Founder"] },
@@ -94,9 +95,20 @@ function generateUIShell(appConfig) {
         header.app-header .section-crumb { font-weight: var(--weight-bold); font-size: var(--label-size); color: var(--text); }
         header.app-header .spacer { flex: 1; }
         
+        /* Dropdown Restored Styles */
         .avatar-wrapper { position: relative; display: flex; align-items: center; }
         .avatar-btn { background: var(--brand-orange-dark); color: var(--card); border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-family: var(--font-brand); font-weight: var(--weight-brand); font-size: var(--label-size); display: flex; align-items: center; justify-content: center; margin-left: 8px; transition: transform 0.2s; }
         .avatar-btn:hover { transform: scale(1.05); }
+        
+        .avatar-dropdown { position: absolute; top: 48px; right: 0; background: var(--card); border: 1px solid var(--border); border-radius: var(--card-radius); box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 220px; display: none; flex-direction: column; z-index: 100; overflow: hidden; }
+        .avatar-dropdown.show { display: flex; }
+        .avatar-dropdown-header { padding: 16px; border-bottom: 1px solid var(--border); background: var(--bg); }
+        .avatar-dropdown-header .identity { font-weight: var(--weight-bold); font-size: 0.9rem; color: var(--text); }
+        .avatar-dropdown-header .node { font-size: 0.75rem; color: var(--brand-orange-dark); margin-top: 4px; font-weight: var(--weight-bold); }
+        .avatar-dropdown a { padding: 12px 16px; color: var(--text); text-decoration: none; font-size: 0.85rem; font-weight: var(--weight-bold); display: flex; align-items: center; transition: background 0.2s; }
+        .avatar-dropdown a i { width: 24px; color: var(--brand-teal-dark); }
+        .avatar-dropdown a:hover { background: var(--active-bg); color: var(--brand-orange-dark); }
+        .avatar-dropdown a:hover i { color: var(--brand-orange-dark); }
         
         main { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
       </style>
@@ -127,6 +139,13 @@ function generateUIShell(appConfig) {
             <div class="header-actions">
               <div class="avatar-wrapper">
                 <button class="avatar-btn" id="avatar-toggle" title="Account Menu">${appConfig.avatar_initial}</button>
+                <div class="avatar-dropdown" id="account-dropdown">
+                   <div class="avatar-dropdown-header">
+                      <div class="identity" id="dom_dropdown_identity">${appConfig.dropdown_identity}</div>
+                      <div class="node"><i class="fas fa-network-wired mr-1"></i> <span id="dom_dropdown_node">${appConfig.dropdown_node}</span></div>
+                   </div>
+                   <a href="#/account"><i class="fas fa-shield-alt"></i> Data Sovereignty</a>
+                </div>
               </div>
             </div>
           </header>
@@ -189,6 +208,21 @@ async function bootloader() {
     }
     
     rootNode.innerHTML = generateUIShell(appLedger);
+
+    // Dropdown Event Listener Restored
+    const avatarBtn = document.getElementById('avatar-toggle');
+    const accountDropdown = document.getElementById('account-dropdown');
+    if (avatarBtn && accountDropdown) {
+        avatarBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            accountDropdown.classList.toggle('show');
+        });
+        document.addEventListener('click', (e) => {
+            if (!accountDropdown.contains(e.target) && e.target !== avatarBtn) {
+                accountDropdown.classList.remove('show');
+            }
+        });
+    }
 
     applyTheme(savedTheme);
     window.addEventListener("hashchange", router);
@@ -253,6 +287,10 @@ function router() {
         }
         else if (hash === "#/regions") {
             renderView('<div style="background: var(--active-bg); border-left: 4px solid var(--brand-orange-dark); padding: var(--main-padding); border-radius: var(--card-radius);"><h2 style="font-size: var(--page-title-size); font-family: var(--font-brand); font-weight: var(--weight-bold); color: var(--brand-orange-dark);"><i class="fas fa-lock" style="margin-right: 12px;"></i>' + appLedger.page_regions_title + '</h2></div>');
+        }
+        else if (hash === "#/account") {
+            setCrumb("Data Sovereignty");
+            renderView('<div style="background: var(--active-bg); padding: var(--main-padding); border-radius: var(--card-radius);"><h2 style="font-size: var(--page-title-size); font-family: var(--font-brand); font-weight: var(--weight-bold); color: var(--brand-teal-dark);"><i class="fas fa-shield-alt" style="margin-right: 12px;"></i>' + appLedger.page_account_title + '</h2><p style="margin-top: 8px; font-weight: var(--weight-bold); color: var(--muted);">' + appLedger.page_account_subtitle + '</p></div>');
         }
     } catch (e) {
         console.error("Routing error:", e);
