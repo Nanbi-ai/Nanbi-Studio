@@ -1,7 +1,7 @@
 import { CryptoEngine } from './crypto_engine.js';
 
 // =======================================================================
-// NANBI V5.0 MASTER ROUTER (SWITCHBOARD, E2E CRYPTO & FULL UI RESTORED)
+// NANBI V5.0 MASTER ROUTER (SWITCHBOARD, E2E CRYPTO & REGIONS WIRED)
 // =======================================================================
 
 const SUPABASE_URL = "https://yeoracoxyjzgpsyxgwri.supabase.co";
@@ -95,6 +95,7 @@ function generateUIShell(appConfig) {
         header.app-header .section-crumb { font-weight: var(--weight-bold); font-size: var(--label-size); color: var(--text); }
         header.app-header .spacer { flex: 1; }
         
+        /* Dropdown Restored Styles */
         .avatar-wrapper { position: relative; display: flex; align-items: center; }
         .avatar-btn { background: var(--brand-orange-dark); color: var(--card); border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-family: var(--font-brand); font-weight: var(--weight-brand); font-size: var(--label-size); display: flex; align-items: center; justify-content: center; margin-left: 8px; transition: transform 0.2s; }
         .avatar-btn:hover { transform: scale(1.05); }
@@ -258,7 +259,6 @@ function applyTheme(themeId) {
     }
     localStorage.setItem('nanbi_theme', themeId);
     
-    // Update Theme Label in Dropdown
     const themeLabel = document.getElementById('theme-toggle-label');
     if (themeLabel) {
         themeLabel.innerText = "Theme: " + (baseThemeData.name || themeId);
@@ -272,7 +272,7 @@ function setCrumb(title) {
 
 function renderView(html) {
     const contentEl = document.getElementById('app-content');
-    if(contentEl) contentEl.innerHTML = '<div class="flex-1 w-full h-full" style="padding: var(--main-padding);">' + html + '</div>';
+    if(contentEl) contentEl.innerHTML = '<div class="flex-1 w-full h-full flex flex-col" style="padding: var(--main-padding);">' + html + '</div>';
 }
 
 function router() {
@@ -295,20 +295,28 @@ function router() {
             renderView('<h2 style="font-size: var(--page-title-size); font-weight: var(--weight-bold); font-family: var(--font-brand); color: var(--page-title-color);">' + appLedger.page_home_title + '</h2><p style="font-size: var(--page-subtitle-size); margin-top: var(--spacing-sm); color: var(--page-subtitle-color);">' + appLedger.page_home_subtitle + '</p>');
         } 
         else if (hash === "#/config") {
-            renderView('<div id="config-hub-container" class="w-full h-full"><p style="font-weight: var(--weight-bold); color: var(--muted);">' + appLedger.page_loading_text + '</p></div>');
+            renderView('<div id="config-hub-container" class="w-full h-full flex flex-col"><p style="font-weight: var(--weight-bold); color: var(--muted);">' + appLedger.page_loading_text + '</p></div>');
             import('../modules/config_hub.js').then(m => m.initConfigHub('config-hub-container')).catch(e => {
                 document.getElementById('config-hub-container').innerHTML = '<div style="color:red; font-weight:var(--weight-bold);">' + appLedger.page_error_text + '</div>';
             });
         }
         else if (hash === "#/config/presentation") {
             setCrumb("Presentation Engine");
-            renderView('<div id="config-pres-container" class="w-full h-full"><p style="font-weight: var(--weight-bold); color: var(--muted);">' + appLedger.page_loading_text + '</p></div>');
+            renderView('<div id="config-pres-container" class="w-full h-full flex flex-col"><p style="font-weight: var(--weight-bold); color: var(--muted);">' + appLedger.page_loading_text + '</p></div>');
             import('../modules/config/presentation.js').then(m => m.initPresentationEngine('config-pres-container')).catch(e => {
                 document.getElementById('config-pres-container').innerHTML = '<div style="color:red; font-weight:var(--weight-bold);">' + appLedger.page_error_text + '</div>';
             });
         }
         else if (hash === "#/regions") {
-            renderView('<div style="background: var(--active-bg); border-left: 4px solid var(--brand-orange-dark); padding: var(--main-padding); border-radius: var(--card-radius);"><h2 style="font-size: var(--page-title-size); font-family: var(--font-brand); font-weight: var(--weight-bold); color: var(--brand-orange-dark);"><i class="fas fa-lock" style="margin-right: 12px;"></i>' + appLedger.page_regions_title + '</h2></div>');
+            // =======================================================================
+            // NEW DYNAMIC ROUTING FOR THE REGIONS MODULE
+            // =======================================================================
+            setCrumb(activeModule?.label || "Regions");
+            renderView('<div id="regions-container" class="w-full h-full flex flex-col"><p style="font-weight: var(--weight-bold); color: var(--muted);">' + appLedger.page_loading_text + '</p></div>');
+            import('../modules/regions.js').then(m => m.initRegionsEngine('regions-container')).catch(e => {
+                console.error("Regions Engine Load Error:", e);
+                document.getElementById('regions-container').innerHTML = '<div style="color:red; font-weight:var(--weight-bold);">' + appLedger.page_error_text + '</div>';
+            });
         }
         else if (hash === "#/settings") {
             renderView('<div style="background: var(--active-bg); padding: var(--main-padding); border-radius: var(--card-radius);"><h2 style="font-size: var(--page-title-size); font-family: var(--font-brand); font-weight: var(--weight-bold); color: var(--text);"><i class="fas fa-cog" style="margin-right: 12px;"></i>' + appLedger.page_settings_title + '</h2><p style="margin-top: 8px; font-weight: var(--weight-bold); color: var(--muted);">' + appLedger.page_settings_subtitle + '</p></div>');
