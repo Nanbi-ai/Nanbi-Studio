@@ -1,105 +1,123 @@
 // =======================================================================
-// NANBI V5.0 - TERRITORY MATRIX ENGINE (NATIVE MODULAR INTEGRATION)
+// NANBI V5.0 - TERRITORY MATRIX ENGINE (RESTORED NATIVE TAILWIND UI)
 // =======================================================================
 
 export async function initRegionsEngine(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // 1. INJECT SCOPED CSS & EXACT LAYOUT CHASSIS (MAPPED TO CSS VARIABLES)
+    // 1. EXACT HTML & TAILWIND CHASSIS FROM TERRITORY-MATRIX.HTML
     container.innerHTML = `
         <style>
             #regions-module .table-container { overflow-y: auto; max-height: 52vh; }
-            #regions-module th { position: sticky; top: 0; background-color: var(--bg); color: var(--text); z-index: 10; text-align: center; border-bottom: 2px solid var(--border); font-weight: 700; }
-            #regions-module td { text-align: center; border-bottom: 1px solid var(--border); color: var(--text); font-weight: 500;}
+            #regions-module th { position: sticky; top: 0; background-color: #f8fafc; color: #334155; z-index: 10; text-align: center; border-bottom: 2px solid #e2e8f0; font-weight: 700; }
+            #regions-module td { text-align: center; border-bottom: 1px solid #f1f5f9; color: #475569; font-weight: 500;}
             #regions-module .col-left { text-align: left; }
-            #regions-module .row-active { background-color: var(--hover-bg) !important; border-left: 4px solid var(--brand-orange-dark); }
+            #regions-module .row-active { background-color: #fff7ed !important; border-left: 4px solid #D35400; } 
+            
             #regions-module #map-wrapper { position: relative; width: 100%; height: 100%; min-height: 350px; flex: 1; }
             @media (min-width: 1024px) { #regions-module #map-wrapper { min-height: 420px; } }
-            #regions-module #map { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 0.25rem; z-index: 1; background: var(--bg); }
+            #regions-module #map { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 0.25rem; z-index: 1; }
             
-            /* Map Hover & Tools */
-            path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s, stroke 0.2s; outline: none; }
-            path.leaflet-interactive:hover { fill-opacity: 0.8 !important; stroke-width: 2.5px !important; stroke: var(--text) !important; cursor: pointer; }
-            #regions-module .map-nav-btn { color: var(--muted); padding: 2px 8px; font-size: 13px; font-weight: bold; transition: color 0.2s; background: transparent; border: none; cursor: pointer; }
-            #regions-module .map-nav-btn:hover:not(:disabled) { color: var(--brand-orange-dark); }
+            /* Dark Navy Hover Stroke Fix */
+            #regions-module path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s, stroke 0.2s; outline: none; }
+            #regions-module path.leaflet-interactive:hover { fill-opacity: 0.8 !important; stroke-width: 2.5px !important; stroke: #1E293B !important; cursor: pointer; }
+            
+            #regions-module .map-nav-btn { color: #475569; padding: 2px 8px; font-size: 13px; font-weight: bold; transition: color 0.2s; background: transparent; border: none; cursor: pointer; }
+            #regions-module .map-nav-btn:hover:not(:disabled) { color: #D35400; }
             #regions-module .map-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
             
-            .id-label { background: transparent !important; border: none !important; box-shadow: none !important; font-weight: 600; font-size: 9.5px; color: var(--text); text-shadow: 1px 1px 2px var(--card), -1px -1px 2px var(--card), 1px -1px 2px var(--card), -1px 1px 2px var(--card); text-align: center; }
+            /* 9.5px Non-Bold Labels */
+            .id-label {
+                background: transparent !important; border: none !important; box-shadow: none !important;
+                font-weight: 600; font-size: 9.5px; color: #1E293B;
+                text-shadow: 1px 1px 2px #ffffff, -1px -1px 2px #ffffff, 1px -1px 2px #ffffff, -1px 1px 2px #ffffff;
+                text-align: center;
+            }
+
+            #regions-module ::-webkit-scrollbar { width: 6px; }
+            #regions-module ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
             #regions-module .hide-scroll::-webkit-scrollbar { display: none; }
             #regions-module .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
             #regions-module select { -webkit-appearance: none; -moz-appearance: none; appearance: none; background-image: url('data:image/svg+xml;utf8,<svg fill="%2394a3b8" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>'); background-repeat: no-repeat; background-position: right 4px center; }
         </style>
 
-        <div id="regions-module" class="flex-1 flex flex-col lg:flex-row gap-3 overflow-y-auto lg:overflow-hidden h-full p-2">
+        <div id="regions-module" class="flex-1 flex flex-col lg:flex-row gap-3 overflow-y-auto lg:overflow-hidden h-full">
             
-            <!-- LEFT COLUMN: MAP & DROPDOWNS (38%) -->
+            <!-- LEFT COLUMN: MAP & DROPDOWNS -->
             <aside class="w-full lg:w-[38%] flex flex-col gap-3 shrink-0">
-                <div class="flex-1 p-1.5 rounded border flex flex-col relative overflow-hidden shadow-sm h-64 lg:h-auto min-h-[300px]" style="background: var(--card); border-color: var(--border);">
-                    <div id="map-wrapper" class="rounded overflow-hidden border" style="border-color: var(--border);">
+                <div class="flex-1 bg-white p-1.5 rounded border border-slate-200 flex flex-col relative overflow-hidden shadow-sm h-64 lg:h-auto min-h-[300px]">
+                    <div id="map-wrapper" class="rounded overflow-hidden border border-slate-200 bg-[#e2f0f5]">
                         <div id="map"></div>
                     </div>
                 </div>
 
-                <div class="p-3 rounded border flex flex-col gap-2 shrink-0 shadow-sm" style="background: var(--card); border-color: var(--border);">
-                    <div class="flex justify-between items-center pb-1 border-b" style="border-color: var(--border);">
+                <div class="bg-white p-3 rounded border border-slate-200 flex flex-col gap-2 shrink-0 shadow-sm">
+                    <div class="flex justify-between items-center pb-1 border-b border-slate-100">
                         <div class="flex items-center gap-1">
                             <button id="btnNavBack" class="map-nav-btn" title="Go Back"><i class="fas fa-chevron-left text-[10px]"></i></button>
                             <button id="btnNavForward" class="map-nav-btn" title="Go Forward"><i class="fas fa-chevron-right text-[10px]"></i></button>
-                            <span id="geoHierarchyBreadcrumb" class="text-[10px] font-bold uppercase tracking-wide ml-2 truncate max-w-[200px]" style="color: var(--brand-teal-dark);">World View</span>
+                            <span id="geoHierarchyBreadcrumb" class="text-[10px] font-bold text-slate-600 uppercase tracking-wide ml-2 truncate max-w-[200px]">World View</span>
                         </div>
-                        <div class="flex items-center gap-3">
-                            <span id="tm-status-local" class="text-[9px] font-mono uppercase tracking-wider" style="color: var(--brand-orange-dark);"></span>
-                            <button id="btnResetGlobe" class="text-[10px] font-bold hover:opacity-70 transition px-2" style="color: var(--muted);"><i class="fas fa-globe-americas mr-1"></i> Globe</button>
-                        </div>
+                        <button id="btnGlobe" class="text-[10px] font-bold text-slate-500 hover:text-[#D35400] transition px-2"><i class="fas fa-globe-americas mr-1"></i> Globe</button>
                     </div>
                     
                     <div class="grid grid-cols-2 gap-2 text-[10px] mt-1">
-                        <div class="flex flex-col"><label class="font-bold uppercase mb-0.5" style="color: var(--muted);">Country</label><select id="selCountry" class="border rounded p-1 font-medium outline-none" style="background: var(--bg); color: var(--text); border-color: var(--border);"><option value="All">Loading...</option></select></div>
-                        <div class="flex flex-col"><label class="font-bold uppercase mb-0.5" style="color: var(--muted);">State / Province</label><select id="selState" class="border rounded p-1 font-medium outline-none" style="background: var(--bg); color: var(--text); border-color: var(--border);" disabled><option value="All">All</option></select></div>
-                        <div class="flex flex-col"><label class="font-bold uppercase mb-0.5" style="color: var(--muted);">District</label><select id="selDistrict" class="border rounded p-1 font-medium outline-none" style="background: var(--bg); color: var(--text); border-color: var(--border);" disabled><option value="All">All</option></select></div>
-                        <div class="flex flex-col"><label class="font-bold uppercase mb-0.5" style="color: var(--muted);">Taluk / County</label><select id="selTaluk" class="border rounded p-1 font-medium outline-none" style="background: var(--bg); color: var(--text); border-color: var(--border);" disabled><option value="All">All</option></select></div>
-                        <div class="flex flex-col col-span-2"><label class="font-bold uppercase mb-0.5" style="color: var(--muted);">Ward / Territory</label><select id="selWard" class="border rounded p-1 font-medium outline-none" style="background: var(--bg); color: var(--text); border-color: var(--border);" disabled><option value="All">All</option></select></div>
+                        <div class="flex flex-col"><label class="font-bold text-slate-500 uppercase mb-0.5">Country</label><select id="selCountry" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-800 font-medium outline-none"><option value="All">Loading...</option></select></div>
+                        <div class="flex flex-col"><label class="font-bold text-slate-500 uppercase mb-0.5">State / Province</label><select id="selState" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-800 font-medium outline-none" disabled><option value="All">All</option></select></div>
+                        <div class="flex flex-col"><label class="font-bold text-slate-500 uppercase mb-0.5">District</label><select id="selDistrict" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-800 font-medium outline-none" disabled><option value="All">All</option></select></div>
+                        <div class="flex flex-col"><label class="font-bold text-slate-500 uppercase mb-0.5">Taluk / County</label><select id="selTaluk" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-800 font-medium outline-none" disabled><option value="All">All</option></select></div>
+                        <div class="flex flex-col col-span-2"><label class="font-bold text-slate-500 uppercase mb-0.5">Ward / Territory</label><select id="selWard" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-800 font-medium outline-none" disabled><option value="All">All</option></select></div>
                     </div>
                 </div>
             </aside>
 
-            <!-- RIGHT COLUMN: STATS & TABLES (62%) -->
+            <!-- RIGHT COLUMN: STATS & TABLES -->
             <section class="w-full lg:w-[62%] flex flex-col gap-3 shrink-0 lg:shrink h-auto lg:h-full">
-                <div class="p-2.5 rounded border flex justify-around items-center shrink-0 shadow-sm" style="background: var(--card); border-color: var(--border);">
+                <div class="bg-white p-2.5 rounded border border-slate-200 flex justify-around items-center shrink-0 shadow-sm">
                     <div class="text-center w-1/2">
-                        <p class="text-[10px] font-bold uppercase tracking-widest" style="color: var(--muted);">Active Territories</p>
-                        <p class="text-2xl font-black mt-1" style="color: var(--text);" id="metricCount">0</p>
+                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active Territories</p>
+                        <p class="text-2xl font-black text-slate-800 mt-1" id="metricCount">0</p>
                     </div>
-                    <div class="w-px h-10" style="background: var(--border);"></div>
+                    <div class="w-px h-12 bg-slate-200"></div>
                     <div class="text-center w-1/2">
-                        <p class="text-[10px] font-bold uppercase tracking-widest" style="color: var(--muted);">Market Capacity</p>
-                        <p class="text-2xl font-black mt-1" style="color: var(--brand-orange-dark);" id="metricMPS">₹0</p>
+                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Market Capacity</p>
+                        <p class="text-2xl font-black mt-1" style="color: #D35400;" id="metricMPS">₹0</p>
                     </div>
                 </div>
                 
-                <div class="flex-1 rounded border flex flex-col overflow-hidden shadow-sm" style="background: var(--card); border-color: var(--border);">
+                <div class="flex-1 bg-white rounded border border-slate-200 flex flex-col overflow-hidden shadow-sm">
                     <div class="table-container flex-1 hide-scroll">
                         <table class="w-full border-collapse text-[11px]">
-                            <thead>
-                                <tr>
-                                    <th class="p-2 uppercase tracking-wider text-left pl-4">ID</th>
-                                    <th class="p-2 uppercase tracking-wider text-left">Ward Name</th>
-                                    <th class="p-2 uppercase tracking-wider text-left">Biz-Class</th>
-                                    <th class="p-2 uppercase tracking-wider text-left">Civic Coverage</th>
+                            <thead class="bg-slate-50 sticky top-0 z-10 border-b border-slate-200 shadow-sm">
+                                <tr class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                    <th class="py-4 px-6 text-left pl-4">ID</th>
+                                    <th class="py-4 px-6 text-left">Ward Name</th>
+                                    <th class="py-4 px-6 text-left">Biz-Class</th>
+                                    <th class="py-4 px-6 text-right">Civic Coverage</th>
                                 </tr>
                             </thead>
-                            <tbody id="territoryTbody" class="cursor-pointer" style="color: var(--text);"></tbody>
+                            <tbody id="territoryTbody" class="cursor-pointer text-slate-700">
+                                <tr>
+                                    <td colspan="4" class="py-24 text-center">
+                                        <div class="opacity-70 flex flex-col items-center">
+                                            <i class="fas fa-layer-group text-5xl text-slate-300 mb-4"></i>
+                                            <h4 class="font-bold text-sm uppercase tracking-wider" style="color: #D35400;">Macro Region Selected</h4>
+                                            <p class="text-[12px] text-slate-500 mt-2">Drill down to a specific <span class="font-bold text-slate-700">Taluk</span> to view granular Ward data matrices.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
                         </table>
                     </div>
                 </div>
                 
-                <div class="h-[22vh] min-h-[160px] rounded border p-3 flex flex-col overflow-hidden shrink-0 shadow-sm" style="background: var(--card); border-color: var(--border);">
-                    <div class="flex justify-between items-center border-b pb-1.5 mb-2" style="border-color: var(--border);">
-                        <h3 class="text-[10px] font-bold uppercase tracking-widest" style="color: var(--brand-teal-dark);" id="deepDiveTitle">Entity Inspector</h3>
-                        <span class="text-[10px] font-mono" style="color: var(--muted);" id="deepDiveSubtitle">Select a territory</span>
+                <div class="h-[22vh] min-h-[160px] bg-white rounded border border-slate-200 p-3 flex flex-col overflow-hidden shrink-0 shadow-sm">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-1.5 mb-2">
+                        <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500" id="deepDiveTitle">Entity Inspector</h3>
+                        <span class="text-[10px] text-slate-500 font-mono" id="deepDiveSubtitle">Select a territory</span>
                     </div>
-                    <div id="deepDiveContent" class="flex-1 overflow-y-auto text-[11px] font-medium flex items-center justify-center" style="color: var(--muted);">
+                    <div id="deepDiveContent" class="flex-1 overflow-y-auto text-[11px] text-slate-500 font-medium flex items-center justify-center">
                         Awaiting node selection...
                     </div>
                 </div>
@@ -116,18 +134,13 @@ export async function initRegionsEngine(containerId) {
 
     const wardGeoAnchor = { 1: [12.9180, 77.5560], 4: [12.9240, 77.5780], 14: [12.9260, 77.5930], 65: [12.9420, 77.5750] };
 
-    function updateModuleStatus(text) {
-        const el = document.getElementById('tm-status-local');
-        if (el) el.innerHTML = text;
-    }
-
     function getDistinctColor(name) {
         let hash = 0;
         for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-        return `hsl(${Math.abs(hash % 360)}, 45%, 55%)`; 
+        return `hsl(${Math.abs(hash % 360)}, 45%, 65%)`; 
     }
 
-    // 3. SECURE LEAFLET LOADER
+    // 3. SECURE LEAFLET LOADER & INITIALIZATION
     if (!window.L) {
         await new Promise((resolve) => {
             const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(link);
@@ -135,16 +148,16 @@ export async function initRegionsEngine(containerId) {
         });
     }
 
-    // Clean up container if navigating back and forth in SPA
     const mapContainerEl = window.L.DomUtil.get('map');
     if(mapContainerEl != null){ mapContainerEl._leaflet_id = null; }
 
-    map = window.L.map('map', { zoomControl: true, attributionControl: false, zoomSnap: 0.1, zoomDelta: 0.5 }).setView([22.5937, 78.9629], 3);
+    map = window.L.map('map', { zoomControl: true, attributionControl: false, zoomSnap: 0.1, zoomDelta: 0.5 }).setView([22.5937, 78.9629], 4);
     window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, opacity: 0.5 }).addTo(map);
-
     window.addEventListener('resize', () => { if(map) map.invalidateSize(true); });
 
-    // 4. CORE ENGINE FUNCTIONS (Exactly as you wrote them)
+    let featureGroup = window.L.featureGroup().addTo(map);
+
+    // 4. CORE ENGINE FUNCTIONS (Exactly as written in the 569-line file)
     async function loadCountryList() {
         const { data } = await window.nanbiDB.rpc('get_countries_geojson');
         if (data && data.length > 0) {
@@ -185,7 +198,6 @@ export async function initRegionsEngine(containerId) {
         if (currentGeoLayer) { map.removeLayer(currentGeoLayer); currentGeoLayer = null; }
         markers.forEach(m => map.removeLayer(m)); markers = [];
 
-        updateModuleStatus('Loading ' + level + '...');
         document.getElementById('geoHierarchyBreadcrumb').innerText = parentName ? parentName : 'World View';
 
         let rpcName = ''; let rpcParams = {}; let targetDropdownId = null;
@@ -198,7 +210,6 @@ export async function initRegionsEngine(containerId) {
         if (level === 'taluk') {
             renderWardFallbacks();
             populateWardDropdown(parentName);
-            updateModuleStatus('Layer Ready');
             updateUI(level);
             return;
         }
@@ -208,13 +219,12 @@ export async function initRegionsEngine(containerId) {
         if (error || !data || data.length === 0) {
             if (level === 'country') await drawIsolatedBoundary('get_country_polygon', { p_country: parentName }, parentName);
             else if (level === 'state') await drawIsolatedBoundary('get_state_polygon', { p_state: parentName }, parentName);
-            else updateModuleStatus('No Sub-divisions');
             updateUI(level);
             return;
         }
 
         let layerNames = [];
-        let featureGroup = window.L.featureGroup();
+        featureGroup = window.L.featureGroup();
 
         data.forEach(item => {
             if (!item.geojson) return;
@@ -231,7 +241,7 @@ export async function initRegionsEngine(containerId) {
 
                 layer.on('mouseover', function(e) {
                     e.target.bringToFront(); 
-                    if (this.getTooltip()) this.getTooltip().setContent('<span style="color:var(--text); font-size:11px; font-weight:800;">' + displayName + '</span>');
+                    if (this.getTooltip()) this.getTooltip().setContent('<span style="color:#1E293B; font-size:11px; font-weight:800;">' + displayName + '</span>');
                 });
                 layer.on('mouseout', function() { if (this.getTooltip()) this.getTooltip().setContent(displayId); });
                 layer.on('click', () => { handleMapPolygonClick(level, displayName); });
@@ -252,22 +262,20 @@ export async function initRegionsEngine(containerId) {
         }
 
         fitLayerBounds(featureGroup, level === 'world' ? 3 : 11);
-        updateModuleStatus('Active');
         updateUI(level);
     }
 
     async function drawIsolatedBoundary(rpcName, rpcParams, entityName) {
         const { data } = await window.nanbiDB.rpc(rpcName, rpcParams);
         if (data && data.length > 0 && data[0].geojson) {
-            const featureGroup = window.L.featureGroup();
+            featureGroup = window.L.featureGroup();
             const layer = window.L.geoJSON(JSON.parse(data[0].geojson), {
-                style: { color: 'var(--brand-orange-dark)', weight: 1.5, fillColor: 'var(--brand-orange-dark)', fillOpacity: 0.15 }
+                style: { color: '#D35400', weight: 1.5, fillColor: '#D35400', fillOpacity: 0.15 }
             });
-            layer.bindTooltip(entityName + '<br><span style="font-size:9px; font-weight:normal; color:var(--brand-orange-dark)">Pipeline Territory</span>', { permanent: true, direction: 'center', className: 'id-label' });
+            layer.bindTooltip(entityName + '<br><span style="font-size:9px; font-weight:normal; color:#D35400">Pipeline Territory</span>', { permanent: true, direction: 'center', className: 'id-label' });
             featureGroup.addLayer(layer);
             currentGeoLayer = featureGroup.addTo(map);
             fitLayerBounds(featureGroup, 8);
-            updateModuleStatus('Isolated');
         }
     }
 
@@ -338,9 +346,9 @@ export async function initRegionsEngine(containerId) {
             const lng = wardGeoAnchor[wNo] ? wardGeoAnchor[wNo][1] : 77.5600 + (col * 0.006);
             latlngs.push([lat, lng]);
 
-            const circle = window.L.circleMarker([lat, lng], { radius: 6, fillColor: 'var(--brand-orange-dark)', color: 'var(--bg)', weight: 1.5, opacity: 1, fillOpacity: 0.85 }).addTo(map);
+            const circle = window.L.circleMarker([lat, lng], { radius: 6, fillColor: '#D35400', color: '#ffffff', weight: 1.5, opacity: 1, fillOpacity: 0.85 }).addTo(map);
             circle.bindTooltip('W-' + item.territory_no, { permanent: true, direction: 'center', className: 'id-label' });
-            circle.on('mouseover', (e) => { e.target.bringToFront(); if (circle.getTooltip()) circle.getTooltip().setContent('<span style="color:var(--text); font-size:11px; font-weight:800;">' + item.territory_name + '</span>'); });
+            circle.on('mouseover', (e) => { e.target.bringToFront(); if (circle.getTooltip()) circle.getTooltip().setContent('<span style="color:#1E293B; font-size:11px; font-weight:800;">' + item.territory_name + '</span>'); });
             circle.on('mouseout', () => { if (circle.getTooltip()) circle.getTooltip().setContent('W-' + item.territory_no); });
             circle.on('click', () => { isolateTerritory(item); });
             markers.push(circle);
@@ -368,27 +376,31 @@ export async function initRegionsEngine(containerId) {
 
     function initDropdownListeners() {
         document.getElementById('selCountry').addEventListener('change', (e) => {
+            const val = e.target.value;
             cascadeClear(['selState', 'selDistrict', 'selTaluk', 'selWard']); filterMatrix();
-            if (e.target.value === 'All') renderSpatialLayer('world', ''); else renderSpatialLayer('country', e.target.value);
+            if (val === 'All') renderSpatialLayer('world', ''); else renderSpatialLayer('country', val);
         });
         document.getElementById('selState').addEventListener('change', (e) => {
+            const val = e.target.value;
             cascadeClear(['selDistrict', 'selTaluk', 'selWard']); filterMatrix();
-            if (e.target.value === 'All') renderSpatialLayer('country', document.getElementById('selCountry').value); else renderSpatialLayer('state', e.target.value);
+            if (val === 'All') renderSpatialLayer('country', document.getElementById('selCountry').value); else renderSpatialLayer('state', val);
         });
         document.getElementById('selDistrict').addEventListener('change', (e) => {
+            const val = e.target.value;
             cascadeClear(['selTaluk', 'selWard']); filterMatrix();
-            if (e.target.value === 'All') renderSpatialLayer('state', document.getElementById('selState').value); else renderSpatialLayer('district', e.target.value);
+            if (val === 'All') renderSpatialLayer('state', document.getElementById('selState').value); else renderSpatialLayer('district', val);
         });
         document.getElementById('selTaluk').addEventListener('change', (e) => {
+            const val = e.target.value;
             cascadeClear(['selWard']); filterMatrix();
-            if (e.target.value === 'All') renderSpatialLayer('district', document.getElementById('selDistrict').value); else renderSpatialLayer('taluk', e.target.value);
+            if (val === 'All') renderSpatialLayer('district', document.getElementById('selDistrict').value); else renderSpatialLayer('taluk', val);
         });
         document.getElementById('selWard').addEventListener('change', (e) => {
             filterMatrix();
             if (e.target.value !== 'All' && filteredData.length === 1) isolateTerritory(filteredData[0]);
             else if (e.target.value === 'All') renderSpatialLayer('taluk', document.getElementById('selTaluk').value);
         });
-        document.getElementById('btnResetGlobe').addEventListener('click', () => {
+        document.getElementById('btnGlobe').addEventListener('click', () => {
             const sel = document.getElementById('selCountry'); sel.value = 'All'; sel.dispatchEvent(new Event('change'));
         });
     }
@@ -410,26 +422,26 @@ export async function initRegionsEngine(containerId) {
         const tbody = document.getElementById('territoryTbody'); tbody.innerHTML = '';
         
         if (level === 'world' || level === 'country' || level === 'state' || level === 'district') {
-            tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center"><div class="text-3xl mb-3" style="color: var(--muted);"><i class="fas fa-layer-group"></i></div><div class="font-bold text-[12px] uppercase tracking-widest mb-1" style="color: var(--brand-orange-dark);">Macro Region Selected</div><div class="text-[11px] font-medium" style="color: var(--muted);">Drill down to a specific <b>Taluk</b> to view granular Ward data matrices.</div></td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="py-24 text-center"><div class="opacity-70 flex flex-col items-center"><i class="fas fa-layer-group text-5xl text-slate-300 mb-4"></i><h4 class="font-bold text-sm uppercase tracking-wider" style="color: #D35400;">Macro Region Selected</h4><p class="text-[12px] text-slate-500 mt-2">Drill down to a specific <span class="font-bold text-slate-700">Taluk</span> to view granular Ward data matrices.</p></div></td></tr>';
             return;
         }
 
         if (filteredData.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center"><div class="text-3xl mb-3" style="color: var(--muted);">🚀</div><div class="font-bold text-[12px] uppercase tracking-widest mb-1" style="color: var(--brand-orange-dark);">Pipeline Territory</div><div class="text-[11px] font-medium" style="color: var(--muted);">Territory operations for this region are currently pre-launch.</div></td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="py-24 text-center"><div class="opacity-70 flex flex-col items-center"><i class="fas fa-rocket text-4xl text-pink-500 mb-4"></i><h4 class="font-bold text-xs uppercase tracking-wider" style="color: #334155;">Yet to be launched</h4><p class="text-[11px] text-slate-400 mt-2">Territory operations for this region are currently in the pipeline.</p></div></td></tr>';
             return;
         }
 
         filteredData.forEach(item => {
             const tr = document.createElement('tr');
-            tr.className = "hover:bg-[color:var(--hover-bg)] transition cursor-pointer";
+            tr.className = "hover:bg-slate-50 transition cursor-pointer text-slate-700";
             tr.onclick = () => { isolateTerritory(item, tr); };
 
             const civicCount = item.civicEntities.length;
             const civicBadge = civicCount > 0 
-                ? '<span style="background: rgba(211,84,0,0.1); color: var(--brand-orange-dark); border: 1px solid var(--brand-orange-dark);" class="px-1.5 py-0.5 rounded font-bold text-[9px]">' + civicCount + ' Nodes</span>'
-                : '<span style="background: var(--bg); color: var(--muted);" class="px-1.5 py-0.5 rounded text-[9px] font-semibold">0 Nodes</span>';
+                ? '<span class="bg-orange-100 text-[#D35400] border border-orange-200 px-1.5 py-0.5 rounded font-bold text-[9px]">' + civicCount + ' Nodes</span>'
+                : '<span class="bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded text-[9px] font-semibold">0 Nodes</span>';
 
-            tr.innerHTML = '<td class="p-2 font-mono text-xs font-bold pl-4" style="color: var(--brand-teal-dark); border-right: 1px solid var(--border);">' + item.territory_id + '</td><td class="p-2 font-bold col-left whitespace-nowrap" style="color: var(--text); border-right: 1px solid var(--border);">' + item.territory_name + '</td><td class="p-2 font-bold col-left whitespace-nowrap" style="color: var(--brand-teal-light); border-right: 1px solid var(--border);">' + item.biz_class + '</td><td class="p-2 col-left">' + civicBadge + '</td>';
+            tr.innerHTML = '<td class="p-2 font-mono text-xs font-bold text-teal-700 border-r border-slate-100 pl-4">' + item.territory_id + '</td><td class="p-2 font-bold col-left border-r border-slate-100 whitespace-nowrap">' + item.territory_name + '</td><td class="p-2 font-bold col-left border-r border-slate-100 whitespace-nowrap text-sky-600">' + item.biz_class + '</td><td class="p-2 col-left">' + civicBadge + '</td>';
             tbody.appendChild(tr);
         });
     }
@@ -460,7 +472,7 @@ export async function initRegionsEngine(containerId) {
 
         const content = document.getElementById('deepDiveContent');
         if (item.civicEntities.length === 0) {
-            content.innerHTML = '<div class="italic w-full text-center text-[11px] font-medium py-4" style="color: var(--muted);">No mapped infrastructure found for this sector.</div>';
+            content.innerHTML = '<div class="text-slate-500 italic w-full text-center text-[11px] font-medium py-4">No mapped infrastructure found for this sector.</div>';
             return;
         }
 
@@ -468,7 +480,7 @@ export async function initRegionsEngine(containerId) {
         item.civicEntities.forEach(ent => {
             let entName = ent.civic_entities?.entity_name || 'Unknown';
             let relType = ent.relationship_type ? ent.relationship_type.replace(/_/g, ' ') : '';
-            html += '<div class="p-1.5 rounded flex justify-between items-center shadow-sm" style="background: var(--bg); border: 1px solid var(--border);"><div class="flex items-center gap-2"><span class="text-base">🏛️</span><div class="flex flex-col"><span class="font-bold text-[11px]" style="color: var(--text);">' + entName + '</span><span class="text-[9px] uppercase font-bold" style="color: var(--muted);">' + relType + '</span></div></div></div>';
+            html += '<div class="bg-slate-50 border border-slate-200 p-1.5 rounded flex justify-between items-center shadow-sm"><div class="flex items-center gap-2"><span class="text-base">🏛️</span><div class="flex flex-col"><span class="font-bold text-[11px] text-slate-800">' + entName + '</span><span class="text-[9px] uppercase font-bold text-slate-500">' + relType + '</span></div></div></div>';
         });
         html += '</div>';
         content.innerHTML = html;
@@ -482,6 +494,6 @@ export async function initRegionsEngine(containerId) {
         await loadCountryList();
         await renderSpatialLayer('world', '', false);
     } catch(err) {
-        updateModuleStatus('CRASH: ' + err.message);
+        console.error('CRASH:', err.message);
     }
 }
