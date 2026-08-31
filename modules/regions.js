@@ -1,12 +1,12 @@
 // =======================================================================
-// NANBI V5.0 - TERRITORY MATRIX ENGINE (100% SOVEREIGN & RELATIONAL)
+// NANBI V5.0 - SOVEREIGN TERRITORY MATRIX (ZERO EXTERNAL MAP TILES)
 // =======================================================================
 
 export async function initRegionsEngine(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // 1. EXACT RESTORATION OF YOUR ORIGINAL LAYOUT (From territory_matrix.html)
+    // 1. Exact Restoration of Your UI Layout
     container.innerHTML = `
         <div class="flex-1 flex flex-col w-full h-full bg-slate-50/50">
             <!-- Header -->
@@ -24,12 +24,12 @@ export async function initRegionsEngine(containerId) {
             </div>
 
             <div class="flex-1 flex flex-col lg:flex-row gap-4 w-full">
-                <!-- LEFT COLUMN: Hierarchy & Sovereign Map (38%) -->
+                <!-- LEFT COLUMN: Hierarchy & Map -->
                 <aside class="w-full lg:w-[38%] flex flex-col gap-4 shrink-0">
                     <div class="bg-white p-4 rounded border border-slate-200 shadow-sm">
                         <div class="flex justify-between items-center pb-2 border-b border-slate-100 mb-3">
-                            <span id="geoHierarchyBreadcrumb" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest"><i class="fas fa-chevron-left mr-1"></i> <i class="fas fa-chevron-right mr-1"></i> WORLD VIEW</span>
-                            <button class="text-[10px] font-bold text-slate-500 hover:text-slate-800 transition-colors"><i class="fas fa-globe mr-1"></i> Globe</button>
+                            <span id="geoBreadcrumb" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest"><i class="fas fa-chevron-left mr-1"></i> <i class="fas fa-chevron-right mr-1"></i> WORLD VIEW</span>
+                            <button id="btnResetGlobe" class="text-[10px] font-bold text-slate-500 hover:text-slate-800 transition-colors"><i class="fas fa-globe mr-1"></i> Globe</button>
                         </div>
                         <div class="grid grid-cols-2 gap-3">
                             <div class="flex flex-col gap-1">
@@ -65,16 +65,15 @@ export async function initRegionsEngine(containerId) {
                         </div>
                     </div>
 
-                    <!-- Sovereign Map Canvas: NO EXTERNAL TILES -->
-                    <div class="flex-1 bg-[#eef2f6] p-1.5 rounded border border-slate-200 relative shadow-sm min-h-[400px]">
-                        <div id="map-wrapper" style="position:relative; width:100%; height:100%; min-height:400px; z-index:1;">
-                            <!-- The map background acts as the ocean/canvas. No L.tileLayer will be injected. -->
-                            <div id="map" style="position:absolute; inset:0; background: transparent;"></div>
+                    <!-- Sovereign Map Canvas: NO OSM TILES, JUST CSS BACKGROUND -->
+                    <div class="flex-1 bg-white p-1.5 rounded border border-slate-200 relative shadow-sm min-h-[400px]">
+                        <div id="map-wrapper" style="position:relative; width:100%; height:100%; min-height:400px; z-index:1; border-radius:3px; overflow:hidden;">
+                            <div id="map" style="position:absolute; inset:0; background: #E2E8F0;"></div>
                         </div>
                     </div>
                 </aside>
 
-                <!-- RIGHT COLUMN: Metrics & Relational Data Ledger (62%) -->
+                <!-- RIGHT COLUMN: Metrics & Data Ledger -->
                 <section class="w-full lg:w-[62%] flex flex-col gap-4 shrink-0 lg:shrink">
                     <div class="bg-white p-4 rounded border border-slate-200 flex justify-around items-center shadow-sm">
                         <div class="text-center">
@@ -93,8 +92,8 @@ export async function initRegionsEngine(containerId) {
                             <table class="w-full text-left border-collapse">
                                 <thead class="bg-slate-50 sticky top-0 z-10 border-b border-slate-200">
                                     <tr class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                                        <th class="py-3 px-4">Territory ID</th>
-                                        <th class="py-3 px-4">Ward Name / Node</th>
+                                        <th class="py-3 px-4">ID</th>
+                                        <th class="py-3 px-4">Ward/State Name</th>
                                         <th class="py-3 px-4">Biz-Class</th>
                                         <th class="py-3 px-4 text-center">Civic Coverage</th>
                                     </tr>
@@ -104,8 +103,8 @@ export async function initRegionsEngine(containerId) {
                                         <td colspan="4" class="py-20 text-center">
                                             <div class="opacity-60 flex flex-col items-center">
                                                 <i class="fas fa-layer-group text-4xl text-slate-300 mb-3"></i>
-                                                <h4 class="font-bold text-xs uppercase tracking-wider" style="color: #D35400;">Macro Region Selected</h4>
-                                                <p class="text-[11px] text-slate-500 mt-1">Drill down to a specific <span class="font-bold text-slate-700">Taluk</span> to view the 41-column granular Ward matrices.</p>
+                                                <h4 class="font-bold text-xs uppercase tracking-wider" style="color: #D35400;">Loading Sovereign Data</h4>
+                                                <p class="text-[11px] text-slate-500 mt-1">Connecting to PostGIS Relational DB...</p>
                                             </div>
                                         </td>
                                     </tr>
@@ -114,7 +113,7 @@ export async function initRegionsEngine(containerId) {
                         </div>
                         <div class="bg-slate-50 border-t border-slate-200 p-3 flex justify-between items-center">
                             <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Entity Inspector</span>
-                            <span class="text-[10px] font-medium text-slate-400" id="inspectorText">Select a territory from the relational database...</span>
+                            <span class="text-[10px] font-medium text-slate-400" id="inspectorText">Select a territory...</span>
                         </div>
                     </div>
                 </section>
@@ -122,23 +121,22 @@ export async function initRegionsEngine(containerId) {
         </div>
     `;
 
-    // 2. Initialize the Native Leaflet Engine (ZERO EXTERNAL APIS)
-    if (!window.L) {
-        await loadLeafletLibrary(); 
-    }
+    // 2. Initialize Leaflet Map Engine WITHOUT ANY TILE LAYER
+    if (!window.L) await loadLeafletLibrary(); 
     
     const mapContainer = window.L.DomUtil.get('map');
     if(mapContainer != null){ mapContainer._leaflet_id = null; }
 
-    // Initialize map over the blank background. NO L.tileLayer() is called.
     const map = window.L.map('map', { zoomControl: true, attributionControl: false }).setView([22.5937, 78.9629], 3);
     const featureGroup = window.L.featureGroup().addTo(map);
 
-    // 3. Fetch Sovereign GeoJSON via YOUR Custom RPC
+    let globalCountryData = [];
+
+    // 3. Fetch Sovereign GeoJSON Uploaded via your Python Script
     try {
         const res = await window.nanbiDB.rpc('get_countries_geojson');
-        
         if(res.data && res.data.length > 0) {
+            globalCountryData = res.data;
             const selCountry = document.getElementById('selCountry');
             selCountry.innerHTML = '<option value="All">Global Overview</option>';
             
@@ -149,23 +147,17 @@ export async function initRegionsEngine(containerId) {
                         const layer = window.L.geoJSON(JSON.parse(c.geojson), { 
                             style: { color: '#ffffff', weight: 1, fillColor: getVisualColor(c.name), fillOpacity: 0.8 } 
                         });
+                        layer.on('mouseover', e => { e.target.bringToFront(); e.target.setStyle({stroke: true, color: '#1E293B', weight: 2}); });
+                        layer.on('mouseout', e => e.target.setStyle({color: '#ffffff', weight: 1, fillOpacity: 0.8}));
                         
-                        layer.on('mouseover', e => { 
-                            e.target.bringToFront(); 
-                            e.target.setStyle({stroke: true, color: '#1E293B', weight: 2}); 
-                        });
-                        layer.on('mouseout', e => e.target.setStyle({color: '#ffffff', weight: 1}));
-                        
-                        // Sync Map Click to Dropdown (Interactive Drill-Down)
+                        // Sync Map Click to Dropdown
                         layer.on('click', () => {
                             selCountry.value = c.id;
                             selCountry.dispatchEvent(new Event('change'));
                         });
                         
                         featureGroup.addLayer(layer);
-                    } catch(err) {
-                        console.error("GeoJSON parse error", err);
-                    }
+                    } catch(err) { console.error("GeoJSON parse error", err); }
                 }
             });
             
@@ -174,103 +166,112 @@ export async function initRegionsEngine(containerId) {
             
             document.getElementById('metricCount').innerText = res.data.length;
             document.getElementById('metricCapacity').innerText = 'Global Base';
+            
+            document.getElementById('tableBody').innerHTML = `<tr><td colspan="4" class="py-16 text-center text-slate-500 font-bold text-xs uppercase tracking-wider">Global Overview Active</td></tr>`;
 
-            // 4. Connect Dropdown to your Relational Database (simulating the query drill-down)
+            // 4. Drill Down Event: Fetch States from your Relational DB when Country is selected
             selCountry.addEventListener('change', async (e) => {
-                const selectedId = e.target.value;
-                const selectedName = e.target.options[e.target.selectedIndex].text;
+                const selectedCountryId = e.target.value;
+                const selectedCountryName = e.target.options[e.target.selectedIndex].text;
 
-                if (selectedId === 'All') {
-                    // Reset to Global Overview
+                if (selectedCountryId === 'All') {
+                    // Reset to Global
                     document.getElementById('geoHierarchyBreadcrumb').innerHTML = '<i class="fas fa-chevron-left mr-1"></i> <i class="fas fa-chevron-right mr-1"></i> WORLD VIEW';
-                    document.getElementById('selState').disabled = true;
-                    document.getElementById('selState').classList.add('opacity-60', 'bg-slate-50');
-                    document.getElementById('selState').innerHTML = '<option value="All">All</option>';
+                    const selState = document.getElementById('selState');
+                    selState.disabled = true; selState.classList.add('opacity-60', 'bg-slate-50'); selState.innerHTML = '<option value="All">All</option>';
                     
-                    document.getElementById('metricCount').innerText = res.data.length;
+                    document.getElementById('metricCount').innerText = globalCountryData.length;
                     document.getElementById('metricCapacity').innerText = 'Global Base';
-                    
-                    document.getElementById('tableBody').innerHTML = `
-                        <tr>
-                            <td colspan="4" class="py-20 text-center">
-                                <div class="opacity-60 flex flex-col items-center">
-                                    <i class="fas fa-layer-group text-4xl text-slate-300 mb-3"></i>
-                                    <h4 class="font-bold text-xs uppercase tracking-wider" style="color: #D35400;">Macro Region Selected</h4>
-                                    <p class="text-[11px] text-slate-500 mt-1">Drill down to a specific <span class="font-bold text-slate-700">Taluk</span> to view granular Ward data matrices.</p>
-                                </div>
-                            </td>
-                        </tr>
-                    `;
+                    document.getElementById('tableBody').innerHTML = `<tr><td colspan="4" class="py-16 text-center text-slate-500 font-bold text-xs uppercase tracking-wider">Global Overview Active</td></tr>`;
 
+                    // Redraw all countries
                     featureGroup.clearLayers();
-                    res.data.forEach(c => {
+                    globalCountryData.forEach(c => {
                         if(c.geojson) {
                             const layer = window.L.geoJSON(JSON.parse(c.geojson), { style: { color: '#ffffff', weight: 1, fillColor: getVisualColor(c.name), fillOpacity: 0.8 } });
                             layer.on('mouseover', ev => { ev.target.bringToFront(); ev.target.setStyle({stroke: true, color: '#1E293B', weight: 2}); });
-                            layer.on('mouseout', ev => ev.target.setStyle({color: '#ffffff', weight: 1}));
+                            layer.on('mouseout', ev => ev.target.setStyle({color: '#ffffff', weight: 1, fillOpacity: 0.8}));
                             layer.on('click', () => { selCountry.value = c.id; selCountry.dispatchEvent(new Event('change')); });
                             featureGroup.addLayer(layer);
                         }
                     });
                     map.fitBounds(featureGroup.getBounds(), { padding: [20, 20] });
-
                 } else {
-                    // Specific Country / State Drill Down
-                    document.getElementById('geoHierarchyBreadcrumb').innerHTML = `<i class="fas fa-chevron-left mr-1"></i> <i class="fas fa-chevron-right mr-1"></i> ${selectedName.toUpperCase()}`;
+                    // Specific Country Drill-Down
+                    document.getElementById('geoHierarchyBreadcrumb').innerHTML = `<i class="fas fa-chevron-left mr-1"></i> <i class="fas fa-chevron-right mr-1"></i> ${selectedCountryName.toUpperCase()}`;
                     
-                    // Filter map to show only the selected sovereign polygon
-                    const matchedCountry = res.data.find(c => c.id === selectedId);
-                    if (matchedCountry && matchedCountry.geojson) {
-                        featureGroup.clearLayers();
-                        const activeLayer = window.L.geoJSON(JSON.parse(matchedCountry.geojson), {
-                            style: { color: '#ffffff', weight: 2, fillColor: '#D35400', fillOpacity: 0.7 }
-                        });
-                        featureGroup.addLayer(activeLayer);
-                        map.fitBounds(activeLayer.getBounds(), { padding: [20, 20] });
-                    }
+                    // Fetch States dynamically from your Supabase 'states' table where you uploaded them via Python
+                    const { data: stateData, error: stateError } = await window.nanbiDB
+                        .from('states')
+                        .select('state_id, state_name, geojson')
+                        .eq('country_id', selectedCountryId);
 
-                    // Query the 'states' or 'territories' relational tables in your Supabase
-                    if (selectedName === 'India') {
+                    featureGroup.clearLayers();
+
+                    if (!stateError && stateData && stateData.length > 0) {
+                        // We have state data, unlock the State dropdown
                         const selState = document.getElementById('selState');
                         selState.disabled = false;
                         selState.classList.remove('bg-slate-50', 'opacity-60');
                         selState.classList.add('bg-white');
-                        selState.innerHTML = '<option>All</option><option>Karnataka</option><option>Madhya Pradesh</option><option>Uttar Pradesh</option>';
-                        
-                        // Representing the 1,990 territories across Karnataka from your PDF data[cite: 1, 2]
-                        document.getElementById('metricCount').innerText = '1,990';
-                        document.getElementById('metricCapacity').innerText = '₹6,96,50,000';
-                        
+                        selState.innerHTML = '<option value="All">All</option>' + stateData.map(s => `<option value="${s.state_id}">${s.state_name}</option>`).join('');
+
+                        document.getElementById('metricCount').innerText = stateData.length;
+                        document.getElementById('metricCapacity').innerText = '₹' + (stateData.length * 35000).toLocaleString();
+
+                        // Render States in Map
+                        stateData.forEach(s => {
+                            if(s.geojson) {
+                                const layer = window.L.geoJSON(JSON.parse(s.geojson), { style: { color: '#ffffff', weight: 2, fillColor: getVisualColor(s.state_name), fillOpacity: 0.7 } });
+                                layer.on('mouseover', ev => { ev.target.bringToFront(); ev.target.setStyle({stroke: true, color: '#1E293B', weight: 3}); });
+                                layer.on('mouseout', ev => ev.target.setStyle({color: '#ffffff', weight: 2, fillOpacity: 0.7}));
+                                featureGroup.addLayer(layer);
+                            }
+                        });
+                        map.fitBounds(featureGroup.getBounds(), { padding: [20, 20] });
+
+                        // Render States in Ledger Table
+                        document.getElementById('tableBody').innerHTML = stateData.map(s => `
+                            <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                <td class="py-3 px-4 font-mono text-xs font-bold text-teal-700">${s.state_id || 'N/A'}</td>
+                                <td class="py-3 px-4 text-xs font-semibold text-slate-700">${s.state_name}</td>
+                                <td class="py-3 px-4 text-[10px] font-bold text-teal-600">Macro State</td>
+                                <td class="py-3 px-4 text-[10px] text-slate-400 text-center">Active</td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        // Fallback: Just draw the single country polygon if no states exist
+                        const matchedCountry = globalCountryData.find(c => c.id === selectedCountryId);
+                        if (matchedCountry && matchedCountry.geojson) {
+                            const layer = window.L.geoJSON(JSON.parse(matchedCountry.geojson), { style: { color: '#ffffff', weight: 2, fillColor: '#D35400', fillOpacity: 0.7 } });
+                            featureGroup.addLayer(layer);
+                            map.fitBounds(layer.getBounds(), { padding: [20, 20] });
+                        }
+                        document.getElementById('metricCount').innerText = '1';
+                        document.getElementById('metricCapacity').innerText = 'Global Base';
                         document.getElementById('tableBody').innerHTML = `
                             <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                                <td class="py-3 px-4 font-mono text-xs font-bold text-teal-700">KA-BBA-BSC-U01</td>
-                                <td class="py-3 px-4 text-xs font-semibold text-slate-700">W-1: Padmanabhanagara</td>
-                                <td class="py-3 px-4 text-[10px] font-bold text-teal-600">Comm/Resi</td>
-                                <td class="py-3 px-4 text-[10px] text-slate-400 text-center">Active</td>
-                            </tr>
-                            <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                                <td class="py-3 px-4 font-mono text-xs font-bold text-teal-700">KA-MYS-MCC-C13</td>
-                                <td class="py-3 px-4 text-xs font-semibold text-slate-700">Mandi Mohalla Core</td>
-                                <td class="py-3 px-4 text-[10px] font-bold text-teal-600">Wholesale</td>
-                                <td class="py-3 px-4 text-[10px] text-slate-400 text-center">Active</td>
-                            </tr>
-                            <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                                <td class="py-3 px-4 font-mono text-xs font-bold text-teal-700">KA-DKN-MCC-C01</td>
-                                <td class="py-3 px-4 text-xs font-semibold text-slate-700">Surathkal West & East</td>
-                                <td class="py-3 px-4 text-[10px] font-bold text-teal-600">Educational/Resi</td>
+                                <td class="py-3 px-4 font-mono text-xs font-bold text-teal-700">${selectedCountryId}</td>
+                                <td class="py-3 px-4 text-xs font-semibold text-slate-700">${selectedCountryName}</td>
+                                <td class="py-3 px-4 text-[10px] font-bold text-teal-600">Sovereign</td>
                                 <td class="py-3 px-4 text-[10px] text-slate-400 text-center">Active</td>
                             </tr>
                         `;
                     }
                 }
             });
+
+            // Reset Button
+            document.getElementById('btnResetGlobe').addEventListener('click', () => {
+                selCountry.value = 'All';
+                selCountry.dispatchEvent(new Event('change'));
+            });
         }
     } catch (err) {
-        console.error("Supabase RPC Error:", err);
+        console.error("RPC Error:", err);
     }
 }
 
-// Retains your exact multi-color logic
 function getVisualColor(name) {
     const colors = ['#F1948A', '#82E0AA', '#85C1E9', '#F7DC6F', '#C39BD3', '#F0B27A', '#76D7C4', '#E59866', '#BFC9CA'];
     let hash = 0;
@@ -278,7 +279,6 @@ function getVisualColor(name) {
     return colors[Math.abs(hash) % colors.length];
 }
 
-// Leaflet framework loader
 function loadLeafletLibrary() {
     return new Promise((resolve) => {
         if (window.L) return resolve();
