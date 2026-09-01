@@ -214,36 +214,11 @@ export async function initRegionsEngine(containerId) {
             return;
         }
 
-        // 1. INVISIBLE ANCHOR LOGIC: Fetches parent bounds in the background without drawing them
-        let anchorBounds = null;
-        try {
-            let pRpc = ''; let pParams = {};
-            if (level === 'country') { pRpc = 'get_country_polygon'; pParams = { p_country: parentName }; }
-            else if (level === 'state') { pRpc = 'get_state_polygon'; pParams = { p_state: parentName }; }
-            else if (level === 'district') { pRpc = 'get_district_polygon'; pParams = { p_district: parentName }; }
-            
-            if (pRpc) {
-                const { data: pData } = await window.nanbiDB.rpc(pRpc, pParams);
-                if (pData && pData.length > 0 && pData[0].geojson) {
-                    const tempLayer = window.L.geoJSON(JSON.parse(pData[0].geojson));
-                    anchorBounds = tempLayer.getBounds();
-                }
-            }
-        } catch (e) { 
-            console.warn("Anchor bounds fetch failed, falling back to feature grouping.", e); 
-        }
-
-        // 2. FETCH & RENDER CHILD DATA
         const { data, error } = await window.nanbiDB.rpc(rpcName, rpcParams);
 
         if (error || !data || data.length === 0) {
-            // Draw isolated boundary if no children exist (preserves original behavior)
             if (level === 'country') await drawIsolatedBoundary('get_country_polygon', { p_country: parentName }, parentName);
             else if (level === 'state') await drawIsolatedBoundary('get_state_polygon', { p_state: parentName }, parentName);
-            
-            if (anchorBounds && anchorBounds.isValid() && map) {
-                setTimeout(() => map.fitBounds(anchorBounds, { padding: [30, 30], maxZoom: 11, animate: false }), 300);
-            }
             updateUI(level);
             return;
         }
@@ -252,7 +227,7 @@ export async function initRegionsEngine(containerId) {
         featureGroup = window.L.featureGroup();
 
         data.forEach(item => {
-            if (!item.geojson) return; // Silent null-filter
+            if (!item.geojson) return;
             try {
                 const parsedGeom = JSON.parse(item.geojson);
                 const displayName = item.name || '';
@@ -286,19 +261,41 @@ export async function initRegionsEngine(containerId) {
             sel.disabled = false;
         }
 
-        // 3. ZOOM LOGIC: Prioritize invisible anchor, fallback to drawn children
+        // =======================================================================
+        // INVISIBLE ANCHOR ZOOM LOGIC
+        // Fetches parent bounds without drawing rogue layers to break the UI
+        // =======================================================================
+        let boundsToFit = null;
+        try {
+            let parentRpc = ''; let parentParams = {};
+            if (level === 'country') { parentRpc = 'get_country_polygon'; parentParams = { p_country: parentName }; }
+            else if (level === 'state') { parentRpc = 'get_state_polygon'; parentParams = { p_state: parentName }; }
+            else if (level === 'district') { parentRpc = 'get_district_polygon'; parentParams = { p_district: parentName }; }
+            
+            if (parentRpc) {
+                const { data: pData } = await window.nanbiDB.rpc(parentRpc, parentParams);
+                if (pData && pData.length > 0 && pData[0].geojson) {
+                    const tempLayer = window.L.geoJSON(JSON.parse(pData[0].geojson));
+                    boundsToFit = tempLayer.getBounds();
+                }
+            }
+        } catch (e) {}
+
+        if (!boundsToFit && featureGroup.getLayers().length > 0) {
+            boundsToFit = featureGroup.getBounds();
+        }
+
         map.invalidateSize(true);
         setTimeout(() => { 
             map.invalidateSize(true);
-            if (anchorBounds && anchorBounds.isValid()) {
-                map.fitBounds(anchorBounds, { padding: [30, 30], maxZoom: level === 'world' ? 3 : 11, animate: false }); 
-            } else if (featureGroup.getLayers().length > 0) {
-                map.fitBounds(featureGroup.getBounds(), { padding: [30, 30], maxZoom: level === 'world' ? 3 : 11, animate: false }); 
+            if (boundsToFit && boundsToFit.isValid()) {
+                map.fitBounds(boundsToFit, { padding: [30, 30], maxZoom: level === 'world' ? 3 : 11, animate: false }); 
             } else {
                 map.setView([22.5937, 78.9629], 4);
             }
         }, 300);
-        
+        // =======================================================================
+
         updateUI(level);
     }
 
