@@ -155,8 +155,6 @@ export async function initRegionsEngine(containerId) {
     window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, opacity: 0.5 }).addTo(map);
     window.addEventListener('resize', () => { if(map) map.invalidateSize(true); });
 
-    let featureGroup = window.L.featureGroup().addTo(map);
-
     // 4. CORE ENGINE FUNCTIONS
     async function loadCountryList() {
         const { data } = await window.nanbiDB.rpc('get_countries_geojson');
@@ -198,22 +196,22 @@ export async function initRegionsEngine(containerId) {
         document.getElementById('geoHierarchyBreadcrumb').innerText = parentName ? parentName : 'World View';
 
         let rpcName = ''; let rpcParams = {}; let targetDropdownId = null;
-        let parentRpc = ''; let parentParams = {}; 
+        let parentTable = ''; 
 
         if (level === 'world') { 
             rpcName = 'get_countries_geojson'; targetDropdownId = 'selCountry'; 
         }
         else if (level === 'country') { 
             rpcName = 'get_states_for_country'; rpcParams = { p_country: parentName }; targetDropdownId = 'selState'; 
-            parentRpc = 'get_country_polygon'; parentParams = { p_country: parentName };
+            parentTable = 'countries';
         }
         else if (level === 'state') { 
             rpcName = 'get_districts_for_state'; rpcParams = { p_state: parentName }; targetDropdownId = 'selDistrict'; 
-            parentRpc = 'get_state_polygon'; parentParams = { p_state: parentName };
+            parentTable = 'states';
         }
         else if (level === 'district') { 
             rpcName = 'get_taluks_for_district'; rpcParams = { p_district: parentName }; targetDropdownId = 'selTaluk'; 
-            parentRpc = 'get_district_polygon'; parentParams = { p_district: parentName };
+            parentTable = 'districts';
         }
 
         if (level === 'taluk') {
@@ -228,9 +226,14 @@ export async function initRegionsEngine(containerId) {
         let hasValidData = false;
 
         // 1. FETCH & DRAW PARENT LAYER AS A SOLID BASE
-        if (parentRpc) {
+        if (parentTable && parentName) {
             try {
-                const { data: pData } = await window.nanbiDB.rpc(parentRpc, parentParams);
+                const { data: pData } = await window.nanbiDB
+                    .from(parentTable)
+                    .select('geojson')
+                    .eq('name', parentName)
+                    .limit(1);
+
                 if (pData && pData.length > 0 && pData[0].geojson) {
                     const pLayer = window.L.geoJSON(JSON.parse(pData[0].geojson), {
                         style: { color: '#D35400', weight: 1.5, fillColor: '#e2e8f0', fillOpacity: 0.3 },
@@ -255,11 +258,10 @@ export async function initRegionsEngine(containerId) {
                 const rawStr = String(item.id || item.name || '');
                 const displayName = item.display_name || item.name || item.official_name || rawStr;
                 
-                // ALWAYS push to dropdown array, even if geojson is missing
+                // CRITICAL FIX: Push to array BEFORE geometry check so ALL items show in dropdown
                 layerNames.push(displayName);
                 
-                // Skip drawing ONLY if coordinates are missing in DB
-                if (!item.geojson) return; 
+                if (!item.geojson) return; // Safely skip drawing if geometry is missing
 
                 try {
                     const parsedGeom = JSON.parse(item.geojson);
@@ -268,10 +270,9 @@ export async function initRegionsEngine(containerId) {
                         style: { color: '#ffffff', weight: 1.2, fillColor: polyColor, fillOpacity: 0.75 } 
                     });
 
-                    // FIX: Permanent Short IDs ONLY on Country/State view, NOT World View.
-                    const isPermanent = (level === 'country' || level === 'state');
+                    // CRITICAL FIX: Permanent Short IDs ONLY on Country/State view, NOT World View.
+                    const isPermanent = (level !== 'world');
                     const shortId = rawStr.includes('-') ? rawStr.split('-').pop() : rawStr;
-                    
                     const labelContent = isPermanent ? shortId : displayName;
 
                     layer.bindTooltip(labelContent, { 
@@ -295,10 +296,11 @@ export async function initRegionsEngine(containerId) {
             });
         }
 
-        // 3. SECURE SWAP: NEVER BLANK THE MAP IF NO DATA EXISTS.
+        // 3. SECURE SWAP: NEVER CLEAR THE MAP UNLESS WE HAVE NEW DATA TO SHOW
         if (hasValidData) {
             if (currentGeoLayer) { map.removeLayer(currentGeoLayer); }
             markers.forEach(m => map.removeLayer(m)); markers = [];
+            
             currentGeoLayer = newFeatureGroup.addTo(map);
 
             if (!boundsToFit && newFeatureGroup.getLayers().length > 0) {
@@ -313,10 +315,10 @@ export async function initRegionsEngine(containerId) {
                 }
             }, 300);
         } else {
-            console.warn("No geometry found for this selection. Map view preserved.");
+            console.warn("No geometry found for this selection. Preserving current map view.");
         }
 
-        // Populate Dropdowns safely using unique sorted names
+        // 4. Populate Dropdowns safely using unique sorted names
         if (targetDropdownId && layerNames.length > 0) {
             const sel = document.getElementById(targetDropdownId);
             const currentVal = sel.value;
