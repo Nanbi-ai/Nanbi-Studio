@@ -229,14 +229,14 @@ export async function initRegionsEngine(containerId) {
         featureGroup = window.L.featureGroup();
         let boundsToFit = null;
 
-        // 1. DRAW PARENT LAYER AS A SOLID BASE (Prevents the map from looking broken/empty)
+        // 1. DRAW PARENT LAYER AS A SOLID BASE
         if (parentRpc) {
             try {
                 const { data: pData } = await window.nanbiDB.rpc(parentRpc, parentParams);
                 if (pData && pData.length > 0 && pData[0].geojson) {
                     const pLayer = window.L.geoJSON(JSON.parse(pData[0].geojson), {
                         style: { color: '#D35400', weight: 1.5, fillColor: '#e2e8f0', fillOpacity: 0.4 },
-                        interactive: false // Prevents base layer from blocking clicks
+                        interactive: false
                     });
                     
                     pLayer.bindTooltip(parentName, { permanent: true, direction: 'center', className: 'id-label' });
@@ -254,7 +254,7 @@ export async function initRegionsEngine(containerId) {
 
         if (!error && data && data.length > 0) {
             data.forEach(item => {
-                if (!item.geojson) return; // Silent Drop for Missing Polygons
+                if (!item.geojson) return; 
                 try {
                     const parsedGeom = JSON.parse(item.geojson);
                     const displayName = item.name || '';
@@ -268,7 +268,6 @@ export async function initRegionsEngine(containerId) {
 
                     layer.bindTooltip(displayId, { direction: 'center', className: 'id-label', permanent: level === 'country' || level === 'state', interactive: false });
 
-                    // REMOVED e.target.bringToFront() to stop the mouseover infinite loop glitch
                     layer.on('mouseover', function(e) {
                         if (this.getTooltip()) this.getTooltip().setContent('<span style="color:#1E293B; font-size:11px; font-weight:800;">' + displayName + '</span>');
                     });
@@ -282,7 +281,7 @@ export async function initRegionsEngine(containerId) {
             });
         }
 
-        // 3. FALLBACK FOR COMPLETELY EMPTY REGIONS
+        // 3. ADD LAYERS TO MAP
         if (validChildrenCount === 0 && !boundsToFit) {
             if (level === 'country') await drawIsolatedBoundary('get_country_polygon', { p_country: parentName }, parentName);
             else if (level === 'state') await drawIsolatedBoundary('get_state_polygon', { p_state: parentName }, parentName);
@@ -300,7 +299,7 @@ export async function initRegionsEngine(containerId) {
             sel.disabled = false;
         }
 
-        // 4. ZOOM CAMERA LOGIC
+        // 4. ZOOM CAMERA LOGIC (The setView reset is fully removed here)
         if (!boundsToFit && featureGroup.getLayers().length > 0) {
             boundsToFit = featureGroup.getBounds();
         }
@@ -310,26 +309,28 @@ export async function initRegionsEngine(containerId) {
             map.invalidateSize(true);
             if (boundsToFit && boundsToFit.isValid()) {
                 map.fitBounds(boundsToFit, { padding: [30, 30], maxZoom: level === 'world' ? 3 : 11, animate: false }); 
-            } else {
-                map.setView([22.5937, 78.9629], 4);
             }
+            // NO ELSE STATEMENT. If data is missing, the map stays perfectly still.
         }, 300);
         
         updateUI(level);
     }
 
     async function drawIsolatedBoundary(rpcName, rpcParams, entityName) {
-        const { data } = await window.nanbiDB.rpc(rpcName, rpcParams);
-        if (data && data.length > 0 && data[0].geojson) {
-            featureGroup = window.L.featureGroup();
-            const layer = window.L.geoJSON(JSON.parse(data[0].geojson), {
-                style: { color: '#D35400', weight: 1.5, fillColor: '#D35400', fillOpacity: 0.15 }
-            });
-            layer.bindTooltip(entityName + '<br><span style="font-size:9px; font-weight:normal; color:#D35400">Pipeline Territory</span>', { permanent: true, direction: 'center', className: 'id-label' });
-            featureGroup.addLayer(layer);
-            currentGeoLayer = featureGroup.addTo(map);
-            fitLayerBounds(featureGroup, 8);
-        }
+        try {
+            const { data, error } = await window.nanbiDB.rpc(rpcName, rpcParams);
+            if (error) return;
+            if (data && data.length > 0 && data[0].geojson) {
+                featureGroup = window.L.featureGroup();
+                const layer = window.L.geoJSON(JSON.parse(data[0].geojson), {
+                    style: { color: '#D35400', weight: 1.5, fillColor: '#D35400', fillOpacity: 0.15 }
+                });
+                layer.bindTooltip(entityName + '<br><span style="font-size:9px; font-weight:normal; color:#D35400">Pipeline Territory</span>', { permanent: true, direction: 'center', className: 'id-label' });
+                featureGroup.addLayer(layer);
+                currentGeoLayer = featureGroup.addTo(map);
+                fitLayerBounds(featureGroup, 8);
+            }
+        } catch (e) {}
     }
 
     function fitLayerBounds(featureGroup, maxZoomVal) {
