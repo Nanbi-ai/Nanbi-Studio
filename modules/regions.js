@@ -157,7 +157,7 @@ export async function initRegionsEngine(containerId) {
 
     let featureGroup = window.L.featureGroup().addTo(map);
 
-    // 4. CORE ENGINE FUNCTIONS (Exactly as written in the 569-line file)
+    // 4. CORE ENGINE FUNCTIONS
     async function loadCountryList() {
         const { data } = await window.nanbiDB.rpc('get_countries_geojson');
         if (data && data.length > 0) {
@@ -187,6 +187,7 @@ export async function initRegionsEngine(containerId) {
         filteredData = [...globalData];
     }
 
+    // === UPDATED RESILIENT RENDER FUNCTION (PARENT ANCHOR + NULL FILTER) ===
     async function renderSpatialLayer(level, parentName = '', pushHistory = true) {
         if (pushHistory) {
             navHistory = navHistory.slice(0, historyIndex + 1);
@@ -201,11 +202,22 @@ export async function initRegionsEngine(containerId) {
         document.getElementById('geoHierarchyBreadcrumb').innerText = parentName ? parentName : 'World View';
 
         let rpcName = ''; let rpcParams = {}; let targetDropdownId = null;
+        let parentRpcName = ''; let parentRpcParams = {};
 
-        if (level === 'world') { rpcName = 'get_countries_geojson'; targetDropdownId = 'selCountry'; }
-        else if (level === 'country') { rpcName = 'get_states_for_country'; rpcParams = { p_country: parentName }; targetDropdownId = 'selState'; }
-        else if (level === 'state') { rpcName = 'get_districts_for_state'; rpcParams = { p_state: parentName }; targetDropdownId = 'selDistrict'; }
-        else if (level === 'district') { rpcName = 'get_taluks_for_district'; rpcParams = { p_district: parentName }; targetDropdownId = 'selTaluk'; }
+        if (level === 'world') { 
+            rpcName = 'get_countries_geojson'; targetDropdownId = 'selCountry'; 
+        }
+        else if (level === 'country') { 
+            rpcName = 'get_states_for_country'; rpcParams = { p_country: parentName }; targetDropdownId = 'selState'; 
+            parentRpcName = 'get_country_polygon'; parentRpcParams = { p_country: parentName };
+        }
+        else if (level === 'state') { 
+            rpcName = 'get_districts_for_state'; rpcParams = { p_state: parentName }; targetDropdownId = 'selDistrict'; 
+            parentRpcName = 'get_state_polygon'; parentRpcParams = { p_state: parentName };
+        }
+        else if (level === 'district') { 
+            rpcName = 'get_taluks_for_district'; rpcParams = { p_district: parentName }; targetDropdownId = 'selTaluk'; 
+        }
 
         if (level === 'taluk') {
             renderWardFallbacks();
@@ -214,20 +226,40 @@ export async function initRegionsEngine(containerId) {
             return;
         }
 
+        currentGeoLayer = window.L.featureGroup().addTo(map);
+        let parentBounds = null;
+
+        // FETCH PARENT BOUNDARY FIRST TO ANCHOR THE MAP
+        if (parentRpcName) {
+            const { data: pData } = await window.nanbiDB.rpc(parentRpcName, parentRpcParams);
+            if (pData && pData.length > 0 && pData[0].geojson) {
+                const pGeom = JSON.parse(pData[0].geojson);
+                const pLayer = window.L.geoJSON(pGeom, {
+                    style: { color: '#1E293B', weight: 2, fillOpacity: 0.05, dashArray: '4' },
+                    interactive: false 
+                });
+                parentBounds = pLayer.getBounds();
+                currentGeoLayer.addLayer(pLayer);
+            }
+        }
+
+        // FETCH CHILD BOUNDARIES
         const { data, error } = await window.nanbiDB.rpc(rpcName, rpcParams);
 
         if (error || !data || data.length === 0) {
-            if (level === 'country') await drawIsolatedBoundary('get_country_polygon', { p_country: parentName }, parentName);
-            else if (level === 'state') await drawIsolatedBoundary('get_state_polygon', { p_state: parentName }, parentName);
+            if (parentBounds && parentBounds.isValid()) {
+                map.invalidateSize(true);
+                setTimeout(() => map.fitBounds(parentBounds, { padding: [30, 30], animate: false }), 300);
+            }
             updateUI(level);
             return;
         }
 
         let layerNames = [];
-        featureGroup = window.L.featureGroup();
+        let childFeatures = window.L.featureGroup();
 
         data.forEach(item => {
-            if (!item.geojson) return;
+            if (!item.geojson) return; // SILENT NULL-FILTER FOR MISSING GEOMETRY
             try {
                 const parsedGeom = JSON.parse(item.geojson);
                 const displayName = item.name || '';
@@ -246,11 +278,10 @@ export async function initRegionsEngine(containerId) {
                 layer.on('mouseout', function() { if (this.getTooltip()) this.getTooltip().setContent(displayId); });
                 layer.on('click', () => { handleMapPolygonClick(level, displayName); });
                 
-                featureGroup.addLayer(layer);
+                childFeatures.addLayer(layer);
+                currentGeoLayer.addLayer(layer);
             } catch(e) {}
         });
-
-        currentGeoLayer = featureGroup.addTo(map);
 
         if (targetDropdownId && layerNames.length > 0) {
             const sel = document.getElementById(targetDropdownId);
@@ -261,9 +292,22 @@ export async function initRegionsEngine(containerId) {
             sel.disabled = false;
         }
 
-        fitLayerBounds(featureGroup, level === 'world' ? 3 : 11);
+        // PERFECTED ZOOM LOGIC
+        map.invalidateSize(true);
+        setTimeout(() => { 
+            map.invalidateSize(true);
+            if (parentBounds && parentBounds.isValid()) {
+                map.fitBounds(parentBounds, { padding: [30, 30], animate: false }); 
+            } else if (childFeatures.getLayers().length > 0) {
+                map.fitBounds(childFeatures.getBounds(), { padding: [30, 30], maxZoom: level === 'world' ? 3 : 11, animate: false });
+            } else {
+                map.setView([22.5937, 78.9629], 4);
+            }
+        }, 300);
+        
         updateUI(level);
     }
+    // === END OF UPDATED FUNCTION ===
 
     async function drawIsolatedBoundary(rpcName, rpcParams, entityName) {
         const { data } = await window.nanbiDB.rpc(rpcName, rpcParams);
