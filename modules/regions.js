@@ -195,9 +195,6 @@ export async function initRegionsEngine(containerId) {
             updateHistoryButtons();
         }
 
-        if (currentGeoLayer) { map.removeLayer(currentGeoLayer); currentGeoLayer = null; }
-        markers.forEach(m => map.removeLayer(m)); markers = [];
-
         document.getElementById('geoHierarchyBreadcrumb').innerText = parentName ? parentName : 'World View';
 
         let rpcName = ''; let rpcParams = {}; let targetDropdownId = null;
@@ -226,70 +223,83 @@ export async function initRegionsEngine(containerId) {
             return;
         }
 
-        featureGroup = window.L.featureGroup();
+        let newFeatureGroup = window.L.featureGroup();
         let boundsToFit = null;
+        let hasValidData = false;
 
-        // 1. DRAW PARENT LAYER AS A SOLID BASE
+        // 1. FETCH & DRAW PARENT LAYER AS A SOLID BASE
         if (parentRpc) {
             try {
                 const { data: pData } = await window.nanbiDB.rpc(parentRpc, parentParams);
                 if (pData && pData.length > 0 && pData[0].geojson) {
                     const pLayer = window.L.geoJSON(JSON.parse(pData[0].geojson), {
                         style: { color: '#D35400', weight: 1.5, fillColor: '#e2e8f0', fillOpacity: 0.4 },
-                        interactive: false
+                        interactive: false // Prevents the base layer from blocking clicks
                     });
-                    
                     pLayer.bindTooltip(parentName, { permanent: true, direction: 'center', className: 'id-label' });
-                    featureGroup.addLayer(pLayer);
+                    newFeatureGroup.addLayer(pLayer);
                     boundsToFit = pLayer.getBounds();
+                    hasValidData = true;
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.warn("Parent boundary fetch failed:", e);
+            }
         }
 
-        // 2. FETCH & DRAW CHILD DATA ON TOP
+        // 2. FETCH & DRAW CHILD DATA (Districts/Taluks)
         const { data, error } = await window.nanbiDB.rpc(rpcName, rpcParams);
-
         let layerNames = [];
-        let validChildrenCount = 0;
 
         if (!error && data && data.length > 0) {
             data.forEach(item => {
                 if (!item.geojson) return; 
                 try {
                     const parsedGeom = JSON.parse(item.geojson);
-                    const displayName = item.name || '';
-                    let displayId = (item.id || item.name).includes('-') ? (item.id || item.name).split('-').pop() : (item.id || item.name);
+                    
+                    // CRITICAL FIX: Safe string casting to prevent integer .includes() crashes
+                    const rawStr = String(item.id || item.name || '');
+                    
+                    // CRITICAL FIX: Enforce the actual Name for the Tooltip, not the LGD Code
+                    const displayName = item.name || item.display_name || item.official_name || rawStr;
 
                     layerNames.push(displayName);
-                    validChildrenCount++;
-                    const polyColor = getDistinctColor(displayName);
+                    hasValidData = true;
                     
-                    const layer = window.L.geoJSON(parsedGeom, { style: { color: '#ffffff', weight: 1.2, fillColor: polyColor, fillOpacity: 0.75 } });
+                    const polyColor = getDistinctColor(displayName);
+                    const layer = window.L.geoJSON(parsedGeom, { 
+                        style: { color: '#ffffff', weight: 1.2, fillColor: polyColor, fillOpacity: 0.75 } 
+                    });
 
-                    layer.bindTooltip(displayId, { direction: 'center', className: 'id-label', permanent: level === 'country' || level === 'state', interactive: false });
+                    layer.bindTooltip(displayName, { direction: 'center', className: 'id-label', permanent: level === 'country' || level === 'state', interactive: false });
 
                     layer.on('mouseover', function(e) {
                         if (this.getTooltip()) this.getTooltip().setContent('<span style="color:#1E293B; font-size:11px; font-weight:800;">' + displayName + '</span>');
                     });
                     layer.on('mouseout', function() { 
-                        if (this.getTooltip()) this.getTooltip().setContent(displayId); 
+                        if (this.getTooltip()) this.getTooltip().setContent(displayName); 
                     });
                     layer.on('click', () => { handleMapPolygonClick(level, displayName); });
                     
-                    featureGroup.addLayer(layer);
-                } catch(e) {}
+                    newFeatureGroup.addLayer(layer);
+                } catch(e) {
+                    console.error("Failed parsing child geometry:", e);
+                }
             });
         }
 
-        // 3. ADD LAYERS TO MAP
-        if (validChildrenCount === 0 && !boundsToFit) {
+        // 3. SECURE SWAP: Only clear the map if we have actual new data to show
+        if (hasValidData) {
+            if (currentGeoLayer) { map.removeLayer(currentGeoLayer); }
+            markers.forEach(m => map.removeLayer(m)); markers = [];
+            currentGeoLayer = newFeatureGroup.addTo(map);
+        } else {
+            // Absolute Fallback if both parent and children fail to load
             if (level === 'country') await drawIsolatedBoundary('get_country_polygon', { p_country: parentName }, parentName);
             else if (level === 'state') await drawIsolatedBoundary('get_state_polygon', { p_state: parentName }, parentName);
             else if (level === 'district') await drawIsolatedBoundary('get_district_polygon', { p_district: parentName }, parentName);
-        } else {
-            currentGeoLayer = featureGroup.addTo(map);
         }
 
+        // Populate Dropdowns safely
         if (targetDropdownId && layerNames.length > 0) {
             const sel = document.getElementById(targetDropdownId);
             const currentVal = sel.value;
@@ -299,9 +309,9 @@ export async function initRegionsEngine(containerId) {
             sel.disabled = false;
         }
 
-        // 4. ZOOM CAMERA LOGIC (The setView reset is fully removed here)
-        if (!boundsToFit && featureGroup.getLayers().length > 0) {
-            boundsToFit = featureGroup.getBounds();
+        // 4. ZOOM CAMERA LOGIC
+        if (!boundsToFit && newFeatureGroup.getLayers().length > 0) {
+            boundsToFit = newFeatureGroup.getBounds();
         }
 
         map.invalidateSize(true);
@@ -310,7 +320,6 @@ export async function initRegionsEngine(containerId) {
             if (boundsToFit && boundsToFit.isValid()) {
                 map.fitBounds(boundsToFit, { padding: [30, 30], maxZoom: level === 'world' ? 3 : 11, animate: false }); 
             }
-            // NO ELSE STATEMENT. If data is missing, the map stays perfectly still.
         }, 300);
         
         updateUI(level);
@@ -321,14 +330,15 @@ export async function initRegionsEngine(containerId) {
             const { data, error } = await window.nanbiDB.rpc(rpcName, rpcParams);
             if (error) return;
             if (data && data.length > 0 && data[0].geojson) {
+                if (currentGeoLayer) { map.removeLayer(currentGeoLayer); }
                 featureGroup = window.L.featureGroup();
                 const layer = window.L.geoJSON(JSON.parse(data[0].geojson), {
-                    style: { color: '#D35400', weight: 1.5, fillColor: '#D35400', fillOpacity: 0.15 }
+                    style: { color: '#D35400', weight: 1.5, fillColor: '#e2e8f0', fillOpacity: 0.4 }
                 });
-                layer.bindTooltip(entityName + '<br><span style="font-size:9px; font-weight:normal; color:#D35400">Pipeline Territory</span>', { permanent: true, direction: 'center', className: 'id-label' });
+                layer.bindTooltip(entityName + '<br><span style="font-size:9px; font-weight:normal; color:#D35400">No Sub-Regions Found</span>', { permanent: true, direction: 'center', className: 'id-label' });
                 featureGroup.addLayer(layer);
                 currentGeoLayer = featureGroup.addTo(map);
-                fitLayerBounds(featureGroup, 8);
+                fitLayerBounds(featureGroup, 9);
             }
         } catch (e) {}
     }
