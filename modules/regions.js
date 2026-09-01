@@ -187,7 +187,9 @@ export async function initRegionsEngine(containerId) {
         filteredData = [...globalData];
     }
 
-    // === UPDATED RESILIENT RENDER FUNCTION (PARENT ANCHOR + NULL FILTER) ===
+    // =======================================================================
+    // UPDATED RENDER LAYER: EXACT UI RESTORATION WITH BOUNDS SAFETY
+    // =======================================================================
     async function renderSpatialLayer(level, parentName = '', pushHistory = true) {
         if (pushHistory) {
             navHistory = navHistory.slice(0, historyIndex + 1);
@@ -202,21 +204,22 @@ export async function initRegionsEngine(containerId) {
         document.getElementById('geoHierarchyBreadcrumb').innerText = parentName ? parentName : 'World View';
 
         let rpcName = ''; let rpcParams = {}; let targetDropdownId = null;
-        let parentRpcName = ''; let parentRpcParams = {};
+        let parentRpc = ''; let parentParams = {}; 
 
         if (level === 'world') { 
             rpcName = 'get_countries_geojson'; targetDropdownId = 'selCountry'; 
         }
         else if (level === 'country') { 
             rpcName = 'get_states_for_country'; rpcParams = { p_country: parentName }; targetDropdownId = 'selState'; 
-            parentRpcName = 'get_country_polygon'; parentRpcParams = { p_country: parentName };
+            parentRpc = 'get_country_polygon'; parentParams = { p_country: parentName };
         }
         else if (level === 'state') { 
             rpcName = 'get_districts_for_state'; rpcParams = { p_state: parentName }; targetDropdownId = 'selDistrict'; 
-            parentRpcName = 'get_state_polygon'; parentRpcParams = { p_state: parentName };
+            parentRpc = 'get_state_polygon'; parentParams = { p_state: parentName };
         }
         else if (level === 'district') { 
             rpcName = 'get_taluks_for_district'; rpcParams = { p_district: parentName }; targetDropdownId = 'selTaluk'; 
+            parentRpc = 'get_district_polygon'; parentParams = { p_district: parentName };
         }
 
         if (level === 'taluk') {
@@ -226,40 +229,47 @@ export async function initRegionsEngine(containerId) {
             return;
         }
 
-        currentGeoLayer = window.L.featureGroup().addTo(map);
         let parentBounds = null;
+        let parentLayer = null;
 
-        // FETCH PARENT BOUNDARY FIRST TO ANCHOR THE MAP
-        if (parentRpcName) {
-            const { data: pData } = await window.nanbiDB.rpc(parentRpcName, parentRpcParams);
+        // 1. FETCH PARENT ANCHOR TO PREVENT CAMERA CRASHES
+        if (parentRpc) {
+            const { data: pData } = await window.nanbiDB.rpc(parentRpc, parentParams);
             if (pData && pData.length > 0 && pData[0].geojson) {
-                const pGeom = JSON.parse(pData[0].geojson);
-                const pLayer = window.L.geoJSON(pGeom, {
-                    style: { color: '#1E293B', weight: 2, fillOpacity: 0.05, dashArray: '4' },
-                    interactive: false 
-                });
-                parentBounds = pLayer.getBounds();
-                currentGeoLayer.addLayer(pLayer);
+                try {
+                    parentLayer = window.L.geoJSON(JSON.parse(pData[0].geojson), {
+                        style: { color: '#1E293B', weight: 2, fillOpacity: 0.05, dashArray: '4' },
+                        interactive: false
+                    });
+                    parentBounds = parentLayer.getBounds();
+                } catch(e) {}
             }
         }
 
-        // FETCH CHILD BOUNDARIES
+        // 2. FETCH CHILD DATA
         const { data, error } = await window.nanbiDB.rpc(rpcName, rpcParams);
 
+        // 3. FALLBACK: IF NO CHILD POLYGONS EXIST, DRAW PARENT AND ABORT
         if (error || !data || data.length === 0) {
-            if (parentBounds && parentBounds.isValid()) {
-                map.invalidateSize(true);
-                setTimeout(() => map.fitBounds(parentBounds, { padding: [30, 30], animate: false }), 300);
+            if (parentLayer) {
+                featureGroup = window.L.featureGroup().addLayer(parentLayer);
+                currentGeoLayer = featureGroup.addTo(map);
+                fitLayerBounds(featureGroup, 8);
+            } else {
+                if (level === 'country') await drawIsolatedBoundary('get_country_polygon', { p_country: parentName }, parentName);
+                else if (level === 'state') await drawIsolatedBoundary('get_state_polygon', { p_state: parentName }, parentName);
             }
             updateUI(level);
             return;
         }
 
         let layerNames = [];
-        let childFeatures = window.L.featureGroup();
+        featureGroup = window.L.featureGroup();
+        
+        if (parentLayer) featureGroup.addLayer(parentLayer);
 
         data.forEach(item => {
-            if (!item.geojson) return; // SILENT NULL-FILTER FOR MISSING GEOMETRY
+            if (!item.geojson) return; // Silent Drop for Missing Polygons
             try {
                 const parsedGeom = JSON.parse(item.geojson);
                 const displayName = item.name || '';
@@ -278,10 +288,11 @@ export async function initRegionsEngine(containerId) {
                 layer.on('mouseout', function() { if (this.getTooltip()) this.getTooltip().setContent(displayId); });
                 layer.on('click', () => { handleMapPolygonClick(level, displayName); });
                 
-                childFeatures.addLayer(layer);
-                currentGeoLayer.addLayer(layer);
+                featureGroup.addLayer(layer);
             } catch(e) {}
         });
+
+        currentGeoLayer = featureGroup.addTo(map);
 
         if (targetDropdownId && layerNames.length > 0) {
             const sel = document.getElementById(targetDropdownId);
@@ -292,22 +303,20 @@ export async function initRegionsEngine(containerId) {
             sel.disabled = false;
         }
 
-        // PERFECTED ZOOM LOGIC
-        map.invalidateSize(true);
-        setTimeout(() => { 
+        // 4. ZOOM CAMERA LOGIC
+        if (parentBounds && parentBounds.isValid()) {
             map.invalidateSize(true);
-            if (parentBounds && parentBounds.isValid()) {
+            setTimeout(() => { 
+                map.invalidateSize(true);
                 map.fitBounds(parentBounds, { padding: [30, 30], animate: false }); 
-            } else if (childFeatures.getLayers().length > 0) {
-                map.fitBounds(childFeatures.getBounds(), { padding: [30, 30], maxZoom: level === 'world' ? 3 : 11, animate: false });
-            } else {
-                map.setView([22.5937, 78.9629], 4);
-            }
-        }, 300);
-        
+            }, 300);
+        } else if (featureGroup.getLayers().length > 0) {
+            fitLayerBounds(featureGroup, level === 'world' ? 3 : 11);
+        }
+
         updateUI(level);
     }
-    // === END OF UPDATED FUNCTION ===
+    // =======================================================================
 
     async function drawIsolatedBoundary(rpcName, rpcParams, entityName) {
         const { data } = await window.nanbiDB.rpc(rpcName, rpcParams);
