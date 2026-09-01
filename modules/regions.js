@@ -196,22 +196,22 @@ export async function initRegionsEngine(containerId) {
         document.getElementById('geoHierarchyBreadcrumb').innerText = parentName ? parentName : 'World View';
 
         let rpcName = ''; let rpcParams = {}; let targetDropdownId = null;
-        let parentTable = ''; 
+        let parentRpc = ''; let parentParams = {}; 
 
         if (level === 'world') { 
             rpcName = 'get_countries_geojson'; targetDropdownId = 'selCountry'; 
         }
         else if (level === 'country') { 
             rpcName = 'get_states_for_country'; rpcParams = { p_country: parentName }; targetDropdownId = 'selState'; 
-            parentTable = 'countries';
+            parentRpc = 'get_country_polygon'; parentParams = { p_country: parentName };
         }
         else if (level === 'state') { 
             rpcName = 'get_districts_for_state'; rpcParams = { p_state: parentName }; targetDropdownId = 'selDistrict'; 
-            parentTable = 'states';
+            parentRpc = 'get_state_polygon'; parentParams = { p_state: parentName };
         }
         else if (level === 'district') { 
             rpcName = 'get_taluks_for_district'; rpcParams = { p_district: parentName }; targetDropdownId = 'selTaluk'; 
-            parentTable = 'districts';
+            parentRpc = 'get_district_polygon'; parentParams = { p_district: parentName };
         }
 
         if (level === 'taluk') {
@@ -225,15 +225,10 @@ export async function initRegionsEngine(containerId) {
         let boundsToFit = null;
         let hasValidData = false;
 
-        // 1. FETCH & DRAW PARENT LAYER AS A SOLID BASE
-        if (parentTable && parentName) {
+        // 1. FETCH & DRAW PARENT LAYER AS A SOLID BASE (RESTORED RPC LOGIC)
+        if (parentRpc && parentName) {
             try {
-                const { data: pData } = await window.nanbiDB
-                    .from(parentTable)
-                    .select('geojson')
-                    .eq('name', parentName)
-                    .limit(1);
-
+                const { data: pData } = await window.nanbiDB.rpc(parentRpc, parentParams);
                 if (pData && pData.length > 0 && pData[0].geojson) {
                     const pLayer = window.L.geoJSON(JSON.parse(pData[0].geojson), {
                         style: { color: '#D35400', weight: 1.5, fillColor: '#e2e8f0', fillOpacity: 0.3 },
@@ -245,7 +240,7 @@ export async function initRegionsEngine(containerId) {
                     hasValidData = true;
                 }
             } catch (e) {
-                console.warn("Parent boundary fetch skipped/failed");
+                console.warn("Parent boundary fetch skipped/failed.");
             }
         }
 
@@ -255,13 +250,13 @@ export async function initRegionsEngine(containerId) {
 
         if (!error && data && data.length > 0) {
             data.forEach(item => {
-                const rawStr = String(item.id || item.name || '');
-                const displayName = item.display_name || item.name || item.official_name || rawStr;
+                const rawStr = String(item.display_name || item.official_name || item.name || item.id || '');
+                const displayName = rawStr;
                 
-                // CRITICAL FIX: Push to array BEFORE geometry check so ALL items show in dropdown
+                // ALWAYS push to dropdown array, even if geojson is missing
                 layerNames.push(displayName);
                 
-                if (!item.geojson) return; // Safely skip drawing if geometry is missing
+                if (!item.geojson) return; // Safely skip drawing missing polygons
 
                 try {
                     const parsedGeom = JSON.parse(item.geojson);
@@ -270,9 +265,10 @@ export async function initRegionsEngine(containerId) {
                         style: { color: '#ffffff', weight: 1.2, fillColor: polyColor, fillOpacity: 0.75 } 
                     });
 
-                    // CRITICAL FIX: Permanent Short IDs ONLY on Country/State view, NOT World View.
-                    const isPermanent = (level !== 'world');
+                    // PERMANENT LABELS: Exclude 'world'. Apply only to Country, State, District (Taluks).
+                    const isPermanent = (level === 'country' || level === 'state' || level === 'district');
                     const shortId = rawStr.includes('-') ? rawStr.split('-').pop() : rawStr;
+                    
                     const labelContent = isPermanent ? shortId : displayName;
 
                     layer.bindTooltip(labelContent, { 
@@ -303,8 +299,15 @@ export async function initRegionsEngine(containerId) {
             
             currentGeoLayer = newFeatureGroup.addTo(map);
 
+            // GEOGRAPHIC SANITY CHECK: Protects against corrupted data launching the camera to Europe
             if (!boundsToFit && newFeatureGroup.getLayers().length > 0) {
-                boundsToFit = newFeatureGroup.getBounds();
+                const childBounds = newFeatureGroup.getBounds();
+                const center = childBounds.getCenter();
+                if (level !== 'world' && (center.lat < 5 || center.lat > 38 || center.lng < 65 || center.lng > 100)) {
+                    console.warn("Corrupted geometry coordinates detected outside India. Ignoring Bounds.");
+                } else {
+                    boundsToFit = childBounds;
+                }
             }
 
             map.invalidateSize(true);
@@ -312,6 +315,8 @@ export async function initRegionsEngine(containerId) {
                 map.invalidateSize(true);
                 if (boundsToFit && boundsToFit.isValid()) {
                     map.fitBounds(boundsToFit, { padding: [30, 30], maxZoom: level === 'world' ? 3 : 11, animate: true }); 
+                } else if (!boundsToFit) {
+                    map.setView([22.5937, 78.9629], 4);
                 }
             }, 300);
         } else {
