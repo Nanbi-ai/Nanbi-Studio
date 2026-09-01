@@ -201,11 +201,23 @@ export async function initRegionsEngine(containerId) {
         document.getElementById('geoHierarchyBreadcrumb').innerText = parentName ? parentName : 'World View';
 
         let rpcName = ''; let rpcParams = {}; let targetDropdownId = null;
+        let parentRpc = ''; let parentParams = {}; 
 
-        if (level === 'world') { rpcName = 'get_countries_geojson'; targetDropdownId = 'selCountry'; }
-        else if (level === 'country') { rpcName = 'get_states_for_country'; rpcParams = { p_country: parentName }; targetDropdownId = 'selState'; }
-        else if (level === 'state') { rpcName = 'get_districts_for_state'; rpcParams = { p_state: parentName }; targetDropdownId = 'selDistrict'; }
-        else if (level === 'district') { rpcName = 'get_taluks_for_district'; rpcParams = { p_district: parentName }; targetDropdownId = 'selTaluk'; }
+        if (level === 'world') { 
+            rpcName = 'get_countries_geojson'; targetDropdownId = 'selCountry'; 
+        }
+        else if (level === 'country') { 
+            rpcName = 'get_states_for_country'; rpcParams = { p_country: parentName }; targetDropdownId = 'selState'; 
+            parentRpc = 'get_country_polygon'; parentParams = { p_country: parentName };
+        }
+        else if (level === 'state') { 
+            rpcName = 'get_districts_for_state'; rpcParams = { p_state: parentName }; targetDropdownId = 'selDistrict'; 
+            parentRpc = 'get_state_polygon'; parentParams = { p_state: parentName };
+        }
+        else if (level === 'district') { 
+            rpcName = 'get_taluks_for_district'; rpcParams = { p_district: parentName }; targetDropdownId = 'selTaluk'; 
+            parentRpc = 'get_district_polygon'; parentParams = { p_district: parentName };
+        }
 
         if (level === 'taluk') {
             renderWardFallbacks();
@@ -214,68 +226,70 @@ export async function initRegionsEngine(containerId) {
             return;
         }
 
-        // =======================================================================
-        // INVISIBLE ANCHOR LOGIC: Fetches parent bounds in the background without drawing them
-        let anchorBounds = null;
-        try {
-            let pRpc = ''; let pParams = {};
-            if (level === 'country') { pRpc = 'get_country_polygon'; pParams = { p_country: parentName }; }
-            else if (level === 'state') { pRpc = 'get_state_polygon'; pParams = { p_state: parentName }; }
-            else if (level === 'district') { pRpc = 'get_district_polygon'; pParams = { p_district: parentName }; }
-            
-            if (pRpc) {
-                const { data: pData } = await window.nanbiDB.rpc(pRpc, pParams);
-                if (pData && pData.length > 0 && pData[0].geojson) {
-                    const tempLayer = window.L.geoJSON(JSON.parse(pData[0].geojson));
-                    anchorBounds = tempLayer.getBounds();
-                }
-            }
-        } catch (e) {}
+        featureGroup = window.L.featureGroup();
+        let boundsToFit = null;
 
-        // FETCH & RENDER CHILD DATA
+        // 1. DRAW PARENT LAYER AS A SOLID BASE (Prevents the map from looking broken/empty)
+        if (parentRpc) {
+            try {
+                const { data: pData } = await window.nanbiDB.rpc(parentRpc, parentParams);
+                if (pData && pData.length > 0 && pData[0].geojson) {
+                    const pLayer = window.L.geoJSON(JSON.parse(pData[0].geojson), {
+                        style: { color: '#D35400', weight: 1.5, fillColor: '#e2e8f0', fillOpacity: 0.4 },
+                        interactive: false // Prevents base layer from blocking clicks
+                    });
+                    
+                    pLayer.bindTooltip(parentName, { permanent: true, direction: 'center', className: 'id-label' });
+                    featureGroup.addLayer(pLayer);
+                    boundsToFit = pLayer.getBounds();
+                }
+            } catch (e) {}
+        }
+
+        // 2. FETCH & DRAW CHILD DATA ON TOP
         const { data, error } = await window.nanbiDB.rpc(rpcName, rpcParams);
 
-        if (error || !data || data.length === 0) {
-            // Draw isolated boundary if no children exist
+        let layerNames = [];
+        let validChildrenCount = 0;
+
+        if (!error && data && data.length > 0) {
+            data.forEach(item => {
+                if (!item.geojson) return; // Silent Drop for Missing Polygons
+                try {
+                    const parsedGeom = JSON.parse(item.geojson);
+                    const displayName = item.name || '';
+                    let displayId = (item.id || item.name).includes('-') ? (item.id || item.name).split('-').pop() : (item.id || item.name);
+
+                    layerNames.push(displayName);
+                    validChildrenCount++;
+                    const polyColor = getDistinctColor(displayName);
+                    
+                    const layer = window.L.geoJSON(parsedGeom, { style: { color: '#ffffff', weight: 1.2, fillColor: polyColor, fillOpacity: 0.75 } });
+
+                    layer.bindTooltip(displayId, { direction: 'center', className: 'id-label', permanent: level === 'country' || level === 'state', interactive: false });
+
+                    // REMOVED e.target.bringToFront() to stop the mouseover infinite loop glitch
+                    layer.on('mouseover', function(e) {
+                        if (this.getTooltip()) this.getTooltip().setContent('<span style="color:#1E293B; font-size:11px; font-weight:800;">' + displayName + '</span>');
+                    });
+                    layer.on('mouseout', function() { 
+                        if (this.getTooltip()) this.getTooltip().setContent(displayId); 
+                    });
+                    layer.on('click', () => { handleMapPolygonClick(level, displayName); });
+                    
+                    featureGroup.addLayer(layer);
+                } catch(e) {}
+            });
+        }
+
+        // 3. FALLBACK FOR COMPLETELY EMPTY REGIONS
+        if (validChildrenCount === 0 && !boundsToFit) {
             if (level === 'country') await drawIsolatedBoundary('get_country_polygon', { p_country: parentName }, parentName);
             else if (level === 'state') await drawIsolatedBoundary('get_state_polygon', { p_state: parentName }, parentName);
             else if (level === 'district') await drawIsolatedBoundary('get_district_polygon', { p_district: parentName }, parentName);
-            
-            if (anchorBounds && anchorBounds.isValid() && map) {
-                setTimeout(() => map.fitBounds(anchorBounds, { padding: [30, 30], maxZoom: 11, animate: false }), 300);
-            }
-            updateUI(level);
-            return;
+        } else {
+            currentGeoLayer = featureGroup.addTo(map);
         }
-
-        let layerNames = [];
-        featureGroup = window.L.featureGroup();
-
-        data.forEach(item => {
-            if (!item.geojson) return; // Silent null-filter
-            try {
-                const parsedGeom = JSON.parse(item.geojson);
-                const displayName = item.name || '';
-                let displayId = (item.id || item.name).includes('-') ? (item.id || item.name).split('-').pop() : (item.id || item.name);
-
-                layerNames.push(displayName);
-                const polyColor = getDistinctColor(displayName);
-                const layer = window.L.geoJSON(parsedGeom, { style: { color: '#ffffff', weight: 1, fillColor: polyColor, fillOpacity: 0.65 } });
-
-                layer.bindTooltip(displayId, { direction: 'center', className: 'id-label', permanent: level === 'country' || level === 'state', interactive: false });
-
-                layer.on('mouseover', function(e) {
-                    e.target.bringToFront(); 
-                    if (this.getTooltip()) this.getTooltip().setContent('<span style="color:#1E293B; font-size:11px; font-weight:800;">' + displayName + '</span>');
-                });
-                layer.on('mouseout', function() { if (this.getTooltip()) this.getTooltip().setContent(displayId); });
-                layer.on('click', () => { handleMapPolygonClick(level, displayName); });
-                
-                featureGroup.addLayer(layer);
-            } catch(e) {}
-        });
-
-        currentGeoLayer = featureGroup.addTo(map);
 
         if (targetDropdownId && layerNames.length > 0) {
             const sel = document.getElementById(targetDropdownId);
@@ -286,36 +300,36 @@ export async function initRegionsEngine(containerId) {
             sel.disabled = false;
         }
 
-        // ZOOM LOGIC: Removed the disruptive map.setView reset.
+        // 4. ZOOM CAMERA LOGIC
+        if (!boundsToFit && featureGroup.getLayers().length > 0) {
+            boundsToFit = featureGroup.getBounds();
+        }
+
         map.invalidateSize(true);
         setTimeout(() => { 
             map.invalidateSize(true);
-            if (anchorBounds && anchorBounds.isValid()) {
-                map.fitBounds(anchorBounds, { padding: [30, 30], maxZoom: level === 'world' ? 3 : 11, animate: false }); 
-            } else if (featureGroup.getLayers().length > 0) {
-                map.fitBounds(featureGroup.getBounds(), { padding: [30, 30], maxZoom: level === 'world' ? 3 : 11, animate: false }); 
+            if (boundsToFit && boundsToFit.isValid()) {
+                map.fitBounds(boundsToFit, { padding: [30, 30], maxZoom: level === 'world' ? 3 : 11, animate: false }); 
+            } else {
+                map.setView([22.5937, 78.9629], 4);
             }
         }, 300);
-        // =======================================================================
-
+        
         updateUI(level);
     }
 
     async function drawIsolatedBoundary(rpcName, rpcParams, entityName) {
-        try {
-            const { data, error } = await window.nanbiDB.rpc(rpcName, rpcParams);
-            if (error) return;
-            if (data && data.length > 0 && data[0].geojson) {
-                featureGroup = window.L.featureGroup();
-                const layer = window.L.geoJSON(JSON.parse(data[0].geojson), {
-                    style: { color: '#D35400', weight: 1.5, fillColor: '#D35400', fillOpacity: 0.15 }
-                });
-                layer.bindTooltip(entityName + '<br><span style="font-size:9px; font-weight:normal; color:#D35400">Pipeline Territory</span>', { permanent: true, direction: 'center', className: 'id-label' });
-                featureGroup.addLayer(layer);
-                currentGeoLayer = featureGroup.addTo(map);
-                fitLayerBounds(featureGroup, 8);
-            }
-        } catch (e) {}
+        const { data } = await window.nanbiDB.rpc(rpcName, rpcParams);
+        if (data && data.length > 0 && data[0].geojson) {
+            featureGroup = window.L.featureGroup();
+            const layer = window.L.geoJSON(JSON.parse(data[0].geojson), {
+                style: { color: '#D35400', weight: 1.5, fillColor: '#D35400', fillOpacity: 0.15 }
+            });
+            layer.bindTooltip(entityName + '<br><span style="font-size:9px; font-weight:normal; color:#D35400">Pipeline Territory</span>', { permanent: true, direction: 'center', className: 'id-label' });
+            featureGroup.addLayer(layer);
+            currentGeoLayer = featureGroup.addTo(map);
+            fitLayerBounds(featureGroup, 8);
+        }
     }
 
     function fitLayerBounds(featureGroup, maxZoomVal) {
