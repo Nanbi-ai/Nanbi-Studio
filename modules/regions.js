@@ -157,7 +157,7 @@ export async function initRegionsEngine(containerId) {
 
     // 4. CORE ENGINE FUNCTIONS
     async function loadCountryList() {
-        const { data } = await window.nanbiDB.rpc('get_countries_geojson');
+        const { data } = await window.nanbiDB.rpc('get_countries_geojson').limit(2000);
         if (data && data.length > 0) {
             allCountryNames = data.map(d => d.name).filter(Boolean).sort();
             const sel = document.getElementById('selCountry');
@@ -170,14 +170,15 @@ export async function initRegionsEngine(containerId) {
     async function fetchRelationalData() {
         const { data, error } = await window.nanbiDB
             .from('territories')
-            .select('*, local_bodies ( body_name, taluks ( taluk_name, districts ( district_name, states ( state_name, countries (country_name) ) ) ) ), territory_entity_mappings ( relationship_type, civic_entities (entity_name, category_id) )');
+            .select('*, local_bodies ( body_name, taluks ( taluk_name, districts ( district_name, states ( state_name, countries (country_name) ) ) ) ), territory_entity_mappings ( relationship_type, civic_entities (entity_name, category_id) )')
+            .limit(2000);
 
         if (error) return;
         globalData = (data || []).map(t => ({
             ...t,
             country: t.local_bodies?.taluks?.districts?.states?.countries?.country_name || 'India',
             state: t.local_bodies?.taluks?.districts?.states?.state_name || 'Karnataka',
-            district: t.local_bodies?.taluks?.districts?.district_name || 'Bengaluru Urban',
+            district: t.local_bodies?.taluks?.districts?.district_name || 'Bengal Urban',
             taluk: t.local_bodies?.taluks?.taluk_name || 'Bengaluru South Taluk',
             territory_name: 'W-' + t.territory_no + ': ' + t.territory_name,
             civicEntities: t.territory_entity_mappings || []
@@ -225,10 +226,10 @@ export async function initRegionsEngine(containerId) {
         let boundsToFit = null;
         let hasValidData = false;
 
-        // 1. FETCH & DRAW PARENT LAYER AS A SOLID BASE (RESTORED RPC LOGIC)
+        // 1. FETCH & DRAW PARENT LAYER AS A SOLID BASE (RESTORED RPC LOGIC WITH LIMIT OVERRIDE)
         if (parentRpc && parentName) {
             try {
-                const { data: pData } = await window.nanbiDB.rpc(parentRpc, parentParams);
+                const { data: pData } = await window.nanbiDB.rpc(parentRpc, parentParams).limit(2000);
                 if (pData && pData.length > 0 && pData[0].geojson) {
                     const pLayer = window.L.geoJSON(JSON.parse(pData[0].geojson), {
                         style: { color: '#D35400', weight: 1.5, fillColor: '#e2e8f0', fillOpacity: 0.3 },
@@ -244,8 +245,8 @@ export async function initRegionsEngine(containerId) {
             }
         }
 
-        // 2. FETCH & DRAW CHILD DATA
-        const { data, error } = await window.nanbiDB.rpc(rpcName, rpcParams);
+        // 2. FETCH & DRAW CHILD DATA (LIMIT OVERRIDE APPLIED)
+        const { data, error } = await window.nanbiDB.rpc(rpcName, rpcParams).limit(2000);
         let layerNames = [];
 
         if (!error && data && data.length > 0) {
