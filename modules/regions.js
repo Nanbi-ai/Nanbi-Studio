@@ -178,7 +178,7 @@ export async function initRegionsEngine(containerId) {
             ...t,
             country: t.local_bodies?.taluks?.districts?.states?.countries?.country_name || 'India',
             state: t.local_bodies?.taluks?.districts?.states?.state_name || 'Karnataka',
-            district: t.local_bodies?.taluks?.districts?.district_name || 'Bengal Urban',
+            district: t.local_bodies?.taluks?.districts?.district_name || 'Bengaluru Urban',
             taluk: t.local_bodies?.taluks?.taluk_name || 'Bengaluru South Taluk',
             territory_name: 'W-' + t.territory_no + ': ' + t.territory_name,
             civicEntities: t.territory_entity_mappings || []
@@ -226,12 +226,14 @@ export async function initRegionsEngine(containerId) {
         let boundsToFit = null;
         let hasValidData = false;
 
-        // 1. FETCH & DRAW PARENT LAYER AS A SOLID BASE (RESTORED RPC LOGIC WITH LIMIT OVERRIDE)
+        // 1. FETCH & DRAW PARENT LAYER AS A SOLID BASE
         if (parentRpc && parentName) {
             try {
                 const { data: pData } = await window.nanbiDB.rpc(parentRpc, parentParams).limit(2000);
                 if (pData && pData.length > 0 && pData[0].geojson) {
-                    const pLayer = window.L.geoJSON(JSON.parse(pData[0].geojson), {
+                    // SAFE JSON PARSE CHECK
+                    const rawGeom = typeof pData[0].geojson === 'string' ? JSON.parse(pData[0].geojson) : pData[0].geojson;
+                    const pLayer = window.L.geoJSON(rawGeom, {
                         style: { color: '#D35400', weight: 1.5, fillColor: '#e2e8f0', fillOpacity: 0.3 },
                         interactive: false 
                     });
@@ -245,7 +247,7 @@ export async function initRegionsEngine(containerId) {
             }
         }
 
-        // 2. FETCH & DRAW CHILD DATA (LIMIT OVERRIDE APPLIED)
+        // 2. FETCH & DRAW CHILD DATA
         const { data, error } = await window.nanbiDB.rpc(rpcName, rpcParams).limit(2000);
         let layerNames = [];
 
@@ -257,16 +259,17 @@ export async function initRegionsEngine(containerId) {
                 // ALWAYS push to dropdown array, even if geojson is missing
                 layerNames.push(displayName);
                 
-                if (!item.geojson) return; // Safely skip drawing missing polygons
+                if (!item.geojson) return; 
 
                 try {
-                    const parsedGeom = JSON.parse(item.geojson);
+                    // SAFE JSON PARSE CHECK
+                    const parsedGeom = typeof item.geojson === 'string' ? JSON.parse(item.geojson) : item.geojson;
                     const polyColor = getDistinctColor(displayName);
                     const layer = window.L.geoJSON(parsedGeom, { 
                         style: { color: '#ffffff', weight: 1.2, fillColor: polyColor, fillOpacity: 0.75 } 
                     });
 
-                    // PERMANENT LABELS: Exclude 'world'. Apply only to Country, State, District (Taluks).
+                    // PERMANENT LABELS
                     const isPermanent = (level === 'country' || level === 'state' || level === 'district');
                     const shortId = rawStr.includes('-') ? rawStr.split('-').pop() : rawStr;
                     
@@ -300,7 +303,7 @@ export async function initRegionsEngine(containerId) {
             
             currentGeoLayer = newFeatureGroup.addTo(map);
 
-            // GEOGRAPHIC SANITY CHECK: Protects against corrupted data launching the camera to Europe
+            // GEOGRAPHIC SANITY CHECK
             if (!boundsToFit && newFeatureGroup.getLayers().length > 0) {
                 const childBounds = newFeatureGroup.getBounds();
                 const center = childBounds.getCenter();
