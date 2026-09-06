@@ -1,5 +1,5 @@
 // =======================================================================
-// NANBI V5.0 - OPTIMIZED GLOBAL N-LAYER REGIONS & CONFIG HUB ENGINE
+// NANBI V5.0 - ULTIMATE OPTIMIZED 3-WAY INTERACTIVE REGIONS ENGINE
 // =======================================================================
 
 export async function initRegionsEngine(containerId) {
@@ -9,54 +9,55 @@ export async function initRegionsEngine(containerId) {
     try {
         container.innerHTML = `
             <style>
-                #regions-module { padding: 4px !important; gap: 8px !important; }
-                #regions-module .table-container { overflow-y: auto; max-height: 56vh; }
+                #regions-module { padding: 2px !important; gap: 4px !important; height: 100% !important; overflow: hidden !important; }
+                #regions-module .table-container { overflow-y: auto; max-height: 62vh; }
                 #regions-module th { position: sticky; top: 0; background-color: #f8fafc; color: #334155; z-index: 10; text-align: center; border-bottom: 2px solid #e2e8f0; font-weight: 700; }
                 #regions-module td { text-align: center; border-bottom: 1px solid #f1f5f9; color: #475569; font-weight: 500; }
                 #regions-module .col-left { text-align: left; }
                 #regions-module .row-active { background-color: #fff7ed !important; border-left: 4px solid #D35400; } 
                 
-                /* OPTIMIZED FLEX MAP CONTAINER TO ELIMINATE GREY DEAD-SPACE */
-                #regions-module .map-wrapper-box { position: relative; width: 100%; flex: 1; min-height: 380px; }
-                #regions-module #map { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 0.25rem; z-index: 1; }
+                /* ZERO GREY SPACE MAP CONTAINER FIX */
+                #regions-module .map-box-wrapper { position: relative; width: 100%; flex: 1; min-height: 400px; display: flex; flex-direction: column; }
+                #regions-module #map { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 4px; z-index: 1; }
                 
                 #regions-module path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s, stroke 0.2s; outline: none; }
-                #regions-module path.leaflet-interactive:hover { fill-opacity: 0.85 !important; stroke-width: 2px !important; stroke: #1E293B !important; cursor: pointer; }
+                #regions-module path.leaflet-interactive:hover { fill-opacity: 0.9 !important; stroke-width: 2.5px !important; stroke: #1E293B !important; cursor: pointer; }
                 
                 .id-label {
                     background: transparent !important; border: none !important; box-shadow: none !important;
-                    font-weight: 600; font-size: 9.5px; color: #1E293B;
+                    font-weight: 700; font-size: 10px; color: #1E293B;
                     text-shadow: 1px 1px 2px #ffffff, -1px -1px 2px #ffffff, 1px -1px 2px #ffffff, -1px 1px 2px #ffffff;
                     text-align: center;
                 }
             </style>
 
-            <div id="regions-module" class="flex-1 flex flex-col gap-2 overflow-hidden h-full">
-                <!-- VIEW SELECTOR TABS -->
-                <div class="flex gap-2 border-b border-slate-200 pb-1.5 shrink-0 px-1">
-                    <button id="tabMapMatrix" class="px-3 py-1 rounded text-xs font-bold bg-[#D35400] text-white shadow-sm transition">
+            <div id="regions-module" class="flex-1 flex flex-col gap-1 overflow-hidden h-full">
+                <!-- ULTRA-COMPACT TABS -->
+                <div class="flex gap-2 border-b border-slate-200 pb-1 shrink-0 px-0.5">
+                    <button id="tabMapMatrix" class="px-3 py-0.5 rounded text-xs font-bold bg-[#D35400] text-white shadow-sm transition">
                         <i class="fas fa-map-marked-alt mr-1"></i> Global Map & N-Layer Matrix
                     </button>
-                    <button id="tabConfigHub" class="px-3 py-1 rounded text-xs font-bold bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition">
+                    <button id="tabConfigHub" class="px-3 py-0.5 rounded text-xs font-bold bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition">
                         <i class="fas fa-sitemap mr-1"></i> Jurisdictional Tree & Config Hub
                     </button>
                 </div>
 
-                <!-- VIEW 1: GLOBAL MAP & SELECTORS (MAXIMIZED SCREEN SPACE) -->
-                <div id="viewMapMatrix" class="flex flex-col lg:flex-row gap-2 flex-1 overflow-hidden px-1 pb-1">
-                    <aside class="w-full lg:w-[45%] flex flex-col gap-2 shrink-0 h-full">
-                        <div class="bg-white p-1 rounded border border-slate-200 flex flex-col flex-1 relative overflow-hidden shadow-sm">
-                            <div class="map-wrapper-box rounded overflow-hidden border border-slate-200 bg-[#e2f0f5]">
+                <!-- VIEW 1: 3-WAY INTERACTIVE MAP & MATRIX -->
+                <div id="viewMapMatrix" class="flex flex-col lg:flex-row gap-1.5 flex-1 overflow-hidden px-0.5 pb-0.5">
+                    <!-- LEFT COLUMN: MAP & HIERARCHY SELECTORS -->
+                    <aside class="w-full lg:w-[48%] flex flex-col gap-1.5 shrink-0 h-full">
+                        <div class="bg-white p-0.5 rounded border border-slate-200 flex flex-col flex-1 relative overflow-hidden shadow-sm">
+                            <div class="map-box-wrapper rounded overflow-hidden border border-slate-200 bg-[#e2f0f5]">
                                 <div id="map"></div>
                             </div>
                         </div>
 
-                        <div class="bg-white p-2.5 rounded border border-slate-200 flex flex-col gap-1.5 shrink-0 shadow-sm">
-                            <div class="flex justify-between items-center pb-1 border-b border-slate-100">
+                        <div class="bg-white p-2 rounded border border-slate-200 flex flex-col gap-1 shrink-0 shadow-sm">
+                            <div class="flex justify-between items-center pb-0.5 border-b border-slate-100">
                                 <span id="geoHierarchyBreadcrumb" class="text-[10px] font-bold text-slate-600 uppercase tracking-wide">Global Root (World)</span>
-                                <button id="btnResetView" class="text-[10px] font-bold text-slate-500 hover:text-[#D35400] transition px-2"><i class="fas fa-globe-americas mr-1"></i> Reset View</button>
+                                <button id="btnResetView" class="text-[10px] font-bold text-slate-500 hover:text-[#D35400] transition px-1"><i class="fas fa-globe-americas mr-1"></i> Reset View</button>
                             </div>
-                            <div class="grid grid-cols-2 gap-1.5 text-[10px]">
+                            <div class="grid grid-cols-2 gap-1 text-[10px]">
                                 <div class="flex flex-col"><label class="font-bold text-slate-500 uppercase mb-0.5">Continent</label><select id="selContinent" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-800 font-medium outline-none"><option value="All">All Continents</option></select></div>
                                 <div class="flex flex-col"><label class="font-bold text-slate-500 uppercase mb-0.5">Sub-Continent</label><select id="selSubContinent" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-800 font-medium outline-none" disabled><option value="All">All Sub-Continents</option></select></div>
                                 <div class="flex flex-col"><label class="font-bold text-slate-500 uppercase mb-0.5">Country</label><select id="selCountry" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-800 font-medium outline-none" disabled><option value="All">All Countries</option></select></div>
@@ -67,27 +68,29 @@ export async function initRegionsEngine(containerId) {
                         </div>
                     </aside>
 
-                    <section class="w-full lg:w-[55%] flex flex-col gap-2 shrink-0 lg:shrink h-full">
-                        <div class="bg-white p-2 rounded border border-slate-200 flex justify-around items-center shrink-0 shadow-sm">
+                    <!-- RIGHT COLUMN: STATS, TABLE & ENTITY INSPECTOR -->
+                    <section class="w-full lg:w-[52%] flex flex-col gap-1.5 shrink-0 lg:shrink h-full">
+                        <div class="bg-white p-1.5 rounded border border-slate-200 flex justify-around items-center shrink-0 shadow-sm">
                             <div class="text-center w-1/2">
-                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active Nodes</p>
-                                <p class="text-xl font-black text-slate-800 mt-0.5" id="metricCount">0</p>
+                                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Active Nodes</p>
+                                <p class="text-lg font-black text-slate-800 mt-0" id="metricCount">0</p>
                             </div>
-                            <div class="w-px h-10 bg-slate-200"></div>
+                            <div class="w-px h-8 bg-slate-200"></div>
                             <div class="text-center w-1/2">
-                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Global Capacity</p>
-                                <p class="text-xl font-black mt-0.5" style="color: #D35400;" id="metricMPS">₹0</p>
+                                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Global Capacity</p>
+                                <p class="text-lg font-black mt-0" style="color: #D35400;" id="metricMPS">₹0</p>
                             </div>
                         </div>
+
                         <div class="flex-1 bg-white rounded border border-slate-200 flex flex-col overflow-hidden shadow-sm">
                             <div class="table-container flex-1">
                                 <table class="w-full border-collapse text-[11px]">
                                     <thead class="bg-slate-50 sticky top-0 z-10 border-b border-slate-200 shadow-sm">
                                         <tr class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                            <th class="py-2.5 px-3 text-left pl-3">Node ID</th>
-                                            <th class="py-2.5 px-3 text-left">Node Name</th>
-                                            <th class="py-2.5 px-3 text-left">Level</th>
-                                            <th class="py-2.5 px-3 text-right">Gov Code</th>
+                                            <th class="py-2 px-2.5 text-left pl-3">Node ID</th>
+                                            <th class="py-2 px-2.5 text-left">Node Name</th>
+                                            <th class="py-2 px-2.5 text-left">Level</th>
+                                            <th class="py-2 px-2.5 text-right pr-3">Gov Code</th>
                                         </tr>
                                     </thead>
                                     <tbody id="territoryTbody" class="cursor-pointer text-slate-700">
@@ -96,10 +99,11 @@ export async function initRegionsEngine(containerId) {
                                 </table>
                             </div>
                         </div>
-                        <div class="h-32 bg-white rounded border border-slate-200 p-2.5 flex flex-col overflow-hidden shrink-0 shadow-sm">
-                            <div class="flex justify-between items-center border-b border-slate-100 pb-1 mb-1">
+
+                        <div class="h-28 bg-white rounded border border-slate-200 p-2 flex flex-col overflow-hidden shrink-0 shadow-sm">
+                            <div class="flex justify-between items-center border-b border-slate-100 pb-0.5 mb-1">
                                 <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500" id="deepDiveTitle">Entity Inspector</h3>
-                                <span class="text-[10px] text-slate-500 font-mono" id="deepDiveSubtitle">Select a node</span>
+                                <span class="text-[9px] text-slate-500 font-mono" id="deepDiveSubtitle">Select a node</span>
                             </div>
                             <div id="deepDiveContent" class="flex-1 overflow-y-auto text-[11px] text-slate-500 font-medium flex items-center justify-center">
                                 Awaiting node selection...
@@ -109,34 +113,34 @@ export async function initRegionsEngine(containerId) {
                 </div>
 
                 <!-- VIEW 2: CONFIG HUB -->
-                <div id="viewConfigHub" class="hidden flex-col lg:flex-row gap-2 flex-1 overflow-hidden px-1 pb-1">
-                    <aside class="w-full lg:w-[45%] bg-white p-3 rounded border border-slate-200 flex flex-col shadow-sm">
-                        <div class="flex justify-between items-center pb-2 border-b border-slate-100 mb-2">
+                <div id="viewConfigHub" class="hidden flex-col lg:flex-row gap-1.5 flex-1 overflow-hidden px-0.5 pb-0.5">
+                    <aside class="w-full lg:w-[45%] bg-white p-2.5 rounded border border-slate-200 flex flex-col shadow-sm">
+                        <div class="flex justify-between items-center pb-1.5 border-b border-slate-100 mb-1.5">
                             <h3 class="text-xs font-bold uppercase tracking-widest text-slate-700">Universal Jurisdictional Tree</h3>
                             <span id="treeNodeCountBadge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-orange-50 text-[#D35400] font-bold">0 Nodes</span>
                         </div>
-                        <div id="treeListContainer" class="flex-1 overflow-y-auto space-y-1.5 font-sans">
+                        <div id="treeListContainer" class="flex-1 overflow-y-auto space-y-1 font-sans">
                             <p class="text-slate-400 italic text-center py-10">Synchronizing with Edge Ledger...</p>
                         </div>
                     </aside>
-                    <section class="w-full lg:w-[55%] bg-white p-4 rounded border border-slate-200 flex flex-col shadow-sm">
-                        <div class="flex justify-between items-center pb-2 border-b border-slate-100 mb-3">
+                    <section class="w-full lg:w-[55%] bg-white p-3.5 rounded border border-slate-200 flex flex-col shadow-sm">
+                        <div class="flex justify-between items-center pb-1.5 border-b border-slate-100 mb-2">
                             <div>
                                 <h3 class="text-sm font-bold text-slate-800" id="configNodeTitle">Select a Regional Node</h3>
                                 <p class="text-xs text-slate-400 font-mono" id="configNodeMeta">Level: N/A | ID: --</p>
                             </div>
-                            <button id="btnSaveConfigPayload" class="px-3 py-1.5 rounded text-xs font-bold bg-[#D35400] hover:bg-[#b54600] text-white shadow transition flex items-center gap-1" style="display:none;">
+                            <button id="btnSaveConfigPayload" class="px-3 py-1 rounded text-xs font-bold bg-[#D35400] hover:bg-[#b54600] text-white shadow transition flex items-center gap-1" style="display:none;">
                                 <i class="fas fa-save"></i> Save Config Payload
                             </button>
                         </div>
-                        <div class="flex-1 flex flex-col gap-1.5 mb-3">
+                        <div class="flex-1 flex flex-col gap-1 mb-2">
                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dynamic Config Payload (JSONB - Config Hub)</label>
-                            <textarea id="jsonConfigTextarea" class="w-full flex-1 p-2.5 font-mono text-xs rounded border border-slate-200 bg-slate-900 text-green-400 outline-none resize-none" placeholder="Select a node from the tree to inspect its JSONB configuration..." disabled></textarea>
+                            <textarea id="jsonConfigTextarea" class="w-full flex-1 p-2 font-mono text-xs rounded border border-slate-200 bg-slate-900 text-green-400 outline-none resize-none" placeholder="Select a node from the tree to inspect its JSONB configuration..." disabled></textarea>
                         </div>
-                        <div class="bg-slate-50 p-2.5 rounded border border-slate-200 shrink-0">
-                            <div class="flex justify-between items-center border-b border-slate-100 pb-1 mb-1">
+                        <div class="bg-slate-50 p-2 rounded border border-slate-200 shrink-0">
+                            <div class="flex justify-between items-center border-b border-slate-100 pb-0.5 mb-0.5">
                                 <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Architectural Audit & Reasoning (DEC-12)</span>
-                                <span class="text-[10px] text-slate-400 font-mono">Cascaded SSOT</span>
+                                <span class="text-[9px] text-slate-400 font-mono">Cascaded SSOT</span>
                             </div>
                             <div id="auditReasonBox" class="text-xs text-slate-600 font-medium py-0.5">Select a node to review audit logs.</div>
                         </div>
@@ -145,36 +149,38 @@ export async function initRegionsEngine(containerId) {
             </div>
         `;
 
-        // Tab Switching
+        // Tabs
         const tabMapMatrix = container.querySelector('#tabMapMatrix');
         const tabConfigHub = container.querySelector('#tabConfigHub');
         const viewMapMatrix = container.querySelector('#viewMapMatrix');
         const viewConfigHub = container.querySelector('#viewConfigHub');
 
         tabMapMatrix.onclick = () => {
-            tabMapMatrix.className = "px-3 py-1 rounded text-xs font-bold bg-[#D35400] text-white shadow-sm transition";
-            tabConfigHub.className = "px-3 py-1 rounded text-xs font-bold bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition";
+            tabMapMatrix.className = "px-3 py-0.5 rounded text-xs font-bold bg-[#D35400] text-white shadow-sm transition";
+            tabConfigHub.className = "px-3 py-0.5 rounded text-xs font-bold bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition";
             viewMapMatrix.style.display = "flex";
             viewConfigHub.style.display = "none";
-            if (map) setTimeout(() => map.invalidateSize(true), 150);
+            if (map) {
+                setTimeout(() => map.invalidateSize(true), 50);
+            }
         };
 
         tabConfigHub.onclick = () => {
-            tabConfigHub.className = "px-3 py-1 rounded text-xs font-bold bg-[#D35400] text-white shadow-sm transition";
-            tabMapMatrix.className = "px-3 py-1 rounded text-xs font-bold bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition";
+            tabConfigHub.className = "px-3 py-0.5 rounded text-xs font-bold bg-[#D35400] text-white shadow-sm transition";
+            tabMapMatrix.className = "px-3 py-0.5 rounded text-xs font-bold bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition";
             viewConfigHub.style.display = "flex";
             viewMapMatrix.style.display = "none";
             loadJurisdictionalTree();
         };
 
-        let map = null, currentGeoLayer = null;
+        let map = null, polygonLayerGroup = null;
         let treeNodes = [];
+        let layerMapByNodeId = new Map();
 
-        // Dynamic Multi-Color generator matching original design
         function getDistinctColor(name) {
             let hash = 0;
             for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-            return `hsl(${Math.abs(hash % 360)}, 55%, 65%`;
+            return `hsl(${Math.abs(hash % 360)}, 65%, 60%)`;
         }
 
         if (!window.L) {
@@ -187,7 +193,7 @@ export async function initRegionsEngine(containerId) {
         const mapEl = window.L.DomUtil.get('map');
         if (mapEl) mapEl._leaflet_id = null;
 
-        map = window.L.map('map', { zoomControl: true, attributionControl: false }).setView([20.0, 0.0], 2);
+        map = window.L.map('map', { zoomControl: true, attributionControl: false, zoomSnap: 0.1 }).setView([20.0, 0.0], 2);
         window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, opacity: 0.6 }).addTo(map);
 
         async function fetchTreeData() {
@@ -199,6 +205,7 @@ export async function initRegionsEngine(containerId) {
                     populateContinents();
                     updateTableAndMetrics(treeNodes);
                     renderPolygons(treeNodes);
+                    setupListeners();
                 }
             } catch (err) {
                 console.error("Fetch tree data error:", err);
@@ -329,10 +336,11 @@ export async function initRegionsEngine(containerId) {
             return false;
         }
 
-        // RESTORED MULTI-COLOR POLYGON RENDERING & VIEWPORT RESIZING
+        // 3-WAY INTERACTIVE POLYGON RENDERING WITH MULTI-COLOR & EXACT BOUNDS ZOOMING
         function renderPolygons(nodesList) {
-            if (currentGeoLayer) map.removeLayer(currentGeoLayer);
-            let group = window.L.featureGroup();
+            if (polygonLayerGroup) map.removeLayer(polygonLayerGroup);
+            polygonLayerGroup = window.L.featureGroup();
+            layerMapByNodeId.clear();
 
             nodesList.forEach(n => {
                 if (n.dynamic_config_payload && n.dynamic_config_payload.geojson) {
@@ -340,20 +348,61 @@ export async function initRegionsEngine(containerId) {
                         let geom = n.dynamic_config_payload.geojson;
                         let polyColor = getDistinctColor(n.node_name);
                         let l = window.L.geoJSON(geom, { 
-                            style: { color: '#ffffff', weight: 1.2, fillColor: polyColor, fillOpacity: 0.75 } 
+                            style: { color: '#ffffff', weight: 1.2, fillColor: polyColor, fillOpacity: 0.8 } 
                         });
                         l.bindTooltip(n.node_name, { direction: 'center', className: 'id-label', permanent: false });
-                        group.addLayer(l);
+                        
+                        // MAP -> TABLE & INSPECTOR 3-WAY INTERACTIVITY
+                        l.on('click', () => {
+                            selectNodeFromMapOrTable(n);
+                        });
+
+                        polygonLayerGroup.addLayer(l);
+                        layerMapByNodeId.set(n.node_id, l);
                     } catch(e) {}
                 }
             });
 
-            if (group.getLayers().length > 0) {
-                currentGeoLayer = group.addTo(map);
+            if (polygonLayerGroup.getLayers().length > 0) {
+                polygonLayerGroup.addTo(map);
                 setTimeout(() => {
                     map.invalidateSize(true);
-                    map.fitBounds(group.getBounds(), { padding: [25, 25], maxZoom: 8 });
-                }, 100);
+                    map.fitBounds(polygonLayerGroup.getBounds(), { padding: [20, 20], maxZoom: 7 });
+                }, 50);
+            }
+        }
+
+        // 3-WAY INTERACTION HANDLER: MAP/TABLE SELECTION
+        function selectNodeFromMapOrTable(node) {
+            // Find and highlight table row
+            const rows = container.querySelectorAll('#territoryTbody tr');
+            let targetRow = null;
+            rows.forEach(r => {
+                if (r.innerText.includes(node.node_id)) {
+                    r.classList.add('row-active');
+                    targetRow = r;
+                } else {
+                    r.classList.remove('row-active');
+                }
+            });
+            if (targetRow) {
+                targetRow.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+
+            // Update Entity Inspector
+            container.querySelector('#deepDiveTitle').innerText = `${node.node_id} — ${node.node_name}`;
+            container.querySelector('#deepDiveSubtitle').innerText = `Level: ${node.node_level.toUpperCase()}`;
+            container.querySelector('#deepDiveContent').innerHTML = `
+                <div class="p-1.5 bg-slate-50 rounded border text-slate-700 w-full flex flex-col gap-0.5">
+                    <span class="font-bold">Gov Code:</span> ${node.official_gov_code || 'N/A'}
+                    <span class="font-bold">Reasoning:</span> ${node.architectural_reasoning || 'N/A'}
+                </div>
+            `;
+
+            // Zoom map to specific node bounds if geometry exists
+            const layer = layerMapByNodeId.get(node.node_id);
+            if (layer && layer.getBounds) {
+                map.fitBounds(layer.getBounds(), { padding: [40, 40], maxZoom: 8, animate: true });
             }
         }
 
@@ -369,14 +418,18 @@ export async function initRegionsEngine(containerId) {
             nodesList.forEach(node => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 transition cursor-pointer text-slate-700";
+                
+                // TABLE -> MAP & INSPECTOR 3-WAY INTERACTIVITY
                 tr.onclick = () => {
-                    container.querySelectorAll('#territoryTbody tr').forEach(r => r.classList.remove('row-active'));
-                    tr.classList.add('row-active');
-                    container.querySelector('#deepDiveTitle').innerText = `${node.node_id} — ${node.node_name}`;
-                    container.querySelector('#deepDiveSubtitle').innerText = `Level: ${node.node_level.toUpperCase()}`;
-                    container.querySelector('#deepDiveContent').innerHTML = `<div class="p-2 bg-slate-50 rounded border text-slate-700 w-full"><span class="font-bold">Reasoning:</span> ${node.architectural_reasoning || 'N/A'}</div>`;
+                    selectNodeFromMapOrTable(node);
                 };
-                tr.innerHTML = `<td class="p-2 font-mono text-xs font-bold text-teal-700 border-r pl-3">${node.node_id}</td><td class="p-2 font-bold col-left border-r">${node.node_name}</td><td class="p-2 font-bold col-left border-r text-sky-600 uppercase">${node.node_level}</td><td class="p-2 text-right pr-3 font-mono">${node.official_gov_code || 'N/A'}</td>`;
+
+                tr.innerHTML = `
+                    <td class="py-2 px-2.5 font-mono text-xs font-bold text-teal-700 border-r pl-3">${node.node_id}</td>
+                    <td class="py-2 px-2.5 font-bold col-left border-r">${node.node_name}</td>
+                    <td class="py-2 px-2.5 font-bold col-left border-r text-sky-600 uppercase">${node.node_level}</td>
+                    <td class="py-2 px-2.5 text-right pr-3 font-mono">${node.official_gov_code || 'N/A'}</td>
+                `;
                 tbody.appendChild(tr);
             });
         }
@@ -391,8 +444,8 @@ export async function initRegionsEngine(containerId) {
                     treeContainer.innerHTML = '';
                     data.forEach(node => {
                         const div = document.createElement('div');
-                        div.className = "p-2.5 rounded border border-slate-100 hover:border-slate-300 hover:bg-slate-50 cursor-pointer transition flex justify-between items-center";
-                        div.innerHTML = `<div><div class="font-bold text-slate-800 text-xs">${node.node_name}</div><div class="text-[10px] text-slate-400 uppercase font-mono">${node.node_level} | ID: ${node.node_id}</div></div><i class="fas fa-chevron-right text-xs text-slate-400"></i>`;
+                        div.className = "p-2 rounded border border-slate-100 hover:border-slate-300 hover:bg-slate-50 cursor-pointer transition flex justify-between items-center";
+                        div.innerHTML = `<div><div class="font-bold text-slate-800 text-xs">${node.node_name}</div><div class="text-[9px] text-slate-400 uppercase font-mono">${node.node_level} | ID: ${node.node_id}</div></div><i class="fas fa-chevron-right text-xs text-slate-400"></i>`;
                         div.onclick = () => {
                             container.querySelector('#configNodeTitle').innerText = node.node_name;
                             container.querySelector('#configNodeMeta').innerText = `Level: ${node.node_level.toUpperCase()} | ID: ${node.node_id}`;
@@ -418,7 +471,6 @@ export async function initRegionsEngine(containerId) {
             }
         }
 
-        setupListeners();
         await fetchTreeData();
 
     } catch (err) {
