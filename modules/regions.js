@@ -21,10 +21,10 @@ export async function initRegionsEngine(containerId) {
                 #regions-module td { text-align: center; border-bottom: 1px solid #f1f5f9; color: #475569; font-weight: 600; font-size: 11px; padding: 6px 8px; }
                 #regions-module .col-left { text-align: left; }
                 
-                /* THE ACTIVE ROW HIGHLIGHT */
                 #regions-module .row-active { background-color: #fff7ed !important; border-left: 4px solid #D35400 !important; } 
                 
-                #regions-module .map-box-wrapper { position: relative; width: 100%; flex: 1; min-height: 450px; display: flex; flex-direction: column; border-radius: 6px; }
+                /* FIX: Reduced min-height to 200px so dropdowns are NEVER pushed off-screen */
+                #regions-module .map-box-wrapper { position: relative; width: 100%; flex: 1; min-height: 200px; display: flex; flex-direction: column; border-radius: 6px; }
                 #regions-module #map { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 6px; z-index: 1; background: #e2f0f5; }
                 
                 #regions-module path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s, stroke 0.2s; outline: none; }
@@ -37,7 +37,6 @@ export async function initRegionsEngine(containerId) {
                     text-align: center;
                 }
                 
-                /* COMPACT SCROLLBARS */
                 #regions-module ::-webkit-scrollbar { width: 4px; }
                 #regions-module ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
             </style>
@@ -56,8 +55,8 @@ export async function initRegionsEngine(containerId) {
                 <!-- VIEW 1: 3-WAY INTERACTIVE MAP & MATRIX -->
                 <div id="viewMapMatrix" class="flex flex-col lg:flex-row gap-2 flex-1 overflow-hidden pt-1">
                     
-                    <!-- LEFT COLUMN: MAP & HIERARCHY SELECTORS -->
-                    <aside class="w-full lg:w-[48%] flex flex-col gap-2 shrink-0 h-full">
+                    <!-- LEFT COLUMN: MAP & HIERARCHY SELECTORS (Added overflow-y-auto to prevent hiding) -->
+                    <aside class="w-full lg:w-[48%] flex flex-col gap-2 shrink-0 h-full overflow-y-auto pb-1">
                         <div class="bg-white p-1 rounded border border-slate-200 flex flex-col flex-1 relative shadow-sm">
                             <div class="map-box-wrapper border border-slate-200">
                                 <div id="map"></div>
@@ -216,7 +215,7 @@ export async function initRegionsEngine(containerId) {
                 if (data) {
                     treeNodes = data;
                     populateDropdown('selContinent', 'continent', 'GLOBAL');
-                    applyGlobalSelection('GLOBAL'); // Boot with World View
+                    applyGlobalSelection('GLOBAL');
                     setupDropdownListeners();
                 }
             } catch (err) {
@@ -224,11 +223,6 @@ export async function initRegionsEngine(containerId) {
             }
         }
 
-        // =======================================================================
-        // THE MASTER 3-WAY SYNCHRONIZATION ENGINE
-        // =======================================================================
-        
-        // Traces the entire lineage of any node back to the Global root
         function getLineage(nodeId) {
             let lineage = {};
             let curr = treeNodes.find(n => n.node_id === nodeId);
@@ -266,12 +260,11 @@ export async function initRegionsEngine(containerId) {
             });
         }
 
-        // The unified function called by Maps, Tables, and Dropdowns
+        // 3-WAY SYNCHRONIZATION ENGINE
         function applyGlobalSelection(nodeId) {
             const activeNode = treeNodes.find(n => n.node_id === nodeId);
             if (!activeNode) return;
 
-            // 1. Sync Dropdowns to Match Lineage
             const lineage = getLineage(nodeId);
             
             if (lineage.continent) {
@@ -303,32 +296,27 @@ export async function initRegionsEngine(containerId) {
                 container.querySelector('#selTaluk').value = lineage.taluk;
             }
 
-            // 2. Filter Global Matrix (Only show exact node + its descendants)
             let matched = treeNodes;
             if (nodeId !== 'GLOBAL') {
                 matched = treeNodes.filter(n => n.node_id === nodeId || isDescendant(n, nodeId));
             }
 
-            // 3. Re-render Table
             container.querySelector('#metricCount').innerText = matched.length;
             container.querySelector('#metricMPS').innerText = "₹" + (matched.length * 35000).toLocaleString('en-IN');
             
             const tbody = container.querySelector('#territoryTbody');
             tbody.innerHTML = '';
             
-            // Put the selected macro region at the top of the table
             matched.sort((a, b) => (a.node_id === nodeId ? -1 : (b.node_id === nodeId ? 1 : 0)));
 
             matched.forEach(node => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-100 transition cursor-pointer text-slate-700";
                 
-                // Highlight the actively selected exact node
                 if (node.node_id === nodeId && nodeId !== 'GLOBAL') {
                     tr.classList.add('row-active');
                 }
 
-                // Table -> Engine interaction
                 tr.onclick = () => applyGlobalSelection(node.node_id);
 
                 tr.innerHTML = `
@@ -340,11 +328,9 @@ export async function initRegionsEngine(containerId) {
                 tbody.appendChild(tr);
             });
 
-            // Scroll the active row into view
             const activeRow = tbody.querySelector('.row-active');
             if (activeRow) activeRow.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 
-            // 4. Update Inspector
             container.querySelector('#geoHierarchyBreadcrumb').innerText = activeNode.node_name;
             container.querySelector('#deepDiveTitle').innerText = `${activeNode.node_id} — ${activeNode.node_name}`;
             container.querySelector('#deepDiveSubtitle').innerText = `Level: ${activeNode.node_level.replace('_', ' ')}`;
@@ -359,7 +345,6 @@ export async function initRegionsEngine(containerId) {
                 </div>
             `;
 
-            // 5. Re-render Map & Auto-Zoom bounds tightly around the active selection
             if (polygonLayerGroup) map.removeLayer(polygonLayerGroup);
             polygonLayerGroup = window.L.featureGroup();
             layerMapByNodeId.clear();
@@ -373,8 +358,6 @@ export async function initRegionsEngine(containerId) {
                             style: { color: '#ffffff', weight: 1.2, fillColor: polyColor, fillOpacity: 0.85 } 
                         });
                         l.bindTooltip(n.node_name, { direction: 'center', className: 'id-label', permanent: false });
-                        
-                        // Map -> Engine interaction
                         l.on('click', () => applyGlobalSelection(n.node_id));
 
                         polygonLayerGroup.addLayer(l);
@@ -387,7 +370,6 @@ export async function initRegionsEngine(containerId) {
                 polygonLayerGroup.addTo(map);
                 setTimeout(() => {
                     map.invalidateSize(true);
-                    // Tight zoom bounds based on the filtered hierarchy
                     map.fitBounds(polygonLayerGroup.getBounds(), { padding: [10, 10], animate: true, maxZoom: 9 });
                 }, 50);
             } else if (nodeId === 'GLOBAL') {
@@ -395,7 +377,6 @@ export async function initRegionsEngine(containerId) {
             }
         }
 
-        // Dropdown -> Engine Event Handlers
         function setupDropdownListeners() {
             container.querySelector('#selContinent').addEventListener('change', (e) => {
                 e.target.value === 'All' ? applyGlobalSelection('GLOBAL') : applyGlobalSelection(e.target.value);
@@ -426,10 +407,9 @@ export async function initRegionsEngine(containerId) {
                 const treeContainer = container.querySelector('#treeListContainer');
                 treeContainer.innerHTML = `<p class="text-slate-400 italic text-center py-10">Synchronizing with Edge Ledger...</p>`;
                 
-                // Pull fresh in case of updates
                 const { data } = await window.nanbiDB.from('regional_hierarchy_nodes').select('*').order('node_level');
                 if (data) {
-                    treeNodes = data; // update memory
+                    treeNodes = data;
                     container.querySelector('#treeNodeCountBadge').innerText = data.length + " Nodes";
                     treeContainer.innerHTML = '';
                     
