@@ -1,12 +1,12 @@
 // =======================================================================
-// NANBI V5.0 - UNIFIED REGIONS ENGINE (MAP MATRIX & CONFIG HUB)
+// NANBI V5.0 - UNIVERSAL N-LAYER REGIONS & CONFIG HUB ENGINE
 // =======================================================================
 
 export async function initRegionsEngine(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // 1. RESTORING YOUR EXACT UI CHASSIS (NS-FE-01 & NS-FE-11) WITH A VIEW TOGGLE
+    // 1. EXACT UI CHASSIS WITH PROPER MAP CONTAINER SIZING & N-LAYER SELECTORS
     container.innerHTML = `
         <style>
             #regions-module .table-container { overflow-y: auto; max-height: 48vh; }
@@ -15,7 +15,10 @@ export async function initRegionsEngine(containerId) {
             #regions-module .col-left { text-align: left; }
             #regions-module .row-active { background-color: #fff7ed !important; border-left: 4px solid #D35400; } 
             
-            #regions-module #map-wrapper { position: relative; width: 100%; height: 100%; min-height: 320px; flex: 1; }
+            /* FIXED MAP CONTAINER HEIGHT & ABSOLUTE POSITIONING */
+            #regions-module #map-container-box { position: relative; width: 100%; height: 360px; flex-shrink: 0; }
+            #regions-module #map { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 0.25rem; z-index: 1; }
+            
             #regions-module path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s, stroke 0.2s; outline: none; }
             #regions-module path.leaflet-interactive:hover { fill-opacity: 0.8 !important; stroke-width: 2.5px !important; stroke: #1E293B !important; cursor: pointer; }
             
@@ -37,41 +40,41 @@ export async function initRegionsEngine(containerId) {
             <!-- VIEW SELECTOR TABS -->
             <div class="flex gap-2 border-b border-slate-200 pb-2 shrink-0">
                 <button id="tabMapMatrix" class="px-4 py-1.5 rounded text-xs font-bold bg-[#D35400] text-white shadow-sm transition">
-                    <i class="fas fa-map-marked-alt mr-1.5"></i> Spatial Map & Territory Matrix
+                    <i class="fas fa-map-marked-alt mr-1.5"></i> Spatial Map & N-Layer Matrix
                 </button>
                 <button id="tabConfigHub" class="px-4 py-1.5 rounded text-xs font-bold bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition">
-                    <i class="fas fa-sitemap mr-1.5"></i> Jurisdictional Tree & Config Hub
+                    <i class="fas fa-sitemap mr-1.5"></i> Universal Jurisdictional Tree & Config Hub
                 </button>
             </div>
 
-            <!-- VIEW 1: MAP & TERRITORY MATRIX (NS-FE-01) -->
+            <!-- VIEW 1: MAP & N-LAYER MATRIX -->
             <div id="viewMapMatrix" class="flex flex-col lg:flex-row gap-3 flex-1 overflow-hidden">
-                <aside class="w-full lg:w-[38%] flex flex-col gap-3 shrink-0">
-                    <div class="flex-1 bg-white p-1.5 rounded border border-slate-200 flex flex-col relative overflow-hidden shadow-sm h-64 lg:h-auto min-h-[280px]">
-                        <div id="map-wrapper" class="rounded overflow-hidden border border-slate-200 bg-[#e2f0f5]">
+                <aside class="w-full lg:w-[40%] flex flex-col gap-3 shrink-0">
+                    <!-- MAP BOX -->
+                    <div class="bg-white p-1.5 rounded border border-slate-200 flex flex-col relative overflow-hidden shadow-sm">
+                        <div id="map-container-box" class="rounded overflow-hidden border border-slate-200 bg-[#e2f0f5]">
                             <div id="map"></div>
                         </div>
                     </div>
+
+                    <!-- N-LAYER DYNAMIC MACRO-ROUTING DROPDOWNS -->
                     <div class="bg-white p-3 rounded border border-slate-200 flex flex-col gap-2 shrink-0 shadow-sm">
                         <div class="flex justify-between items-center pb-1 border-b border-slate-100">
-                            <div class="flex items-center gap-1">
-                                <button id="btnNavBack" class="map-nav-btn" title="Go Back"><i class="fas fa-chevron-left text-[10px]"></i></button>
-                                <button id="btnNavForward" class="map-nav-btn" title="Go Forward"><i class="fas fa-chevron-right text-[10px]"></i></button>
-                                <span id="geoHierarchyBreadcrumb" class="text-[10px] font-bold text-slate-600 uppercase tracking-wide ml-2 truncate max-w-[200px]">World View</span>
-                            </div>
-                            <button id="btnGlobe" class="text-[10px] font-bold text-slate-500 hover:text-[#D35400] transition px-2"><i class="fas fa-globe-americas mr-1"></i> Globe</button>
+                            <span id="geoHierarchyBreadcrumb" class="text-[10px] font-bold text-slate-600 uppercase tracking-wide">Global Root (World)</span>
+                            <button id="btnResetView" class="text-[10px] font-bold text-slate-500 hover:text-[#D35400] transition px-2"><i class="fas fa-globe-americas mr-1"></i> Reset View</button>
                         </div>
                         <div class="grid grid-cols-2 gap-2 text-[10px] mt-1">
-                            <div class="flex flex-col"><label class="font-bold text-slate-500 uppercase mb-0.5">Country</label><select id="selCountry" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-800 font-medium outline-none"><option value="All">Loading...</option></select></div>
-                            <div class="flex flex-col"><label class="font-bold text-slate-500 uppercase mb-0.5">State / Province</label><select id="selState" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-800 font-medium outline-none" disabled><option value="All">All</option></select></div>
-                            <div class="flex flex-col"><label class="font-bold text-slate-500 uppercase mb-0.5">District</label><select id="selDistrict" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-800 font-medium outline-none" disabled><option value="All">All</option></select></div>
-                            <div class="flex flex-col"><label class="font-bold text-slate-500 uppercase mb-0.5">Taluk / County</label><select id="selTaluk" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-800 font-medium outline-none" disabled><option value="All">All</option></select></div>
-                            <div class="flex flex-col col-span-2"><label class="font-bold text-slate-500 uppercase mb-0.5">Ward / Territory</label><select id="selWard" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-800 font-medium outline-none" disabled><option value="All">All</option></select></div>
+                            <div class="flex flex-col"><label class="font-bold text-slate-500 uppercase mb-0.5">Continent</label><select id="selContinent" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-800 font-medium outline-none"><option value="All">All Continents</option></select></div>
+                            <div class="flex flex-col"><label class="font-bold text-slate-500 uppercase mb-0.5">Sub-Continent</label><select id="selSubContinent" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-800 font-medium outline-none" disabled><option value="All">All Sub-Continents</option></select></div>
+                            <div class="flex flex-col"><label class="font-bold text-slate-500 uppercase mb-0.5">Country</label><select id="selCountry" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-800 font-medium outline-none" disabled><option value="All">All Countries</option></select></div>
+                            <div class="flex flex-col"><label class="font-bold text-slate-500 uppercase mb-0.5">State / Province</label><select id="selState" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-800 font-medium outline-none" disabled><option value="All">All States</option></select></div>
+                            <div class="flex flex-col"><label class="font-bold text-slate-500 uppercase mb-0.5">District</label><select id="selDistrict" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-800 font-medium outline-none" disabled><option value="All">All Districts</option></select></div>
+                            <div class="flex flex-col"><label class="font-bold text-slate-500 uppercase mb-0.5">Taluk / Territory</label><select id="selTaluk" class="bg-slate-50 border border-slate-200 rounded p-1 text-slate-800 font-medium outline-none" disabled><option value="All">All Taluks</option></select></div>
                         </div>
                     </div>
                 </aside>
 
-                <section class="w-full lg:w-[62%] flex flex-col gap-3 shrink-0 lg:shrink h-auto lg:h-full">
+                <section class="w-full lg:w-[60%] flex flex-col gap-3 shrink-0 lg:shrink h-auto lg:h-full">
                     <div class="bg-white p-2.5 rounded border border-slate-200 flex justify-around items-center shrink-0 shadow-sm">
                         <div class="text-center w-1/2">
                             <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active Territories</p>
@@ -88,10 +91,10 @@ export async function initRegionsEngine(containerId) {
                             <table class="w-full border-collapse text-[11px]">
                                 <thead class="bg-slate-50 sticky top-0 z-10 border-b border-slate-200 shadow-sm">
                                     <tr class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                        <th class="py-3 px-4 text-left pl-4">ID</th>
-                                        <th class="py-3 px-4 text-left">Ward Name</th>
-                                        <th class="py-3 px-4 text-left">Biz-Class</th>
-                                        <th class="py-3 px-4 text-right">Civic Coverage</th>
+                                        <th class="py-3 px-4 text-left pl-4">Node ID</th>
+                                        <th class="py-3 px-4 text-left">Node Name</th>
+                                        <th class="py-3 px-4 text-left">Level</th>
+                                        <th class="py-3 px-4 text-right">Gov Code</th>
                                     </tr>
                                 </thead>
                                 <tbody id="territoryTbody" class="cursor-pointer text-slate-700">
@@ -100,7 +103,7 @@ export async function initRegionsEngine(containerId) {
                                             <div class="opacity-70 flex flex-col items-center">
                                                 <i class="fas fa-layer-group text-4xl text-slate-300 mb-3"></i>
                                                 <h4 class="font-bold text-xs uppercase tracking-wider text-[#D35400]">Macro Region Selected</h4>
-                                                <p class="text-[11px] text-slate-500 mt-1">Drill down to a specific Taluk to view granular Ward data matrices.</p>
+                                                <p class="text-[11px] text-slate-500 mt-1">Select a jurisdiction from the tree or dropdowns to inspect data.</p>
                                             </div>
                                         </td>
                                     </tr>
@@ -111,7 +114,7 @@ export async function initRegionsEngine(containerId) {
                     <div class="h-40 bg-white rounded border border-slate-200 p-3 flex flex-col overflow-hidden shrink-0 shadow-sm">
                         <div class="flex justify-between items-center border-b border-slate-100 pb-1 mb-2">
                             <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500" id="deepDiveTitle">Entity Inspector</h3>
-                            <span class="text-[10px] text-slate-500 font-mono" id="deepDiveSubtitle">Select a territory</span>
+                            <span class="text-[10px] text-slate-500 font-mono" id="deepDiveSubtitle">Select a node</span>
                         </div>
                         <div id="deepDiveContent" class="flex-1 overflow-y-auto text-[11px] text-slate-500 font-medium flex items-center justify-center">
                             Awaiting node selection...
@@ -120,11 +123,11 @@ export async function initRegionsEngine(containerId) {
                 </section>
             </div>
 
-            <!-- VIEW 2: JURISDICTIONAL TREE & CONFIG HUB (NS-FE-11) -->
+            <!-- VIEW 2: UNIVERSAL JURISDICTIONAL TREE & CONFIG HUB -->
             <div id="viewConfigHub" class="hidden flex-col lg:flex-row gap-3 flex-1 overflow-hidden">
                 <aside class="w-full lg:w-[45%] bg-white p-4 rounded border border-slate-200 flex flex-col shadow-sm">
                     <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-3">
-                        <h3 class="text-xs font-bold uppercase tracking-widest text-slate-700">Universal Jurisdictional Tree</h3>
+                        <h3 class="text-xs font-bold uppercase tracking-widest text-slate-700">N-Layer Universal Jurisdictional Tree</h3>
                         <span id="treeNodeCountBadge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-orange-50 text-[#D35400] font-bold">0 Nodes</span>
                     </div>
                     <div id="treeListContainer" class="flex-1 overflow-y-auto space-y-2 font-sans">
@@ -142,13 +145,13 @@ export async function initRegionsEngine(containerId) {
                         </button>
                     </div>
                     <div class="flex-1 flex flex-col gap-2 mb-4">
-                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dynamic Config Payload (JSONB)</label>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dynamic Config Payload (JSONB - Config Hub)</label>
                         <textarea id="jsonConfigTextarea" class="w-full flex-1 p-3 font-mono text-xs rounded border border-slate-200 bg-slate-900 text-green-400 outline-none resize-none" placeholder="Select a node from the tree to inspect its JSONB configuration..." disabled></textarea>
                     </div>
                     <div class="bg-slate-50 p-3 rounded border border-slate-200 shrink-0">
                         <div class="flex justify-between items-center border-b border-slate-100 pb-1 mb-1">
-                            <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Architectural Audit & Reasoning</span>
-                            <span class="text-[10px] text-slate-400 font-mono">DEC-12 Compliance</span>
+                            <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Architectural Audit & Reasoning (DEC-12)</span>
+                            <span class="text-[10px] text-slate-400 font-mono">Cascaded SSOT</span>
                         </div>
                         <div id="auditReasonBox" class="text-xs text-slate-600 font-medium py-1">
                             Select a node to review its immutability log and architectural reasoning.
@@ -181,19 +184,9 @@ export async function initRegionsEngine(containerId) {
         loadJurisdictionalTree();
     };
 
-    // 3. LEAFLET MAP & TERRITORY MATRIX ENGINE (NS-FE-01)
+    // 3. LEAFLET MAP & N-LAYER JURISDICTIONAL HIERARCHY
     let map = null, currentGeoLayer = null, markers = [];
-    let globalData = [], filteredData = [];
-    let allCountryNames = [];
-    let navHistory = [{ level: 'world', parentName: '' }];
-    let historyIndex = 0;
-    const wardGeoAnchor = { 1: [12.9180, 77.5560], 4: [12.9240, 77.5780], 14: [12.9260, 77.5930], 65: [12.9420, 77.5750] };
-
-    function getDistinctColor(name) {
-        let hash = 0;
-        for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-        return `hsl(${Math.abs(hash % 360)}, 45%, 65%)`; 
-    }
+    let treeNodes = [];
 
     if (!window.L) {
         await new Promise((resolve) => {
@@ -208,204 +201,193 @@ export async function initRegionsEngine(containerId) {
     map = window.L.map('map', { zoomControl: true, attributionControl: false, zoomSnap: 0.1, zoomDelta: 0.5 }).setView([22.5937, 78.9629], 4);
     window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, opacity: 0.5 }).addTo(map);
 
-    async function loadCountryList() {
-        try {
-            const { data } = await window.nanbiDB.rpc('get_countries_geojson').limit(2000);
-            if (data && data.length > 0) {
-                allCountryNames = data.map(d => d.name).filter(Boolean).sort();
-                const sel = container.querySelector('#selCountry');
-                sel.innerHTML = '<option value="All">All Countries</option>';
-                allCountryNames.forEach(c => sel.innerHTML += '<option value="' + c + '">' + c + '</option>');
-                sel.disabled = false;
-            }
-        } catch(e) {
-            const sel = container.querySelector('#selCountry');
-            sel.innerHTML = '<option value="All">All (Default)</option>';
-            sel.disabled = false;
+    async function fetchTreeData() {
+        const { data, error } = await window.nanbiDB
+            .from('regional_hierarchy_nodes')
+            .select('*')
+            .order('node_level', { ascending: true });
+
+        if (!error && data) {
+            treeNodes = data;
+            populateDropdowns();
+            updateTableAndMetrics(treeNodes);
         }
     }
 
-    async function fetchRelationalData() {
-        const { data } = await window.nanbiDB.from('territories').select('*, local_bodies ( body_name, taluks ( taluk_name, districts ( district_name, states ( state_name, countries (country_name) ) ) ) ), territory_entity_mappings ( relationship_type, civic_entities (entity_name, category_id) )').limit(2000);
-        globalData = (data || []).map(t => ({
-            ...t,
-            country: t.local_bodies?.taluks?.districts?.states?.countries?.country_name || 'India',
-            state: t.local_bodies?.taluks?.districts?.states?.state_name || 'Karnataka',
-            district: t.local_bodies?.taluks?.districts?.district_name || 'Bengaluru Urban',
-            taluk: t.local_bodies?.taluks?.taluk_name || 'Bengaluru South Taluk',
-            territory_name: 'W-' + t.territory_no + ': ' + t.territory_name,
-            civicEntities: t.territory_entity_mappings || []
-        }));
-        filteredData = [...globalData];
+    function populateDropdowns() {
+        const continents = treeNodes.filter(n => n.node_level === 'continent');
+        const selCont = container.querySelector('#selContinent');
+        selCont.innerHTML = '<option value="All">All Continents</option>';
+        continents.forEach(c => selCont.innerHTML += `<option value="${c.node_id}">${c.node_name}</option>`);
+        selCont.disabled = false;
     }
 
-    async function renderSpatialLayer(level, parentName = '', pushHistory = true) {
-        if (pushHistory) {
-            navHistory = navHistory.slice(0, historyIndex + 1);
-            navHistory.push({ level, parentName });
-            historyIndex++;
-        }
-        container.querySelector('#geoHierarchyBreadcrumb').innerText = parentName ? parentName : 'World View';
-        
-        let rpcName = level === 'world' ? 'get_countries_geojson' : level === 'country' ? 'get_states_for_country' : level === 'state' ? 'get_districts_for_state' : 'get_taluks_for_district';
-        let rpcParams = level === 'country' ? { p_country: parentName } : level === 'state' ? { p_state: parentName } : level === 'district' ? { p_district: parentName } : {};
-        let targetDropdownId = level === 'world' ? 'selCountry' : level === 'country' ? 'selState' : level === 'state' ? 'selDistrict' : 'selTaluk';
+    function setupDropdownListeners() {
+        container.querySelector('#selContinent').addEventListener('change', (e) => {
+            const val = e.target.value;
+            const subContSel = container.querySelector('#selSubContinent');
+            subContSel.innerHTML = '<option value="All">All Sub-Continents</option>';
+            subContSel.disabled = true;
+            cascadeClear(['selCountry', 'selState', 'selDistrict', 'selTaluk']);
 
-        if (level === 'taluk') {
-            renderWardFallbacks();
-            populateWardDropdown(parentName);
-            updateUI(level);
-            return;
-        }
-
-        let newFeatureGroup = window.L.featureGroup();
-        let hasValidData = false;
-
-        try {
-            const { data } = await window.nanbiDB.rpc(rpcName, rpcParams).limit(2000);
-            let layerNames = [];
-            if (data && data.length > 0) {
-                data.forEach(item => {
-                    const displayName = String(item.display_name || item.official_name || item.name || item.id || '');
-                    layerNames.push(displayName);
-                    if (!item.geojson) return;
-                    const parsedGeom = typeof item.geojson === 'string' ? JSON.parse(item.geojson) : item.geojson;
-                    const layer = window.L.geoJSON(parsedGeom, { style: { color: '#ffffff', weight: 1.2, fillColor: getDistinctColor(displayName), fillOpacity: 0.75 } });
-                    layer.bindTooltip(displayName, { direction: 'center', className: 'id-label', permanent: true });
-                    layer.on('click', () => { handleMapPolygonClick(level, displayName); });
-                    newFeatureGroup.addLayer(layer);
-                    hasValidData = true;
-                });
+            if (val !== 'All') {
+                const subs = treeNodes.filter(n => n.node_level === 'sub_continent' && n.parent_id === val);
+                subs.forEach(s => subContSel.innerHTML += `<option value="${s.node_id}">${s.node_name}</option>`);
+                subContSel.disabled = subs.length === 0;
             }
-
-            if (hasValidData) {
-                if (currentGeoLayer) map.removeLayer(currentGeoLayer);
-                markers.forEach(m => map.removeLayer(m)); markers = [];
-                currentGeoLayer = newFeatureGroup.addTo(map);
-                map.invalidateSize(true);
-                setTimeout(() => map.fitBounds(newFeatureGroup.getBounds(), { padding: [30, 30], maxZoom: 11 }), 200);
-            }
-
-            if (targetDropdownId && layerNames.length > 0) {
-                const sel = container.querySelector(`#${targetDropdownId}`);
-                sel.innerHTML = '<option value="All">All</option>';
-                [...new Set(layerNames)].sort().forEach(n => sel.innerHTML += '<option value="' + n + '">' + n + '</option>');
-                sel.disabled = false;
-            }
-        } catch(e) {}
-        updateUI(level);
-    }
-
-    function handleMapPolygonClick(level, entityName) {
-        if (level === 'world') { container.querySelector('#selCountry').value = entityName; container.querySelector('#selCountry').dispatchEvent(new Event('change')); }
-        else if (level === 'country') { container.querySelector('#selState').value = entityName; container.querySelector('#selState').dispatchEvent(new Event('change')); }
-        else if (level === 'state') { container.querySelector('#selDistrict').value = entityName; container.querySelector('#selDistrict').dispatchEvent(new Event('change')); }
-        else if (level === 'district') { container.querySelector('#selTaluk').value = entityName; container.querySelector('#selTaluk').dispatchEvent(new Event('change')); }
-    }
-
-    function renderWardFallbacks() {
-        markers.forEach(m => map.removeLayer(m)); markers = [];
-        let latlngs = [];
-        filteredData.forEach(item => {
-            const wNo = parseInt(item.territory_no) || 1;
-            const lat = 12.9180 + ((wNo % 10) * 0.006);
-            const lng = 77.5560 + (Math.floor(wNo / 10) * 0.006);
-            latlngs.push([lat, lng]);
-            const circle = window.L.circleMarker([lat, lng], { radius: 6, fillColor: '#D35400', color: '#ffffff', weight: 1.5, opacity: 1, fillOpacity: 0.85 }).addTo(map);
-            circle.bindTooltip('W-' + item.territory_no, { permanent: true, direction: 'center', className: 'id-label' });
-            circle.on('click', () => isolateTerritory(item));
-            markers.push(circle);
+            filterAndRender();
         });
-        if (latlngs.length > 0) {
-            setTimeout(() => map.fitBounds(window.L.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 14 }), 200);
-        }
-    }
 
-    function populateWardDropdown(talukName) {
-        const selWard = container.querySelector('#selWard');
-        selWard.innerHTML = '<option value="All">All</option>';
-        const wards = globalData.filter(i => i.taluk === talukName).map(i => i.territory_name).sort();
-        wards.forEach(w => selWard.innerHTML += '<option value="' + w + '">' + w + '</option>');
-        selWard.disabled = wards.length === 0;
+        container.querySelector('#selSubContinent').addEventListener('change', (e) => {
+            const val = e.target.value;
+            const countrySel = container.querySelector('#selCountry');
+            countrySel.innerHTML = '<option value="All">All Countries</option>';
+            countrySel.disabled = true;
+            cascadeClear(['selState', 'selDistrict', 'selTaluk']);
+
+            if (val !== 'All') {
+                const countries = treeNodes.filter(n => n.node_level === 'country' && n.parent_id === val);
+                countries.forEach(co => countrySel.innerHTML += `<option value="${co.node_id}">${co.node_name}</option>`);
+                countrySel.disabled = countries.length === 0;
+            }
+            filterAndRender();
+        });
+
+        container.querySelector('#selCountry').addEventListener('change', (e) => {
+            const val = e.target.value;
+            const stateSel = container.querySelector('#selState');
+            stateSel.innerHTML = '<option value="All">All States</option>';
+            stateSel.disabled = true;
+            cascadeClear(['selDistrict', 'selTaluk']);
+
+            if (val !== 'All') {
+                const states = treeNodes.filter(n => n.node_level === 'state' && n.parent_id === val);
+                states.forEach(st => stateSel.innerHTML += `<option value="${st.node_id}">${st.node_name}</option>`);
+                stateSel.disabled = states.length === 0;
+            }
+            filterAndRender();
+        });
+
+        container.querySelector('#selState').addEventListener('change', (e) => {
+            const val = e.target.value;
+            const distSel = container.querySelector('#selDistrict');
+            distSel.innerHTML = '<option value="All">All Districts</option>';
+            distSel.disabled = true;
+            cascadeClear(['selTaluk']);
+
+            if (val !== 'All') {
+                const dists = treeNodes.filter(n => n.node_level === 'district' && n.parent_id === val);
+                dists.forEach(d => distSel.innerHTML += `<option value="${d.node_id}">${d.node_name}</option>`);
+                distSel.disabled = dists.length === 0;
+            }
+            filterAndRender();
+        });
+
+        container.querySelector('#selDistrict').addEventListener('change', (e) => {
+            const val = e.target.value;
+            const talukSel = container.querySelector('#selTaluk');
+            talukSel.innerHTML = '<option value="All">All Taluks/Territories</option>';
+            talukSel.disabled = true;
+
+            if (val !== 'All') {
+                const taluks = treeNodes.filter(n => (n.node_level === 'taluk' || n.node_level === 'territory_sp') && n.parent_id === val);
+                taluks.forEach(t => talukSel.innerHTML += `<option value="${t.node_id}">${t.node_name}</option>`);
+                talukSel.disabled = taluks.length === 0;
+            }
+            filterAndRender();
+        });
+
+        container.querySelector('#selTaluk').addEventListener('change', () => filterAndRender());
+
+        container.querySelector('#btnResetView').addEventListener('click', () => {
+            container.querySelector('#selContinent').value = 'All';
+            cascadeClear(['selSubContinent', 'selCountry', 'selState', 'selDistrict', 'selTaluk']);
+            updateTableAndMetrics(treeNodes);
+            map.setView([22.5937, 78.9629], 4);
+        });
     }
 
     function cascadeClear(ids) {
         ids.forEach(id => {
             const el = container.querySelector(`#${id}`);
-            if(el) { el.innerHTML = '<option value="All">All</option>'; el.disabled = true; }
+            if (el) { el.innerHTML = '<option value="All">All</option>'; el.disabled = true; }
         });
     }
 
-    function initDropdownListeners() {
-        container.querySelector('#selCountry').addEventListener('change', (e) => {
-            const val = e.target.value; cascadeClear(['selState', 'selDistrict', 'selTaluk', 'selWard']); filterMatrix();
-            if (val === 'All') renderSpatialLayer('world', ''); else renderSpatialLayer('country', val);
-        });
-        container.querySelector('#selState').addEventListener('change', (e) => {
-            const val = e.target.value; cascadeClear(['selDistrict', 'selTaluk', 'selWard']); filterMatrix();
-            if (val === 'All') renderSpatialLayer('country', container.querySelector('#selCountry').value); else renderSpatialLayer('state', val);
-        });
-        container.querySelector('#selDistrict').addEventListener('change', (e) => {
-            const val = e.target.value; cascadeClear(['selTaluk', 'selWard']); filterMatrix();
-            if (val === 'All') renderSpatialLayer('state', container.querySelector('#selState').value); else renderSpatialLayer('district', val);
-        });
-        container.querySelector('#selTaluk').addEventListener('change', (e) => {
-            const val = e.target.value; cascadeClear(['selWard']); filterMatrix();
-            if (val === 'All') renderSpatialLayer('district', container.querySelector('#selDistrict').value); else renderSpatialLayer('taluk', val);
-        });
-        container.querySelector('#selWard').addEventListener('change', (e) => {
-            filterMatrix();
-            if (e.target.value !== 'All' && filteredData.length === 1) isolateTerritory(filteredData[0]);
-        });
-        container.querySelector('#btnGlobe').addEventListener('click', () => {
-            const sel = container.querySelector('#selCountry'); sel.value = 'All'; sel.dispatchEvent(new Event('change'));
-        });
+    function filterAndRender() {
+        const cont = container.querySelector('#selContinent').value;
+        const subCont = container.querySelector('#selSubContinent').value;
+        const country = container.querySelector('#selCountry').value;
+        const state = container.querySelector('#selState').value;
+        const dist = container.querySelector('#selDistrict').value;
+        const taluk = container.querySelector('#selTaluk').value;
+
+        let activeId = null;
+        if (taluk !== 'All') activeId = taluk;
+        else if (dist !== 'All') activeId = dist;
+        else if (state !== 'All') activeId = state;
+        else if (country !== 'All') activeId = country;
+        else if (subCont !== 'All') activeId = subCont;
+        else if (cont !== 'All') activeId = cont;
+
+        let matched = treeNodes;
+        if (activeId) {
+            matched = treeNodes.filter(n => n.node_id === activeId || isDescendant(n, activeId));
+        }
+
+        updateTableAndMetrics(matched);
     }
 
-    function filterMatrix() {
-        const c = container.querySelector('#selCountry').value, s = container.querySelector('#selState').value;
-        const d = container.querySelector('#selDistrict').value, t = container.querySelector('#selTaluk').value, w = container.querySelector('#selWard').value;
-        filteredData = globalData.filter(item => 
-            (c === 'All' || item.country === c) && (s === 'All' || item.state === s) &&
-            (d === 'All' || item.district === d) && (t === 'All' || item.taluk === t) && (w === 'All' || item.territory_name === w)
-        );
-        updateUI();
+    function isDescendant(node, parentId) {
+        let curr = treeNodes.find(n => n.node_id === node.parent_id);
+        while (curr) {
+            if (curr.node_id === parentId) return true;
+            curr = treeNodes.find(n => n.node_id === curr.parent_id);
+        }
+        return false;
     }
 
-    function updateUI(level) {
-        container.querySelector('#metricCount').innerText = filteredData.length;
-        container.querySelector('#metricMPS').innerText = "₹" + (filteredData.length * 35000).toLocaleString('en-IN');
-        const tbody = container.querySelector('#territoryTbody'); tbody.innerHTML = '';
-        
-        if (level && level !== 'taluk') {
-            tbody.innerHTML = '<tr><td colspan="4" class="py-16 text-center"><div class="opacity-70 flex flex-col items-center"><i class="fas fa-layer-group text-4xl text-slate-300 mb-3"></i><h4 class="font-bold text-xs uppercase tracking-wider text-[#D35400]">Macro Region Selected</h4><p class="text-[11px] text-slate-500 mt-1">Drill down to a specific Taluk to view granular Ward data matrices.</p></div></td></tr>';
+    function updateTableAndMetrics(nodesList) {
+        container.querySelector('#metricCount').innerText = nodesList.length;
+        container.querySelector('#metricMPS').innerText = "₹" + (nodesList.length * 35000).toLocaleString('en-IN');
+
+        const tbody = container.querySelector('#territoryTbody');
+        tbody.innerHTML = '';
+
+        if (nodesList.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="py-16 text-center text-slate-400">No nodes match the selected filter criteria.</td></tr>';
             return;
         }
-        if (filteredData.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="py-16 text-center"><div class="opacity-70 flex flex-col items-center"><i class="fas fa-rocket text-3xl text-pink-500 mb-3"></i><h4 class="font-bold text-xs uppercase tracking-wider text-slate-700">Yet to be launched</h4><p class="text-[11px] text-slate-400 mt-1">Territory operations for this region are currently in the pipeline.</p></div></td></tr>';
-            return;
-        }
-        filteredData.forEach(item => {
+
+        nodesList.forEach(node => {
             const tr = document.createElement('tr');
             tr.className = "hover:bg-slate-50 transition cursor-pointer text-slate-700";
-            tr.onclick = () => isolateTerritory(item, tr);
-            const civicCount = item.civicEntities.length;
-            const civicBadge = civicCount > 0 ? `<span class="bg-orange-100 text-[#D35400] border border-orange-200 px-1.5 py-0.5 rounded font-bold text-[9px]">${civicCount} Nodes</span>` : '<span class="bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded text-[9px] font-semibold">0 Nodes</span>';
-            tr.innerHTML = `<td class="p-2 font-mono text-xs font-bold text-teal-700 border-r border-slate-100 pl-4">${item.territory_id}</td><td class="p-2 font-bold col-left border-r border-slate-100 whitespace-nowrap">${item.territory_name}</td><td class="p-2 font-bold col-left border-r border-slate-100 whitespace-nowrap text-sky-600">${item.biz_class || 'General'}</td><td class="p-2 col-left">${civicBadge}</td>`;
+            tr.onclick = () => inspectNodeEntity(node, tr);
+            tr.innerHTML = `
+                <td class="p-2 font-mono text-xs font-bold text-teal-700 border-r border-slate-100 pl-4">${node.node_id}</td>
+                <td class="p-2 font-bold col-left border-r border-slate-100 whitespace-nowrap">${node.node_name}</td>
+                <td class="p-2 font-bold col-left border-r border-slate-100 whitespace-nowrap text-sky-600 uppercase">${node.node_level}</td>
+                <td class="p-2 text-right pr-4 font-mono">${node.official_gov_code || 'N/A'}</td>
+            `;
             tbody.appendChild(tr);
         });
     }
 
-    function isolateTerritory(item, trElement = null) {
+    function inspectNodeEntity(node, trElement) {
         document.querySelectorAll('#territoryTbody tr').forEach(r => r.classList.remove('row-active'));
         if (trElement) trElement.classList.add('row-active');
-        container.querySelector('#deepDiveTitle').innerText = item.territory_id + ' — ' + item.territory_name;
-        container.querySelector('#deepDiveSubtitle').innerText = 'H3: ' + (item.h3_polygon_anchor || 'Active');
+        container.querySelector('#deepDiveTitle').innerText = `${node.node_id} — ${node.node_name}`;
+        container.querySelector('#deepDiveSubtitle').innerText = `Level: ${node.node_level.toUpperCase()} | Parent: ${node.parent_id || 'None'}`;
+        
         const content = container.querySelector('#deepDiveContent');
-        content.innerHTML = `<div class="w-full flex flex-col gap-1"><span class="font-bold text-slate-800">${item.territory_name}</span><span class="text-xs text-slate-500">Business Class: ${item.biz_class || 'Standard'}</span></div>`;
+        content.innerHTML = `
+            <div class="w-full flex flex-col gap-1 p-2 bg-slate-50 rounded border border-slate-200">
+                <span class="font-bold text-slate-800">Reasoning:</span> <span class="text-slate-600">${node.architectural_reasoning || 'No audit log.'}</span>
+            </div>
+        `;
     }
 
-    // 4. JURISDICTIONAL TREE & CONFIG HUB ENGINE (NS-FE-11)
+    // 4. JURISDICTIONAL TREE & CONFIG HUB ENGINE
     async function loadJurisdictionalTree() {
         const treeContainer = container.querySelector('#treeListContainer');
         treeContainer.innerHTML = `<p class="text-slate-400 italic text-center py-10">Synchronizing with Edge Ledger...</p>`;
@@ -491,12 +473,10 @@ export async function initRegionsEngine(containerId) {
     }
 
     // Initialize Map Matrix view on boot
-    initDropdownListeners();
+    setupDropdownListeners();
     try {
-        await fetchRelationalData();
-        await loadCountryList();
-        await renderSpatialLayer('world', '', false);
+        await fetchTreeData();
     } catch(e) {
-        console.warn("Map boot warning:", e);
+        console.warn("Tree boot warning:", e);
     }
 }
