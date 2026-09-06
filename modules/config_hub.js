@@ -1,5 +1,6 @@
 export function initConfigHub(containerId) {
     const container = document.getElementById(containerId);
+    if (!container) return;
     
     container.innerHTML = `
       <div class="flex-1 max-w-6xl">
@@ -15,13 +16,13 @@ export function initConfigHub(containerId) {
                 <p class="text-sm" style="color: var(--muted);">Manage global themes, brand colors, layout dimensions, and typography.</p>
             </a>
 
-            <div class="block p-8" style="background: var(--bg); border: 1px solid var(--border); border-radius: 0px; opacity: 0.6; cursor: not-allowed;">
-                <div class="w-12 h-12 flex items-center justify-center mb-4" style="background: rgba(100,116,139,0.1); color: var(--muted); font-size: 1.5rem;">
+            <a href="#/regions" class="block p-8 transition-all" style="background: var(--bg); border: 1px solid var(--border); border-radius: 0px; text-decoration: none;">
+                <div class="w-12 h-12 flex items-center justify-center mb-4" style="background: var(--hover-bg); color: var(--brand-teal-dark); font-size: 1.5rem;">
                     <i class="fas fa-globe"></i>
                 </div>
                 <h3 class="text-xl font-bold mb-2" style="color: var(--text);">Regional Taxonomy</h3>
-                <p class="text-sm" style="color: var(--muted);">Configure Country > State > District hierarchical ledgers. (Pending)</p>
-            </div>
+                <p class="text-sm" style="color: var(--muted);">Configure N-Layer Universal Jurisdictional Tree and JSONB Config Hubs.</p>
+            </a>
         </div>
       </div>
     `;
