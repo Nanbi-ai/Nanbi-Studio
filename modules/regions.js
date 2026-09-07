@@ -245,11 +245,11 @@ export async function initRegionsEngine(containerId) {
         map = window.L.map('map', { 
             zoomControl: true, 
             attributionControl: false,
-            zoomSnap: 0.1, // Allows fractional zooming for tight framing
+            zoomSnap: 0.1, 
             worldCopyJump: true,
-            minZoom: 2,
+            minZoom: 0, // Unlocks the map so it can shrink to fit your panel
             maxBounds: null
-        }).setView([20.0, 0.0], 2);
+        }).setView([20.0, 0.0], 1);
         
         window.nanbiMapInstance = map;
         window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, opacity: 1, noWrap: false }).addTo(map);
