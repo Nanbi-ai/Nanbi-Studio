@@ -1,5 +1,5 @@
 // =======================================================================
-// NANBI V5.0 - ZERO-SPACE, DARK-MODE COMPLIANT, 3-WAY REGIONS ENGINE
+// NANBI V5.0 - ZERO-API, THEME-COMPLIANT, 3-WAY REGIONS ENGINE
 // =======================================================================
 
 export async function initRegionsEngine(containerId) {
@@ -28,11 +28,12 @@ export async function initRegionsEngine(containerId) {
                 #regions-module td { text-align: left; border-bottom: 1px solid var(--border); color: var(--text); font-weight: 600; font-size: 11px; padding: 10px; }
                 #regions-module .row-active { background-color: var(--hover-bg) !important; border-left: 4px solid var(--brand-orange-dark) !important; } 
                 
-                #regions-module #map { position: absolute; inset: 0; border-radius: 5px; z-index: 1; background-color: var(--active-bg); }
+                /* ZERO-API MAP BACKGROUND: Uses native theme card color instead of external tiles */
+                #regions-module #map { position: absolute; inset: 0; border-radius: 5px; z-index: 1; background-color: var(--card); }
                 #regions-module path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s; outline: none; }
                 #regions-module path.leaflet-interactive:hover { fill-opacity: 0.9 !important; stroke-width: 2.5px !important; stroke: var(--text) !important; cursor: pointer; }
                 
-                .id-label { background: transparent !important; border: none !important; box-shadow: none !important; font-weight: 800; font-size: 11px; color: #1E293B; text-shadow: 1px 1px 2px #ffffff, -1px -1px 2px #ffffff, 1px -1px 2px #ffffff, -1px 1px 2px #ffffff; text-align: center; }
+                .id-label { background: transparent !important; border: none !important; box-shadow: none !important; font-weight: 800; font-size: 11px; color: var(--text); text-shadow: none; text-align: center; }
                 
                 #regions-module ::-webkit-scrollbar { width: 6px; }
                 #regions-module ::-webkit-scrollbar-thumb { background-color: var(--border); border-radius: 4px; }
@@ -128,7 +129,7 @@ export async function initRegionsEngine(containerId) {
                     <aside class="flex-1 lg:max-w-[40%] panel-card p-3 flex flex-col min-h-0">
                         <div class="flex justify-between items-center pb-2 border-b border-[color:var(--border)] mb-2 shrink-0">
                             <h3 class="text-xs font-bold uppercase tracking-widest text-[color:var(--text)]">Universal Jurisdictional Tree</h3>
-                            <span id="treeNodeCountBadge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-[color:var(--active-bg)] text-[color:var(--brand-orange-dark)] font-bold">0 Nodes</span>
+                            <span id="treeNodeCountBadge" class="text-[10px] font-mono px-2 py-0.5 rounded border border-[color:var(--brand-orange-dark)] text-[color:var(--brand-orange-dark)] font-bold">0 Nodes</span>
                         </div>
                         <div id="treeListContainer" class="flex-1 overflow-y-auto space-y-1 font-sans pr-1"></div>
                     </aside>
@@ -144,9 +145,9 @@ export async function initRegionsEngine(containerId) {
                         </div>
                         <div class="flex-1 flex flex-col gap-1 mb-3 min-h-0">
                             <label class="text-[10px] font-bold text-[color:var(--muted)] uppercase tracking-widest">JSONB Config Ledger</label>
-                            <textarea id="jsonConfigTextarea" class="w-full flex-1 p-3 font-mono text-xs rounded border border-[color:var(--border)] bg-[#0f172a] text-green-400 outline-none resize-none shadow-inner" disabled></textarea>
+                            <textarea id="jsonConfigTextarea" class="w-full flex-1 p-3 font-mono text-xs rounded border border-[color:var(--border)] bg-transparent text-[color:var(--text)] outline-none resize-none shadow-inner" disabled></textarea>
                         </div>
-                        <div class="bg-[color:var(--active-bg)] p-3 rounded border border-[color:var(--border)] shrink-0">
+                        <div class="bg-transparent p-3 rounded border border-[color:var(--border)] shrink-0">
                             <div class="flex justify-between items-center border-b border-[color:var(--border)] pb-1 mb-1.5">
                                 <span class="text-[10px] font-bold uppercase tracking-widest text-[color:var(--text)]">Architectural Audit & Reasoning</span>
                             </div>
@@ -189,7 +190,7 @@ export async function initRegionsEngine(containerId) {
             return `hsl(${Math.abs(hash % 360)}, 65%, 55%)`;
         }
 
-        // Initialize Map with Theme Detection
+        // Initialize Map
         if (!window.L) {
             await new Promise((resolve) => {
                 const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(link);
@@ -200,16 +201,9 @@ export async function initRegionsEngine(containerId) {
         const mapEl = window.L.DomUtil.get('map');
         if (mapEl) mapEl._leaflet_id = null;
 
+        // ZERO EXTERNAL APIS: Removed tileLayer. The map relies purely on your DB GeoJSON.
         map = window.L.map('map', { zoomControl: true, attributionControl: false }).setView([20.0, 0.0], 2);
         
-        // DYNAMIC DARK MODE TILE LOADING
-        const isDark = localStorage.getItem('nanbi_theme') === 'dark';
-        const tileUrl = isDark 
-            ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' 
-            : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-        window.L.tileLayer(tileUrl, { maxZoom: 19, opacity: isDark ? 0.9 : 0.65 }).addTo(map);
-
-        // GUARANTEE NO GREY MAP BUG ON RESIZE
         new ResizeObserver(() => {
             if (map) map.invalidateSize();
         }).observe(container.querySelector('#map'));
@@ -280,7 +274,7 @@ export async function initRegionsEngine(containerId) {
             if (lineage.district) { container.querySelector('#selDistrict').value = lineage.district; populateDropdown('selTaluk', 'taluk', lineage.district); } else cascadeClear(['selTaluk']);
             if (lineage.taluk) { container.querySelector('#selTaluk').value = lineage.taluk; }
 
-            // 2. FILTER TABLE (Target node + its children only)
+            // 2. FILTER TABLE
             let tableNodes = [];
             if (nodeId === 'GLOBAL') {
                 tableNodes = treeNodes.filter(n => n.node_level === 'continent');
@@ -299,24 +293,24 @@ export async function initRegionsEngine(containerId) {
                 tr.className = "hover:bg-[color:var(--hover-bg)] transition cursor-pointer text-[color:var(--text)]";
                 if (node.node_id === nodeId && nodeId !== 'GLOBAL') tr.classList.add('row-active');
                 
-                // TABLE -> ENGINE TRIGGER
                 tr.onclick = () => applyGlobalSelection(node.node_id);
 
+                // FIXED: Readable Pill colors
                 tr.innerHTML = `
-                    <td class="col-left border-r pl-4"><span class="bg-[color:var(--active-bg)] border border-[color:var(--border)] px-1.5 py-0.5 rounded font-mono text-teal-600 font-bold">${node.node_id}</span></td>
+                    <td class="col-left border-r pl-4"><span class="bg-transparent border border-[color:var(--brand-orange-dark)] px-1.5 py-0.5 rounded font-mono text-[color:var(--brand-orange-dark)] font-bold">${node.node_id}</span></td>
                     <td class="font-bold col-left border-r">${node.node_name}</td>
-                    <td class="font-bold col-left border-r text-sky-600 uppercase text-[9px] tracking-wider">${node.node_level.replace('_', ' ')}</td>
+                    <td class="font-bold col-left border-r text-[color:var(--muted)] uppercase text-[9px] tracking-wider">${node.node_level.replace('_', ' ')}</td>
                     <td class="text-right pr-4 font-mono font-bold">${node.official_gov_code || '--'}</td>
                 `;
                 tbody.appendChild(tr);
             });
 
-            // 3. UPDATE INSPECTOR
+            // 3. UPDATE INSPECTOR (FIXED: Readable contrast)
             container.querySelector('#geoHierarchyBreadcrumb').innerText = activeNode.node_name;
             container.querySelector('#deepDiveTitle').innerText = `${activeNode.node_id} — ${activeNode.node_name}`;
             container.querySelector('#deepDiveSubtitle').innerText = `Level: ${activeNode.node_level.replace('_', ' ')}`;
             container.querySelector('#deepDiveContent').innerHTML = `
-                <div class="flex justify-between items-center bg-[color:var(--active-bg)] border border-[color:var(--border)] rounded p-2 shadow-sm text-[color:var(--text)]">
+                <div class="flex justify-between items-center bg-transparent border border-[color:var(--border)] rounded p-2 text-[color:var(--text)]">
                     <span class="font-bold">Gov/ISO Code:</span> 
                     <span class="font-mono font-bold">${activeNode.official_gov_code || 'N/A'}</span>
                 </div>
@@ -326,7 +320,7 @@ export async function initRegionsEngine(containerId) {
                 </div>
             `;
 
-            // 4. FILTER AND RENDER MAP
+            // 4. FILTER AND RENDER MAP (FORCE ZOOM/CENTER)
             if (polygonLayerGroup) map.removeLayer(polygonLayerGroup);
             polygonLayerGroup = window.L.featureGroup();
             layerMapByNodeId.clear();
@@ -345,8 +339,6 @@ export async function initRegionsEngine(containerId) {
                         style: { color: '#ffffff', weight: 1.2, fillColor: polyColor, fillOpacity: 0.85 } 
                     });
                     l.bindTooltip(n.node_name, { direction: 'center', className: 'id-label', permanent: false });
-                    
-                    // MAP -> ENGINE TRIGGER
                     l.on('click', () => applyGlobalSelection(n.node_id));
 
                     polygonLayerGroup.addLayer(l);
@@ -356,12 +348,13 @@ export async function initRegionsEngine(containerId) {
 
             if (polygonLayerGroup.getLayers().length > 0) {
                 polygonLayerGroup.addTo(map);
+                // Guaranteed Map Centering Loop
                 setTimeout(() => {
                     map.invalidateSize(true);
                     map.fitBounds(polygonLayerGroup.getBounds(), { padding: [20, 20], animate: true, maxZoom: 8 });
-                }, 50);
+                }, 100);
             } else if (nodeId === 'GLOBAL') {
-                setTimeout(() => { map.invalidateSize(true); map.setView([20.0, 0.0], 2); }, 50);
+                setTimeout(() => { map.invalidateSize(true); map.setView([20.0, 0.0], 2); }, 100);
             }
         }
 
