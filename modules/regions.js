@@ -177,7 +177,7 @@ export async function initRegionsEngine(containerId) {
             tabConfigHub.className = "px-4 py-1 rounded text-[11px] font-bold bg-[color:var(--card)] text-[color:var(--muted)] border border-[color:var(--border)] hover:bg-[color:var(--hover-bg)] transition";
             viewMapMatrix.style.display = "flex";
             viewConfigHub.style.display = "none";
-            if (map) setTimeout(() => map.invalidateSize(true), 50);
+            if (window.nanbiMapInstance) setTimeout(() => window.nanbiMapInstance.invalidateSize(true), 50);
         };
 
         tabConfigHub.onclick = () => {
@@ -237,15 +237,18 @@ export async function initRegionsEngine(containerId) {
         const mapEl = window.L.DomUtil.get('map');
         if (mapEl) mapEl._leaflet_id = null;
 
+        // FRACTIONAL ZOOM ENABLER: 0.1 allows precise 80% scaling without triggering browser freezing loops
         map = window.L.map('map', { 
             zoomControl: true, 
             attributionControl: false,
-            zoomSnap: 0.1, // 0.1 prevents the infinite scaling loop while preserving exact 80% boundaries
+            zoomSnap: 0.1, 
             worldCopyJump: true,
             minZoom: 2,
             maxBounds: null
         }).setView([20.0, 0.0], 2);
         
+        window.nanbiMapInstance = map;
+
         window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, opacity: 1, noWrap: false }).addTo(map);
 
         const isDark = localStorage.getItem('nanbi_theme') === 'dark' || document.documentElement.classList.contains('dark') || document.body.classList.contains('dark');
@@ -254,17 +257,13 @@ export async function initRegionsEngine(containerId) {
             container.querySelector('#map-wrapper').style.backgroundColor = '#0f172a';
         }
 
-        // DEBOUNCED OBSERVER: Instantly halts the infinite loop browser-freeze
-        let resizeTimer;
-        const resizeObs = new ResizeObserver(() => {
-            if (map) {
-                clearTimeout(resizeTimer);
-                resizeTimer = setTimeout(() => {
-                    map.invalidateSize(true);
-                }, 150);
-            }
-        });
-        resizeObs.observe(container.querySelector('#map-wrapper'));
+        // KILLED RESIZEOBSERVER LOOP: Uses stable window resize event instead
+        if (!window.nanbiMapResizeAttached) {
+            window.addEventListener('resize', () => {
+                if (window.nanbiMapInstance) window.nanbiMapInstance.invalidateSize(false);
+            });
+            window.nanbiMapResizeAttached = true;
+        }
 
         async function fetchTreeData() {
             try {
@@ -318,6 +317,9 @@ export async function initRegionsEngine(containerId) {
 
         function applyGlobalSelection(nodeId) {
             const activeNode = treeNodes.find(n => n.node_id === nodeId) || { node_id: 'GLOBAL', node_name: 'World', node_level: 'root' };
+            
+            // STRICT CLUTTER PROTECTION: True if World or Continent view
+            const isMacroView = (nodeId === 'GLOBAL' || activeNode.node_level === 'continent');
 
             const lineage = getLineage(nodeId);
             if (lineage.continent) { container.querySelector('#selContinent').value = lineage.continent; populateDropdown('selSubContinent', 'sub_continent', lineage.continent); } else cascadeClear(['selSubContinent', 'selCountry', 'selState', 'selDistrict', 'selTaluk']);
@@ -387,16 +389,28 @@ export async function initRegionsEngine(containerId) {
                     let formattedName = toTitleCase(n.node_name);
                     
                     let l = window.L.geoJSON(geom, { 
-                        style: { color: '#D35400', weight: 0.4, fillColor: polyColor, fillOpacity: 0.85 } 
+                        style: { 
+                            color: '#D35400', 
+                            weight: 0.4,      
+                            fillColor: polyColor, 
+                            fillOpacity: 0.85 
+                        } 
                     });
                     
                     l.bindTooltip(formattedName, { sticky: true, className: 'region-label-hover' });
+                    
                     polygonLayerGroup.addLayer(l);
                     layerMapByNodeId.set(n.node_id, l);
 
-                    // CLUTTER PROTECTION: Hides permanent labels on the World Map to prevent overlap.
-                    if (n.node_level === 'country' && nodeId !== 'GLOBAL') {
-                        let centerPoint = centroidOverrides[n.node_id] ? centroidOverrides[n.node_id] : l.getBounds().getCenter();
+                    // LABEL LOGIC: Only display labels for Countries, AND strictly hide them on World/Continent views
+                    if (n.node_level === 'country' && !isMacroView) {
+                        let centerPoint;
+                        if (centroidOverrides[n.node_id]) {
+                            centerPoint = centroidOverrides[n.node_id];
+                        } else {
+                            centerPoint = l.getBounds().getCenter();
+                        }
+
                         let labelMarker = window.L.marker(centerPoint, {
                             icon: window.L.divIcon({
                                 className: 'region-label',
@@ -420,9 +434,10 @@ export async function initRegionsEngine(containerId) {
                 if (polygonLayerGroup.getLayers().length > 0) {
                     polygonLayerGroup.addTo(map); 
                     
+                    // 10% Math = Exactly 80% Viewport Frame
                     const mapDom = container.querySelector('#map-wrapper');
-                    const padX = Math.max(10, Math.floor(mapDom.clientWidth * 0.1));
-                    const padY = Math.max(10, Math.floor(mapDom.clientHeight * 0.1));
+                    const padX = Math.floor(mapDom.clientWidth * 0.1);
+                    const padY = Math.floor(mapDom.clientHeight * 0.1);
                     
                     let targetBounds;
                     if (nodeId === 'GLOBAL') {
@@ -433,7 +448,7 @@ export async function initRegionsEngine(containerId) {
                         targetBounds = polygonLayerGroup.getBounds();
                     }
                     
-                    // Instant fitBounds kills the jittery pan animation
+                    // animate: false completely prevents jittering and bounds looping
                     map.fitBounds(targetBounds, { padding: [padX, padY], animate: false });
                 }
             }, 50);
