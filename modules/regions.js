@@ -37,24 +37,24 @@ export async function initRegionsEngine(containerId) {
                 
                 /* POLYGON HOVER EFFECT */
                 #regions-module path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s, stroke 0.2s; outline: none; }
-                #regions-module path.leaflet-interactive:hover { stroke: #D35400 !important; stroke-width: 1.5px !important; fill-opacity: 0.95 !important; cursor: pointer; }
+                #regions-module path.leaflet-interactive:hover { stroke: #D35400 !important; stroke-width: 2.0px !important; fill-opacity: 1.0 !important; cursor: pointer; }
                 
-                /* DYNAMIC NEIGHBOR LABELS */
+                /* PREMIUM NEIGHBOR LABELS */
                 .region-label { 
                     background: transparent !important; border: none !important; box-shadow: none !important; 
                     text-align: center; margin: 0; padding: 0; pointer-events: none; white-space: nowrap !important;
                 }
                 .label-active { 
-                    font-weight: 700; font-size: 11px; color: #0f172a; 
-                    text-shadow: 1px 1px 2px rgba(255,255,255,0.9), -1px -1px 2px rgba(255,255,255,0.9), 1px -1px 2px rgba(255,255,255,0.9), -1px 1px 2px rgba(255,255,255,0.9); 
+                    font-weight: 800; font-size: 12px; color: #000000; 
+                    text-shadow: 1px 1px 3px rgba(255,255,255,1), -1px -1px 3px rgba(255,255,255,1), 1px -1px 3px rgba(255,255,255,1), -1px 1px 3px rgba(255,255,255,1); 
                 }
                 .label-neighbor { 
-                    font-weight: 600; font-size: 9px; color: #475569; 
-                    text-shadow: 1px 1px 2px rgba(255,255,255,0.6), -1px -1px 2px rgba(255,255,255,0.6), 1px -1px 2px rgba(255,255,255,0.6), -1px 1px 2px rgba(255,255,255,0.6); 
+                    font-weight: 600; font-size: 10px; color: #334155; 
+                    text-shadow: 1px 1px 2px rgba(255,255,255,0.8), -1px -1px 2px rgba(255,255,255,0.8), 1px -1px 2px rgba(255,255,255,0.8), -1px 1px 2px rgba(255,255,255,0.8); 
                 }
                 .region-label-hover { 
-                    background: rgba(255,255,255,0.95) !important; border: 1px solid #cbd5e1 !important; border-radius: 4px;
-                    font-weight: 700; font-size: 11px; color: #0f172a; 
+                    background: rgba(255,255,255,1.0) !important; border: 1px solid #cbd5e1 !important; border-radius: 4px;
+                    font-weight: 800; font-size: 11px; color: #0f172a; 
                 }
                 
                 #regions-module ::-webkit-scrollbar { width: 6px; }
@@ -385,7 +385,7 @@ export async function initRegionsEngine(containerId) {
             activeLayerGroup = window.L.featureGroup(); 
             layerMapByNodeId.clear();
 
-            // PERFECT GHOSTING: Forces ALL countries to load into the base map array
+            // ALL COUNTRIES RENDERED: Ensures neighbors are always present as a base layer
             let mapNodes = treeNodes.filter(n => {
                 if (!n.dynamic_config_payload || !n.dynamic_config_payload.geojson) return false;
                 if (n.node_level === 'country') return true; 
@@ -399,10 +399,10 @@ export async function initRegionsEngine(containerId) {
                     let polyColor = getDistinctColor(n.node_name);
                     let formattedName = toTitleCase(n.node_name);
                     
-                    // Dual-Style Logic: Active nodes get full opacity/border, ghosts fade into the background
+                    // HIGHLIGHT VS GHOST STYLING: Neighbors get clean white borders and 60% pastel fill
                     let styleOptions = isActive 
-                        ? { color: '#D35400', weight: 0.8, fillColor: polyColor, fillOpacity: 0.85 } 
-                        : { color: '#94a3b8', weight: 0.3, fillColor: polyColor, fillOpacity: 0.15 };
+                        ? { color: '#D35400', weight: 2.0, fillColor: polyColor, fillOpacity: 0.95 } 
+                        : { color: '#ffffff', weight: 1.0, fillColor: polyColor, fillOpacity: 0.60 };
                         
                     let l = window.L.geoJSON(geom, { style: styleOptions });
                     
@@ -412,7 +412,7 @@ export async function initRegionsEngine(containerId) {
                     if (isActive) activeLayerGroup.addLayer(l); 
                     layerMapByNodeId.set(n.node_id, l);
 
-                    // Dynamic Labeling logic safely triggers for both Active and Ghost nodes when zoomed in
+                    // LABELS: Applied to all countries when drilled down, visually separated by 'active' vs 'neighbor' classes
                     if (n.node_level === 'country' && !isMacroView) {
                         let centerPoint = centroidOverrides[n.node_id] ? centroidOverrides[n.node_id] : l.getBounds().getCenter();
                         let labelMarker = window.L.marker(centerPoint, {
@@ -448,7 +448,6 @@ export async function initRegionsEngine(containerId) {
                     } else if (strictBounds[nodeId]) {
                         targetBounds = window.L.latLngBounds(strictBounds[nodeId][0], strictBounds[nodeId][1]);
                     } else {
-                        // Crucial for 80% fit: The map zooms exclusively onto the ACTIVE node's bounds, ignoring the ghost layer.
                         if (activeLayerGroup.getLayers().length > 0) {
                             targetBounds = activeLayerGroup.getBounds();
                         } else {
