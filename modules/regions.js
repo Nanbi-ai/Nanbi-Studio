@@ -45,14 +45,13 @@ export async function initRegionsEngine(containerId) {
                     text-align: center; margin: 0; padding: 0; pointer-events: none; white-space: nowrap !important;
                 }
                 .label-active { 
-                    font-weight: 600; font-size: 11px; color: #0f172a; 
+                    font-weight: 700; font-size: 11px; color: #0f172a; 
                     text-shadow: 1px 1px 2px rgba(255,255,255,0.9), -1px -1px 2px rgba(255,255,255,0.9), 1px -1px 2px rgba(255,255,255,0.9), -1px 1px 2px rgba(255,255,255,0.9); 
                 }
                 .label-neighbor { 
-                    font-weight: 500; font-size: 10px; color: #475569; 
+                    font-weight: 600; font-size: 9px; color: #475569; 
                     text-shadow: 1px 1px 2px rgba(255,255,255,0.6), -1px -1px 2px rgba(255,255,255,0.6), 1px -1px 2px rgba(255,255,255,0.6), -1px 1px 2px rgba(255,255,255,0.6); 
                 }
-
                 .region-label-hover { 
                     background: rgba(255,255,255,0.95) !important; border: 1px solid #cbd5e1 !important; border-radius: 4px;
                     font-weight: 700; font-size: 11px; color: #0f172a; 
@@ -199,7 +198,6 @@ export async function initRegionsEngine(containerId) {
         let treeNodes = [];
         let layerMapByNodeId = new Map();
 
-        // STRICT ANCHORS: Perfects Continent framing & prevents stretching
         const strictBounds = {
             'EU': [[34.0, -25.0], [75.0, 65.0]],     
             'AS': [[-11.0, 26.0], [55.0, 150.0]],    
@@ -302,9 +300,11 @@ export async function initRegionsEngine(containerId) {
 
         function isDescendant(node, parentId) {
             let curr = treeNodes.find(n => n.node_id === node.parent_id);
-            while (curr) {
+            let depth = 0;
+            while (curr && depth < 20) {
                 if (curr.node_id === parentId) return true;
                 curr = treeNodes.find(n => n.node_id === curr.parent_id);
+                depth++;
             }
             return false;
         }
@@ -382,10 +382,10 @@ export async function initRegionsEngine(containerId) {
 
             if (polygonLayerGroup) map.removeLayer(polygonLayerGroup);
             polygonLayerGroup = window.L.featureGroup();
-            activeLayerGroup = window.L.featureGroup(); // Isolate active bounds
+            activeLayerGroup = window.L.featureGroup(); // Isolates the active region for zooming
             layerMapByNodeId.clear();
 
-            // NEIGHBOR CONTEXT ENGINE: Render ALL countries to provide neighborhood base layer
+            // TRUE GHOSTING LOGIC: Passes ALL available countries into Leaflet
             let mapNodes = treeNodes.filter(n => {
                 if (!n.dynamic_config_payload || !n.dynamic_config_payload.geojson) return false;
                 if (n.node_level === 'country') return true; 
@@ -399,21 +399,20 @@ export async function initRegionsEngine(containerId) {
                     let polyColor = getDistinctColor(n.node_name);
                     let formattedName = toTitleCase(n.node_name);
                     
-                    // Ghost inactive neighbors with muted opacity/borders
+                    // Applies strong styling to active nodes, and fades neighbors to 15% opacity
                     let styleOptions = isActive 
-                        ? { color: '#D35400', weight: 0.5, fillColor: polyColor, fillOpacity: 0.85 } 
+                        ? { color: '#D35400', weight: 0.8, fillColor: polyColor, fillOpacity: 0.85 } 
                         : { color: '#94a3b8', weight: 0.3, fillColor: polyColor, fillOpacity: 0.15 };
-                    
+                        
                     let l = window.L.geoJSON(geom, { style: styleOptions });
                     
                     l.bindTooltip(formattedName, { sticky: true, className: 'region-label-hover' });
                     polygonLayerGroup.addLayer(l);
                     
-                    if (isActive) activeLayerGroup.addLayer(l); // Used for tight zoom calculation
-                    
+                    if (isActive) activeLayerGroup.addLayer(l); 
                     layerMapByNodeId.set(n.node_id, l);
 
-                    // Dynamic Label Selection: Printed for active & neighbor countries, hidden on World/Continent view
+                    // Dynamic Labeling: Assigns larger bold labels to Active nodes, and smaller muted labels to Ghosts
                     if (n.node_level === 'country' && !isMacroView) {
                         let centerPoint = centroidOverrides[n.node_id] ? centroidOverrides[n.node_id] : l.getBounds().getCenter();
                         let labelMarker = window.L.marker(centerPoint, {
@@ -435,7 +434,7 @@ export async function initRegionsEngine(containerId) {
             });
 
             setTimeout(() => {
-                map.invalidateSize(true);
+                map.invalidateSize(false);
                 if (polygonLayerGroup.getLayers().length > 0) {
                     polygonLayerGroup.addTo(map); 
                     
@@ -449,12 +448,11 @@ export async function initRegionsEngine(containerId) {
                     } else if (strictBounds[nodeId]) {
                         targetBounds = window.L.latLngBounds(strictBounds[nodeId][0], strictBounds[nodeId][1]);
                     } else {
-                        // Dynamically pull bounds from active nodes only, ignoring ghosted neighbors
+                        // The engine zooms ONLY to the active layer, leaving ghosts out on the 20% periphery
                         targetBounds = activeLayerGroup.getBounds();
                     }
                     
                     let appliedPadding = nodeId === 'GLOBAL' ? [mapDom.clientWidth * 0.05, mapDom.clientHeight * 0.05] : [padX, padY];
-                    
                     map.fitBounds(targetBounds, { padding: appliedPadding, animate: false });
                 }
             }, 50);
