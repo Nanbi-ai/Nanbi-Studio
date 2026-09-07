@@ -227,22 +227,55 @@ export async function initRegionsEngine(containerId) {
             return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
         }
 
+        // ==========================================
+        // CURATED PASTEL PALETTE ENGINE
+        // ==========================================
         function getDistinctColor(name) {
-            // Anchor India explicitly in Premium Saffron
-            if (name.toLowerCase() === 'india') return '#FF9933'; 
+            const key = name.toLowerCase().trim();
+            
+            // 1. Explicit Anchors from Reference Image
+            const anchorColors = {
+                'india': '#FF9933', // Premium Saffron
+                'russia': '#FCD55A', // Soft Yellow
+                'china': '#F47E99', // Rose Pink
+                'canada': '#59C3C3', // Pastel Teal
+                'united states of america': '#C7E07E', // Mint Green
+                'united states': '#C7E07E',
+                'australia': '#9B7EDE', // Lilac
+                'brazil': '#F47E99', // Rose Pink
+                'greenland': '#4DBEEA', // Sky Blue
+                'kazakhstan': '#9B7EDE', // Lilac
+                'algeria': '#FCD55A', // Soft Yellow
+                'sudan': '#4DBEEA', // Sky Blue
+                'argentina': '#C7E07E', // Mint Green
+                'iran': '#59C3C3', // Pastel Teal
+                'iraq': '#FCD55A', // Soft Yellow (explicitly prevents clash with Iran)
+                'pakistan': '#C7E07E' // Mint Green
+            };
 
+            if (anchorColors[key]) return anchorColors[key];
+
+            // 2. Curated Array for all remaining countries
+            const curatedPalette = [
+                '#F47E99', // Rose Pink
+                '#FCD55A', // Soft Yellow
+                '#59C3C3', // Pastel Teal
+                '#C7E07E', // Mint Green
+                '#9B7EDE', // Lilac
+                '#4DBEEA', // Sky Blue
+                '#FFB5A7', // Peach
+                '#FDE173', // Light Lemon
+                '#74C7D5'  // Aqua
+            ];
+
+            // 3. Golden Angle Distribution
             let hash = 0;
-            for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-            
-            let hue = Math.abs(hash % 360);
-            
-            // Shift competing warm colors (oranges/yellows) to complementary cool tones (teals/blues)
-            // This guarantees the Saffron highlight remains distinct and premium
-            if (hue >= 15 && hue <= 55) {
-                hue = (hue + 180) % 360;
+            for (let i = 0; i < name.length; i++) {
+                hash = name.charCodeAt(i) + ((hash << 5) - hash);
             }
             
-            return `hsl(${hue}, 65%, 55%)`;
+            let index = Math.abs(Math.floor(hash * 137.508)) % curatedPalette.length;
+            return curatedPalette[index];
         }
 
         if (!window.L) {
@@ -403,6 +436,10 @@ export async function initRegionsEngine(containerId) {
                 return n.node_id === nodeId || isDescendant(n, nodeId);
             });
 
+            // Set specific opacities based on active theme to prevent Dark Mode shattering
+            let activeOpacity = isDark ? 0.80 : 0.95;
+            let ghostOpacity = isDark ? 0.20 : 0.15;
+
             mapNodes.forEach(n => {
                 try {
                     let isActive = (nodeId === 'GLOBAL') || (n.node_id === nodeId || isDescendant(n, nodeId));
@@ -411,8 +448,8 @@ export async function initRegionsEngine(containerId) {
                     let formattedName = toTitleCase(n.node_name);
                     
                     let styleOptions = isActive 
-                        ? { color: '#D35400', weight: 0.8, fillColor: polyColor, fillOpacity: 0.85 } 
-                        : { color: '#94a3b8', weight: 0.3, fillColor: polyColor, fillOpacity: 0.15 };
+                        ? { color: '#D35400', weight: 0.8, fillColor: polyColor, fillOpacity: activeOpacity } 
+                        : { color: '#94a3b8', weight: 0.3, fillColor: polyColor, fillOpacity: ghostOpacity };
                         
                     let l = window.L.geoJSON(geom, { style: styleOptions });
                     
@@ -457,7 +494,6 @@ export async function initRegionsEngine(containerId) {
                     } else if (strictBounds[nodeId]) {
                         targetBounds = window.L.latLngBounds(strictBounds[nodeId][0], strictBounds[nodeId][1]);
                     } else {
-                        // The engine zooms ONLY to the active layer, leaving ghosts out on the 20% periphery
                         targetBounds = activeLayerGroup.getBounds();
                     }
                     
