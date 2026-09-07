@@ -35,16 +35,22 @@ export async function initRegionsEngine(containerId) {
                 .dark-map-tiles .leaflet-tile-pane { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
                 
                 /* POLYGON HOVER EFFECT */
-                #regions-module path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s; outline: none; }
+                #regions-module path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s, stroke 0.2s; outline: none; }
                 #regions-module path.leaflet-interactive:hover { stroke: #D35400 !important; stroke-width: 1.5px !important; fill-opacity: 0.95 !important; cursor: pointer; }
                 
-                /* REFINED COUNTRY LABELS: Medium weight, clean white outline */
+                /* PERMANENT REGION LABELS */
                 .region-label { 
                     background: transparent !important; border: none !important; box-shadow: none !important; 
                     font-weight: 600; font-size: 11px; color: #0f172a; 
                     text-shadow: 1px 1px 1.5px rgba(255,255,255,0.9), -1px -1px 1.5px rgba(255,255,255,0.9), 1px -1px 1.5px rgba(255,255,255,0.9), -1px 1px 1.5px rgba(255,255,255,0.9); 
                     text-align: center; margin: 0; padding: 0;
                     pointer-events: none; white-space: nowrap;
+                }
+
+                /* HOVER TOOLTIPS */
+                .region-label-hover { 
+                    background: rgba(255,255,255,0.95) !important; border: 1px solid #cbd5e1 !important; border-radius: 4px;
+                    font-weight: 700; font-size: 11px; color: #0f172a; 
                 }
                 
                 #regions-module ::-webkit-scrollbar { width: 6px; }
@@ -193,12 +199,21 @@ export async function initRegionsEngine(containerId) {
         let treeNodes = [];
         let layerMapByNodeId = new Map();
 
-        // UTILITY: Converts uppercase DB strings to clean Title Case
+        // MANUAL CENTROID OVERRIDES FOR MULTI-POLYGONS (Fixes floating ocean labels)
+        const centroidOverrides = {
+            'IND': [22.5, 79.0],   // Central India mainland
+            'USA': [39.8, -98.5],  // Central USA
+            'FRA': [46.2, 2.2],    // Mainland France
+            'GBR': [53.0, -1.5],   // Mainland UK
+            'CAN': [56.1, -106.3], // Central Canada
+            'RUS': [61.5, 105.3],  // Central Russia
+            'AUS': [-25.2, 133.7]  // Central Australia
+        };
+
         function toTitleCase(str) {
             return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
         }
 
-        // RETUNED: Deeper, richer colors with greater variation
         function getDistinctColor(name) {
             let hash = 0;
             for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -281,6 +296,7 @@ export async function initRegionsEngine(containerId) {
 
         function applyGlobalSelection(nodeId) {
             const activeNode = treeNodes.find(n => n.node_id === nodeId) || { node_id: 'GLOBAL', node_name: 'World', node_level: 'root' };
+            const isMacroView = (nodeId === 'GLOBAL' || activeNode.node_level === 'continent');
 
             // 1. SYNC DROPDOWNS
             const lineage = getLineage(nodeId);
@@ -351,44 +367,58 @@ export async function initRegionsEngine(containerId) {
                 try {
                     let geom = n.dynamic_config_payload.geojson;
                     let polyColor = getDistinctColor(n.node_name);
+                    let formattedName = toTitleCase(n.node_name);
                     
                     let l = window.L.geoJSON(geom, { 
                         style: { 
-                            color: '#D35400', // Nanbi Orange stroke for EVERY boundary
-                            weight: 0.4,      // 1/3rd thickness (hairline border)
+                            color: '#D35400', 
+                            weight: 0.4,      
                             fillColor: polyColor, 
                             fillOpacity: 0.85 
                         } 
                     });
                     
-                    // ONLY print labels for Countries
-                    if (n.node_level === 'country') {
-                        let formattedName = toTitleCase(n.node_name);
-                        l.bindTooltip(formattedName, { 
-                            permanent: true, 
-                            direction: 'center', 
-                            className: 'region-label' 
+                    // Always show clean tooltip on hover
+                    l.bindTooltip(formattedName, { sticky: true, className: 'region-label-hover' });
+                    
+                    polygonLayerGroup.addLayer(l);
+                    layerMapByNodeId.set(n.node_id, l);
+
+                    // INDEPENDENT MARKER RENDERER (Suppressed on Macro Views)
+                    if (n.node_level === 'country' && !isMacroView) {
+                        let centerPoint;
+                        if (centroidOverrides[n.node_id]) {
+                            centerPoint = centroidOverrides[n.node_id];
+                        } else {
+                            centerPoint = l.getBounds().getCenter();
+                        }
+
+                        let labelMarker = window.L.marker(centerPoint, {
+                            icon: window.L.divIcon({
+                                className: 'region-label',
+                                html: formattedName,
+                                iconSize: [150, 20],
+                                iconAnchor: [75, 10]
+                            }),
+                            interactive: false
                         });
+                        polygonLayerGroup.addLayer(labelMarker);
                     }
                     
                     l.node_id = n.node_id; 
                     l.on('click', () => applyGlobalSelection(n.node_id));
-                    polygonLayerGroup.addLayer(l);
-                    layerMapByNodeId.set(n.node_id, l);
+                    
                 } catch(e) {}
             });
 
             setTimeout(() => {
                 map.invalidateSize(true);
                 if (polygonLayerGroup.getLayers().length > 0) {
-                    polygonLayerGroup.addTo(map);
-                    
                     if (nodeId === 'GLOBAL') {
                         let boundsGroup = window.L.featureGroup();
                         polygonLayerGroup.eachLayer(layer => {
                             if (layer.node_id !== 'ATA' && layer.node_id !== 'AN') { boundsGroup.addLayer(layer); }
                         });
-                        
                         if (boundsGroup.getLayers().length > 0) {
                             map.fitBounds(boundsGroup.getBounds(), { padding: [15, 15], animate: true });
                         } else {
@@ -401,7 +431,6 @@ export async function initRegionsEngine(containerId) {
             }, 100);
         }
 
-        // Dropdown -> Engine Event Handlers
         function setupDropdownListeners() {
             ['selContinent', 'selSubContinent', 'selCountry', 'selState', 'selDistrict', 'selTaluk'].forEach(id => {
                 container.querySelector(`#${id}`).addEventListener('change', (e) => {
