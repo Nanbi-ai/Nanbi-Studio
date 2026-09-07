@@ -382,10 +382,10 @@ export async function initRegionsEngine(containerId) {
 
             if (polygonLayerGroup) map.removeLayer(polygonLayerGroup);
             polygonLayerGroup = window.L.featureGroup();
-            activeLayerGroup = window.L.featureGroup(); 
+            activeLayerGroup = window.L.featureGroup(); // Isolates the active region for zooming
             layerMapByNodeId.clear();
 
-            // PERFECT GHOSTING: Forces ALL countries to load into the base map array
+            // TRUE GHOSTING LOGIC: Passes ALL available countries into Leaflet
             let mapNodes = treeNodes.filter(n => {
                 if (!n.dynamic_config_payload || !n.dynamic_config_payload.geojson) return false;
                 if (n.node_level === 'country') return true; 
@@ -399,7 +399,7 @@ export async function initRegionsEngine(containerId) {
                     let polyColor = getDistinctColor(n.node_name);
                     let formattedName = toTitleCase(n.node_name);
                     
-                    // Dual-Style Logic: Active nodes get full opacity/border, ghosts fade into the background
+                    // Applies strong styling to active nodes, and fades neighbors to 15% opacity
                     let styleOptions = isActive 
                         ? { color: '#D35400', weight: 0.8, fillColor: polyColor, fillOpacity: 0.85 } 
                         : { color: '#94a3b8', weight: 0.3, fillColor: polyColor, fillOpacity: 0.15 };
@@ -412,7 +412,7 @@ export async function initRegionsEngine(containerId) {
                     if (isActive) activeLayerGroup.addLayer(l); 
                     layerMapByNodeId.set(n.node_id, l);
 
-                    // Dynamic Labeling logic safely triggers for both Active and Ghost nodes when zoomed in
+                    // Dynamic Labeling: Assigns larger bold labels to Active nodes, and smaller muted labels to Ghosts
                     if (n.node_level === 'country' && !isMacroView) {
                         let centerPoint = centroidOverrides[n.node_id] ? centroidOverrides[n.node_id] : l.getBounds().getCenter();
                         let labelMarker = window.L.marker(centerPoint, {
@@ -448,12 +448,8 @@ export async function initRegionsEngine(containerId) {
                     } else if (strictBounds[nodeId]) {
                         targetBounds = window.L.latLngBounds(strictBounds[nodeId][0], strictBounds[nodeId][1]);
                     } else {
-                        // Crucial for 80% fit: The map zooms exclusively onto the ACTIVE node's bounds, ignoring the ghost layer.
-                        if (activeLayerGroup.getLayers().length > 0) {
-                            targetBounds = activeLayerGroup.getBounds();
-                        } else {
-                            targetBounds = polygonLayerGroup.getBounds();
-                        }
+                        // The engine zooms ONLY to the active layer, leaving ghosts out on the 20% periphery
+                        targetBounds = activeLayerGroup.getBounds();
                     }
                     
                     let appliedPadding = nodeId === 'GLOBAL' ? [mapDom.clientWidth * 0.05, mapDom.clientHeight * 0.05] : [padX, padY];
