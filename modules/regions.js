@@ -196,16 +196,16 @@ export async function initRegionsEngine(containerId) {
 
        // STRICT ANCHORS: Perfects Continent framing & prevents stretching to overseas islands
         const strictBounds = {
-            'EU': [[34.0, -25.0], [75.0, 65.0]],     // Expanded to include Iceland & Western Russia
-            'AS': [[-11.0, 25.0], [80.0, 180.0]],    // Expanded to perfectly frame the Middle East & Chukotka
-            'AF': [[-35.0, -20.0], [38.0, 55.0]],    // Africa (Perfect)
-            'NO': [[5.0, -170.0], [84.0, -10.0]],    // Expanded to encompass all of Alaska & Greenland
-            'SO': [[-56.0, -85.0], [15.0, -35.0]],   // South America (Perfect)
-            'OC': [[-50.0, 110.0], [10.0, 180.0]],   // Oceania (Perfect)
-            'USA': [[24.0, -170.0], [72.0, -65.0]],  // Expanded to include Alaska
-            'RUS': [[41.0, 19.0], [82.0, 180.0]],    // Safely caps at Longitude 180 to prevent wrap-around loops
-            'FRA': [[41.0, -5.0], [51.0, 10.0]],     // Mainland France only
-            'GBR': [[49.0, -8.0], [61.0, 2.0]]       // Mainland UK only
+            'EU': [[34.0, -25.0], [75.0, 65.0]],     
+            'AS': [[-11.0, 26.0], [55.0, 150.0]],    // FIXED: Tightly frames Asia (excluding Russia which is in Europe)
+            'AF': [[-35.0, -20.0], [38.0, 55.0]],    
+            'NO': [[5.0, -170.0], [84.0, -10.0]],    
+            'SO': [[-56.0, -85.0], [15.0, -35.0]],   
+            'OC': [[-50.0, 110.0], [10.0, 180.0]],   
+            'USA': [[24.0, -170.0], [72.0, -65.0]],  
+            'RUS': [[41.0, 19.0], [82.0, 180.0]],    
+            'FRA': [[41.0, -5.0], [51.0, 10.0]],     
+            'GBR': [[49.0, -8.0], [61.0, 2.0]]       
         };
 
         // Center anchors for specific countries
