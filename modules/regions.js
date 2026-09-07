@@ -228,9 +228,21 @@ export async function initRegionsEngine(containerId) {
         }
 
         function getDistinctColor(name) {
+            // Anchor India explicitly in Premium Saffron
+            if (name.toLowerCase() === 'india') return '#FF9933'; 
+
             let hash = 0;
             for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-            return `hsl(${Math.abs(hash % 360)}, 70%, 55%)`;
+            
+            let hue = Math.abs(hash % 360);
+            
+            // Shift competing warm colors (oranges/yellows) to complementary cool tones (teals/blues)
+            // This guarantees the Saffron highlight remains distinct and premium
+            if (hue >= 15 && hue <= 55) {
+                hue = (hue + 180) % 360;
+            }
+            
+            return `hsl(${hue}, 65%, 55%)`;
         }
 
         if (!window.L) {
@@ -382,10 +394,9 @@ export async function initRegionsEngine(containerId) {
 
             if (polygonLayerGroup) map.removeLayer(polygonLayerGroup);
             polygonLayerGroup = window.L.featureGroup();
-            activeLayerGroup = window.L.featureGroup(); // Isolates the active region for zooming
+            activeLayerGroup = window.L.featureGroup(); 
             layerMapByNodeId.clear();
 
-            // TRUE GHOSTING LOGIC: Passes ALL available countries into Leaflet
             let mapNodes = treeNodes.filter(n => {
                 if (!n.dynamic_config_payload || !n.dynamic_config_payload.geojson) return false;
                 if (n.node_level === 'country') return true; 
@@ -399,7 +410,6 @@ export async function initRegionsEngine(containerId) {
                     let polyColor = getDistinctColor(n.node_name);
                     let formattedName = toTitleCase(n.node_name);
                     
-                    // Applies strong styling to active nodes, and fades neighbors to 15% opacity
                     let styleOptions = isActive 
                         ? { color: '#D35400', weight: 0.8, fillColor: polyColor, fillOpacity: 0.85 } 
                         : { color: '#94a3b8', weight: 0.3, fillColor: polyColor, fillOpacity: 0.15 };
@@ -412,7 +422,6 @@ export async function initRegionsEngine(containerId) {
                     if (isActive) activeLayerGroup.addLayer(l); 
                     layerMapByNodeId.set(n.node_id, l);
 
-                    // Dynamic Labeling: Assigns larger bold labels to Active nodes, and smaller muted labels to Ghosts
                     if (n.node_level === 'country' && !isMacroView) {
                         let centerPoint = centroidOverrides[n.node_id] ? centroidOverrides[n.node_id] : l.getBounds().getCenter();
                         let labelMarker = window.L.marker(centerPoint, {
