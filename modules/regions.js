@@ -394,7 +394,7 @@ export async function initRegionsEngine(containerId) {
 
             mapNodes.forEach(n => {
                 try {
-                    let isActive = (nodeId !== 'GLOBAL') && (n.node_id === nodeId || isDescendant(n, nodeId));
+                    let isActive = (nodeId === 'GLOBAL') || (n.node_id === nodeId || isDescendant(n, nodeId));
                     let geom = n.dynamic_config_payload.geojson;
                     let polyColor = getDistinctColor(n.node_name);
                     let formattedName = toTitleCase(n.node_name);
