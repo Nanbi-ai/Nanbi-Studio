@@ -228,129 +228,80 @@ export async function initRegionsEngine(containerId) {
         }
 
         // =========================================================================================
-        // EXACT VECTEEZY COLOR MAPPING: Direct 1-to-1 match to avoid math-based visual clashing
+        // COMPREHENSIVE VECTEEZY COLOR MAPPING: 100% Hardcoded to bypass algorithmic errors
         // =========================================================================================
         function getDistinctColor(name) {
             const key = name.toLowerCase().trim();
             
-            // Explicitly mapped to the exact hex values from your reference image
+            const C_SAFFRON = '#FF9933';
+            const C_YELLOW  = '#FCD55A';
+            const C_PINK    = '#F47E99';
+            const C_TEAL    = '#59C3C3';
+            const C_GREEN   = '#C7E07E';
+            const C_LILAC   = '#9B7EDE';
+            const C_BLUE    = '#4DBEEA';
+
             const exactMapColors = {
-                'india': '#FF9933', // User explicitly requested Saffron
-                
-                // North America
-                'canada': '#59C3C3', 
-                'united states of america': '#C7E07E', 'united states': '#C7E07E', 
-                'mexico': '#F47E99', 
-                'greenland': '#4DBEEA', 
-                'cuba': '#9B7EDE', 
+                // Saffron Anchor
+                'india': C_SAFFRON, 
 
-                // South America
-                'brazil': '#F47E99', 
-                'argentina': '#C7E07E', 
-                'chile': '#FCD55A', 
-                'peru': '#9B7EDE', 
-                'bolivia': '#59C3C3', 'bolivia (plurinational state of)': '#59C3C3', 
-                'paraguay': '#FCD55A', 
-                'uruguay': '#59C3C3', 
-                'colombia': '#59C3C3', 
-                'venezuela': '#4DBEEA', 'venezuela (bolivarian republic of)': '#4DBEEA', 
-                'ecuador': '#F47E99', 
-                'guyana': '#C7E07E', 
+                // The Yellows
+                'russia': C_YELLOW, 'russian federation': C_YELLOW, 'algeria': C_YELLOW, 'angola': C_YELLOW, 
+                'saudi arabia': C_YELLOW, 'kazakhstan': C_YELLOW, 'spain': C_YELLOW, 'tanzania': C_YELLOW, 
+                'united republic of tanzania': C_YELLOW, 'ethiopia': C_YELLOW, 'peru': C_YELLOW, 'chile': C_YELLOW, 
+                'papua new guinea': C_YELLOW, 'iraq': C_YELLOW, 'malaysia': C_YELLOW, 'sweden': C_YELLOW, 
+                'romania': C_YELLOW, 'slovakia': C_YELLOW, 'slovenia': C_YELLOW, 'tajikistan': C_YELLOW, 
+                'qatar': C_YELLOW, 'fiji': C_YELLOW, 'ivory coast': C_YELLOW, 'côte d\'ivoire': C_YELLOW, 
+                'rwanda': C_YELLOW, 'burundi': C_YELLOW, 'zimbabwe': C_YELLOW,
 
-                // Europe
-                'russia': '#FCD55A', 'russian federation': '#FCD55A', 
-                'ukraine': '#4DBEEA', 
-                'poland': '#F47E99', 
-                'germany': '#C7E07E', 
-                'france': '#4DBEEA', 
-                'spain': '#FCD55A', 
-                'portugal': '#C7E07E', 
-                'italy': '#59C3C3', 
-                'united kingdom': '#F47E99', 'united kingdom of great britain and northern ireland': '#F47E99', 
-                'ireland': '#C7E07E', 
-                'norway': '#F47E99', 
-                'sweden': '#FCD55A', 
-                'finland': '#C7E07E', 
-                'belarus': '#59C3C3', 
-                'romania': '#FCD55A', 
-                'greece': '#F47E99', 
-                'iceland': '#F47E99', 
+                // The Pinks
+                'china': C_PINK, 'brazil': C_PINK, 'mexico': C_PINK, 'libya': C_PINK, 'western sahara': C_PINK, 
+                'namibia': C_PINK, 'kenya': C_PINK, 'iceland': C_PINK, 'norway': C_PINK, 'poland': C_PINK, 
+                'greece': C_PINK, 'vietnam': C_PINK, 'viet nam': C_PINK, 'south korea': C_PINK, 
+                'republic of korea': C_PINK, 'turkmenistan': C_PINK, 'central african republic': C_PINK, 
+                'ecuador': C_PINK, 'senegal': C_PINK, 'gabon': C_PINK, 'eritrea': C_PINK, 'austria': C_PINK, 
+                'latvia': C_PINK, 'serbia': C_PINK, 'lebanon': C_PINK, 'taiwan': C_PINK, 'turkey': C_PINK, 
+                'türkiye': C_PINK, 'yemen': C_PINK,
 
-                // Asia & Middle East
-                'china': '#F47E99', 
-                'kazakhstan': '#9B7EDE', 
-                'mongolia': '#9B7EDE', 
-                'saudi arabia': '#FCD55A', 
-                'iran': '#59C3C3', 'iran (islamic republic of)': '#59C3C3', 
-                'iraq': '#9B7EDE', 
-                'pakistan': '#C7E07E', 
-                'afghanistan': '#4DBEEA', 
-                'turkey': '#F47E99', 'türkiye': '#F47E99', 
-                'syria': '#C7E07E', 'syrian arab republic': '#C7E07E', 
-                'yemen': '#F47E99', 
-                'oman': '#C7E07E', 
-                'indonesia': '#4DBEEA', 
-                'malaysia': '#FCD55A', 
-                'thailand': '#9B7EDE', 
-                'myanmar': '#59C3C3', 
-                'vietnam': '#F47E99', 'viet nam': '#F47E99', 
-                'philippines': '#C7E07E', 
-                'japan': '#C7E07E', 
-                'south korea': '#F47E99', 'republic of korea': '#F47E99', 
-                'north korea': '#59C3C3', 'democratic people\'s republic of korea': '#59C3C3', 
-                'uzbekistan': '#C7E07E', 
-                'turkmenistan': '#F47E99', 
+                // The Teals
+                'canada': C_TEAL, 'iran': C_TEAL, 'iran (islamic republic of)': C_TEAL, 
+                'democratic republic of the congo': C_TEAL, 'madagascar': C_TEAL, 'somalia': C_TEAL, 'niger': C_TEAL, 
+                'botswana': C_TEAL, 'uruguay': C_TEAL, 'colombia': C_TEAL, 'bolivia': C_TEAL, 
+                'bolivia (plurinational state of)': C_TEAL, 'italy': C_TEAL, 'belarus': C_TEAL, 'north korea': C_TEAL, 
+                'democratic people\'s republic of korea': C_TEAL, 'myanmar': C_TEAL, 'honduras': C_TEAL, 
+                'haiti': C_TEAL, 'guinea': C_TEAL, 'mozambique': C_TEAL, 'djibouti': C_TEAL, 'belgium': C_TEAL, 
+                'lithuania': C_TEAL, 'bosnia and herzegovina': C_TEAL, 'croatia': C_TEAL, 'nepal': C_TEAL, 
+                'united arab emirates': C_TEAL, 'cyprus': C_TEAL, 'vanuatu': C_TEAL, 'mali': C_TEAL,
 
-                // Africa
-                'algeria': '#FCD55A', 
-                'libya': '#F47E99', 
-                'egypt': '#4DBEEA', 
-                'sudan': '#9B7EDE', 
-                'chad': '#C7E07E', 
-                'niger': '#59C3C3', 
-                'mali': '#F47E99', 
-                'mauritania': '#4DBEEA', 
-                'morocco': '#C7E07E', 
-                'nigeria': '#9B7EDE', 
-                'cameroon': '#59C3C3', 
-                'central african republic': '#F47E99', 
-                'democratic republic of the congo': '#59C3C3', 'congo': '#C7E07E', 
-                'angola': '#FCD55A', 
-                'zambia': '#C7E07E', 
-                'namibia': '#F47E99', 
-                'botswana': '#59C3C3', 
-                'south africa': '#C7E07E', 
-                'madagascar': '#59C3C3', 
-                'tanzania': '#FCD55A', 'united republic of tanzania': '#FCD55A', 
-                'kenya': '#F47E99', 
-                'ethiopia': '#FCD55A', 
-                'somalia': '#59C3C3', 
+                // The Mint Greens
+                'united states': C_GREEN, 'united states of america': C_GREEN, 'argentina': C_GREEN, 'chad': C_GREEN, 
+                'morocco': C_GREEN, 'south africa': C_GREEN, 'zambia': C_GREEN, 'oman': C_GREEN, 'syria': C_GREEN, 
+                'syrian arab republic': C_GREEN, 'pakistan': C_GREEN, 'philippines': C_GREEN, 'japan': C_GREEN, 
+                'uzbekistan': C_GREEN, 'germany': C_GREEN, 'portugal': C_GREEN, 'finland': C_GREEN, 'ireland': C_GREEN, 
+                'guyana': C_GREEN, 'nicaragua': C_GREEN, 'cameroon': C_GREEN, 'congo': C_GREEN, 'uganda': C_GREEN, 
+                'burkina faso': C_GREEN, 'denmark': C_GREEN, 'hungary': C_GREEN, 'bulgaria': C_GREEN, 'georgia': C_GREEN, 
+                'azerbaijan': C_GREEN, 'sri lanka': C_GREEN, 'solomon islands': C_GREEN,
 
-                // Oceania
-                'australia': '#9B7EDE', 
-                'new zealand': '#4DBEEA', 
-                'papua new guinea': '#FCD55A' 
+                // The Lilacs
+                'australia': C_LILAC, 'nigeria': C_LILAC, 'sudan': C_LILAC, 'jordan': C_LILAC, 'mongolia': C_LILAC, 
+                'thailand': C_LILAC, 'cuba': C_LILAC, 'south sudan': C_LILAC, 'guinea-bissau': C_LILAC, 'benin': C_LILAC, 
+                'malawi': C_LILAC, 'czechia': C_LILAC, 'switzerland': C_LILAC, 'estonia': C_LILAC, 'macedonia': C_LILAC, 
+                'north macedonia': C_LILAC, 'armenia': C_LILAC, 'kyrgyzstan': C_LILAC, 'bhutan': C_LILAC, 'bahamas': C_LILAC, 
+                'jamaica': C_LILAC,
+
+                // The Sky Blues
+                'greenland': C_BLUE, 'france': C_BLUE, 'ukraine': C_BLUE, 'egypt': C_BLUE, 'mauritania': C_BLUE, 
+                'afghanistan': C_BLUE, 'indonesia': C_BLUE, 'new zealand': C_BLUE, 'venezuela': C_BLUE, 
+                'venezuela (bolivarian republic of)': C_BLUE, 'united kingdom': C_BLUE, 
+                'united kingdom of great britain and northern ireland': C_BLUE, 'ghana': C_BLUE, 'togo': C_BLUE, 
+                'lesotho': C_BLUE, 'dominican republic': C_BLUE, 'guatemala': C_BLUE, 'el salvador': C_BLUE, 
+                'costa rica': C_BLUE, 'panama': C_BLUE, 'netherlands': C_BLUE, 'moldova': C_BLUE, 'albania': C_BLUE, 
+                'kuwait': C_BLUE, 'israel': C_BLUE, 'bangladesh': C_BLUE, 'laos': C_BLUE, 'samoa': C_BLUE, 
+                'paraguay': C_YELLOW // Fix for Paraguay clash
             };
 
-            if (exactMapColors[key]) return exactMapColors[key];
-
-            // Curated fallback palette for smaller unmapped island nations 
-            const curatedPalette = [
-                '#F47E99', // Rose Pink
-                '#FCD55A', // Soft Yellow
-                '#59C3C3', // Pastel Teal
-                '#C7E07E', // Mint Green
-                '#9B7EDE', // Lilac
-                '#4DBEEA'  // Sky Blue
-            ];
-
-            let hash = 0;
-            for (let i = 0; i < name.length; i++) {
-                hash = name.charCodeAt(i) + ((hash << 5) - hash);
-            }
-            
-            let index = Math.abs(Math.floor(hash * 137.508)) % curatedPalette.length;
-            return curatedPalette[index];
+            // Return the exact mapped color, or a safe Mint Green fallback for unmapped micro-nations
+            return exactMapColors[key] || C_GREEN;
         }
 
         if (!window.L) {
@@ -511,7 +462,7 @@ export async function initRegionsEngine(containerId) {
                 return n.node_id === nodeId || isDescendant(n, nodeId);
             });
 
-            // Adjust opacity dynamically to prevent Dark Mode colors from shattering against black
+            // Opacity is slightly reduced in Dark Mode to ensure colors glow without shattering
             let activeOpacity = isDark ? 0.75 : 0.95;
             let ghostOpacity = isDark ? 0.15 : 0.15;
 
