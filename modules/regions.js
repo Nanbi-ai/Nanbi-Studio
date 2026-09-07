@@ -27,23 +27,24 @@ export async function initRegionsEngine(containerId) {
                 #regions-module td { text-align: left; border-bottom: 1px solid var(--border); color: var(--text); font-weight: 600; font-size: 11px; padding: 10px; }
                 #regions-module .row-active { background-color: var(--hover-bg) !important; border-left: 4px solid var(--brand-orange-dark) !important; } 
                 
-                /* MAP CONTAINER: Forced absolute sizing to fix Edge browser collapsing */
+                /* MAP CONTAINER */
                 #regions-module #map-wrapper { position: relative; width: 100%; height: 100%; min-height: 250px; border-radius: 5px; background-color: var(--card); overflow: hidden; }
                 #regions-module #map { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
                 
                 /* DARK MODE INVERSION */
                 .dark-map-tiles .leaflet-tile-pane { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
                 
-                /* POLYGON HOVER EFFECT: Thin Nanbi Orange Line */
-                #regions-module path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s, stroke 0.2s; outline: none; }
+                /* POLYGON HOVER EFFECT */
+                #regions-module path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s; outline: none; }
                 #regions-module path.leaflet-interactive:hover { stroke: #D35400 !important; stroke-width: 1.5px !important; fill-opacity: 0.95 !important; cursor: pointer; }
                 
-                /* CENTERED SHORT-ID LABELS: Highly readable slate text with strong white outline */
+                /* REFINED COUNTRY LABELS: Medium weight, clean white outline */
                 .region-label { 
                     background: transparent !important; border: none !important; box-shadow: none !important; 
-                    font-weight: 800; font-size: 10px; color: #0f172a; 
+                    font-weight: 600; font-size: 11px; color: #0f172a; 
                     text-shadow: 1px 1px 1.5px rgba(255,255,255,0.9), -1px -1px 1.5px rgba(255,255,255,0.9), 1px -1px 1.5px rgba(255,255,255,0.9), -1px 1px 1.5px rgba(255,255,255,0.9); 
                     text-align: center; margin: 0; padding: 0;
+                    pointer-events: none; white-space: nowrap;
                 }
                 
                 #regions-module ::-webkit-scrollbar { width: 6px; }
@@ -192,11 +193,16 @@ export async function initRegionsEngine(containerId) {
         let treeNodes = [];
         let layerMapByNodeId = new Map();
 
-        // RETUNED: Subtle, muted pastel colors
+        // UTILITY: Converts uppercase DB strings to clean Title Case
+        function toTitleCase(str) {
+            return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        }
+
+        // RETUNED: Deeper, richer colors with greater variation
         function getDistinctColor(name) {
             let hash = 0;
             for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-            return `hsl(${Math.abs(hash % 360)}, 50%, 75%)`;
+            return `hsl(${Math.abs(hash % 360)}, 70%, 55%)`;
         }
 
         // Initialize Map
@@ -218,7 +224,6 @@ export async function initRegionsEngine(containerId) {
             container.querySelector('#map').classList.add('dark-map-tiles');
         }
 
-        // AGGRESSIVE RESIZE OBSERVER (Edge Browser Fix)
         const resizeObs = new ResizeObserver(() => {
             if (map) requestAnimationFrame(() => map.invalidateSize(true));
         });
@@ -346,23 +351,27 @@ export async function initRegionsEngine(containerId) {
                 try {
                     let geom = n.dynamic_config_payload.geojson;
                     let polyColor = getDistinctColor(n.node_name);
-                    let isSelected = (n.node_id === nodeId && nodeId !== 'GLOBAL');
                     
                     let l = window.L.geoJSON(geom, { 
                         style: { 
-                            color: isSelected ? '#D35400' : '#ffffff', // Highlight specific boundary with Orange
-                            weight: isSelected ? 2 : 1, 
+                            color: '#D35400', // Nanbi Orange stroke for EVERY boundary
+                            weight: 0.4,      // 1/3rd thickness (hairline border)
                             fillColor: polyColor, 
-                            fillOpacity: 0.9 
+                            fillOpacity: 0.85 
                         } 
                     });
                     
-                    // Center the Short Code permanently on the shape
-                    l.bindTooltip(n.node_id, { permanent: true, direction: 'center', className: 'region-label' });
+                    // ONLY print labels for Countries
+                    if (n.node_level === 'country') {
+                        let formattedName = toTitleCase(n.node_name);
+                        l.bindTooltip(formattedName, { 
+                            permanent: true, 
+                            direction: 'center', 
+                            className: 'region-label' 
+                        });
+                    }
                     
-                    // Tag layer for exclusion processing
                     l.node_id = n.node_id; 
-                    
                     l.on('click', () => applyGlobalSelection(n.node_id));
                     polygonLayerGroup.addLayer(l);
                     layerMapByNodeId.set(n.node_id, l);
@@ -375,7 +384,6 @@ export async function initRegionsEngine(containerId) {
                     polygonLayerGroup.addTo(map);
                     
                     if (nodeId === 'GLOBAL') {
-                        // Exclude Antarctica from bounds calculation to naturally zoom in on inhabited world
                         let boundsGroup = window.L.featureGroup();
                         polygonLayerGroup.eachLayer(layer => {
                             if (layer.node_id !== 'ATA' && layer.node_id !== 'AN') { boundsGroup.addLayer(layer); }
