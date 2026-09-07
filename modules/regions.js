@@ -394,15 +394,15 @@ export async function initRegionsEngine(containerId) {
 
             mapNodes.forEach(n => {
                 try {
-                    let isActive = (nodeId === 'GLOBAL') || (n.node_id === nodeId || isDescendant(n, nodeId));
+                    let isActive = (nodeId !== 'GLOBAL') && (n.node_id === nodeId || isDescendant(n, nodeId));
                     let geom = n.dynamic_config_payload.geojson;
                     let polyColor = getDistinctColor(n.node_name);
                     let formattedName = toTitleCase(n.node_name);
                     
-                    // HIGHLIGHT VS GHOST STYLING: Neighbors get clean white borders and 60% pastel fill
+                    // HIGHLIGHT VS GHOST STYLING: Active nodes pop; inactive neighbors return to subtle 25% pastel
                     let styleOptions = isActive 
                         ? { color: '#D35400', weight: 2.0, fillColor: polyColor, fillOpacity: 0.95 } 
-                        : { color: '#ffffff', weight: 0, fillColor: polyColor, fillOpacity: 0 };
+                        : { color: '#ffffff', weight: 1.0, fillColor: polyColor, fillOpacity: 0.25 };
                         
                     let l = window.L.geoJSON(geom, { style: styleOptions });
                     
