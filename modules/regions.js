@@ -17,7 +17,6 @@ export async function initRegionsEngine(containerId) {
     try {
         container.innerHTML = `
             <style>
-                /* RESPONSIVE & THEME COMPLIANT CSS */
                 #regions-module { width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden !important; box-sizing: border-box; font-family: var(--font-main); }
                 .panel-card { background-color: var(--card); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
                 
@@ -28,9 +27,12 @@ export async function initRegionsEngine(containerId) {
                 #regions-module td { text-align: left; border-bottom: 1px solid var(--border); color: var(--text); font-weight: 600; font-size: 11px; padding: 10px; }
                 #regions-module .row-active { background-color: var(--hover-bg) !important; border-left: 4px solid var(--brand-orange-dark) !important; } 
                 
-                /* ZERO-API MAP BACKGROUND: Uses native theme card color instead of external tiles */
                 #regions-module #map { position: absolute; inset: 0; border-radius: 5px; z-index: 1; background-color: var(--card); }
-                #regions-module path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s; outline: none; }
+                
+                /* ZERO-API DARK MODE: Magically inverts standard free OSM tiles into dark mode */
+                .dark-map-tiles .leaflet-tile-pane { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
+                
+                #regions-module path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s, stroke 0.2s; outline: none; }
                 #regions-module path.leaflet-interactive:hover { fill-opacity: 0.9 !important; stroke-width: 2.5px !important; stroke: var(--text) !important; cursor: pointer; }
                 
                 .id-label { background: transparent !important; border: none !important; box-shadow: none !important; font-weight: 800; font-size: 11px; color: var(--text); text-shadow: none; text-align: center; }
@@ -55,12 +57,10 @@ export async function initRegionsEngine(containerId) {
                     
                     <!-- LEFT COLUMN: MAP & DROPDOWNS -->
                     <aside class="flex-1 lg:max-w-[45%] flex flex-col h-full min-h-0 min-w-0 gap-2 z-10">
-                        <!-- Map Container (Auto-fills space) -->
                         <div class="flex-1 panel-card relative min-h-[200px]">
                             <div id="map"></div>
                         </div>
                         
-                        <!-- Dropdowns -->
                         <div class="shrink-0 panel-card p-3 shadow-sm z-20">
                             <div class="flex justify-between items-center pb-1.5 border-b border-[color:var(--border)] mb-2">
                                 <span id="geoHierarchyBreadcrumb" class="text-[11px] font-bold text-[color:var(--text)] uppercase tracking-wide">Global Root (World)</span>
@@ -79,7 +79,6 @@ export async function initRegionsEngine(containerId) {
 
                     <!-- RIGHT COLUMN: TABLE & INSPECTOR -->
                     <section class="flex-1 lg:max-w-[55%] flex flex-col h-full min-h-0 min-w-0 gap-2 relative">
-                        <!-- Stats -->
                         <div class="shrink-0 panel-card flex justify-around items-center py-2">
                             <div class="text-center w-1/2">
                                 <p class="text-[9px] font-bold text-[color:var(--muted)] uppercase tracking-widest">Filtered Nodes</p>
@@ -92,7 +91,6 @@ export async function initRegionsEngine(containerId) {
                             </div>
                         </div>
 
-                        <!-- Scrollable Table -->
                         <div class="flex-1 panel-card flex flex-col overflow-hidden min-h-0">
                             <div class="flex-1 overflow-y-auto">
                                 <table class="w-full border-collapse">
@@ -111,7 +109,6 @@ export async function initRegionsEngine(containerId) {
                             </div>
                         </div>
 
-                        <!-- Inspector -->
                         <div class="shrink-0 h-32 panel-card p-3 overflow-y-auto z-20">
                             <div class="flex justify-between items-center border-b border-[color:var(--border)] pb-1 mb-1.5">
                                 <h3 class="text-[11px] font-bold uppercase tracking-widest text-[color:var(--text)]" id="deepDiveTitle">Entity Inspector</h3>
@@ -201,9 +198,17 @@ export async function initRegionsEngine(containerId) {
         const mapEl = window.L.DomUtil.get('map');
         if (mapEl) mapEl._leaflet_id = null;
 
-        // ZERO EXTERNAL APIS: Removed tileLayer. The map relies purely on your DB GeoJSON.
         map = window.L.map('map', { zoomControl: true, attributionControl: false }).setView([20.0, 0.0], 2);
         
+        // 100% Free OpenStreetMap Base Layer
+        window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, opacity: 1 }).addTo(map);
+
+        // Apply CSS Invert Filter if App is in Dark Mode
+        const isDark = localStorage.getItem('nanbi_theme') === 'dark' || document.documentElement.classList.contains('dark') || document.body.classList.contains('dark');
+        if (isDark) {
+            container.querySelector('#map').classList.add('dark-map-tiles');
+        }
+
         new ResizeObserver(() => {
             if (map) map.invalidateSize();
         }).observe(container.querySelector('#map'));
@@ -259,9 +264,6 @@ export async function initRegionsEngine(containerId) {
             });
         }
 
-        // =======================================================================
-        // THE MASTER 3-WAY SYNCHRONIZATION ENGINE
-        // =======================================================================
         function applyGlobalSelection(nodeId) {
             const activeNode = treeNodes.find(n => n.node_id === nodeId) || { node_id: 'GLOBAL', node_name: 'World', node_level: 'root' };
 
@@ -295,7 +297,6 @@ export async function initRegionsEngine(containerId) {
                 
                 tr.onclick = () => applyGlobalSelection(node.node_id);
 
-                // FIXED: Readable Pill colors
                 tr.innerHTML = `
                     <td class="col-left border-r pl-4"><span class="bg-transparent border border-[color:var(--brand-orange-dark)] px-1.5 py-0.5 rounded font-mono text-[color:var(--brand-orange-dark)] font-bold">${node.node_id}</span></td>
                     <td class="font-bold col-left border-r">${node.node_name}</td>
@@ -305,7 +306,7 @@ export async function initRegionsEngine(containerId) {
                 tbody.appendChild(tr);
             });
 
-            // 3. UPDATE INSPECTOR (FIXED: Readable contrast)
+            // 3. UPDATE INSPECTOR
             container.querySelector('#geoHierarchyBreadcrumb').innerText = activeNode.node_name;
             container.querySelector('#deepDiveTitle').innerText = `${activeNode.node_id} — ${activeNode.node_name}`;
             container.querySelector('#deepDiveSubtitle').innerText = `Level: ${activeNode.node_level.replace('_', ' ')}`;
@@ -320,7 +321,7 @@ export async function initRegionsEngine(containerId) {
                 </div>
             `;
 
-            // 4. FILTER AND RENDER MAP (FORCE ZOOM/CENTER)
+            // 4. MAP CENTERING AND POLYGON RENDERING
             if (polygonLayerGroup) map.removeLayer(polygonLayerGroup);
             polygonLayerGroup = window.L.featureGroup();
             layerMapByNodeId.clear();
@@ -346,16 +347,16 @@ export async function initRegionsEngine(containerId) {
                 } catch(e) {}
             });
 
-            if (polygonLayerGroup.getLayers().length > 0) {
-                polygonLayerGroup.addTo(map);
-                // Guaranteed Map Centering Loop
-                setTimeout(() => {
-                    map.invalidateSize(true);
-                    map.fitBounds(polygonLayerGroup.getBounds(), { padding: [20, 20], animate: true, maxZoom: 8 });
-                }, 100);
-            } else if (nodeId === 'GLOBAL') {
-                setTimeout(() => { map.invalidateSize(true); map.setView([20.0, 0.0], 2); }, 100);
-            }
+            // Delayed rendering block guarantees container size is calculated before zooming
+            setTimeout(() => {
+                map.invalidateSize(true);
+                if (polygonLayerGroup.getLayers().length > 0) {
+                    polygonLayerGroup.addTo(map);
+                    map.fitBounds(polygonLayerGroup.getBounds(), { padding: [30, 30], animate: true, maxZoom: 7 });
+                } else if (nodeId === 'GLOBAL') {
+                    map.setView([20.0, 0.0], 2);
+                }
+            }, 150);
         }
 
         // Dropdown -> Engine Event Handlers
