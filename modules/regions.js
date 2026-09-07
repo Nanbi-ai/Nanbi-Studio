@@ -313,7 +313,7 @@ export async function initRegionsEngine(containerId) {
 
             // 3. UPDATE INSPECTOR
             container.querySelector('#geoHierarchyBreadcrumb').innerText = activeNode.node_name;
-            container.querySelector('#deepDiveTitle').innerText = `${activeNode.node_id} —${activeNode.node_name}`;
+            container.querySelector('#deepDiveTitle').innerText = `${activeNode.node_id} — ${activeNode.node_name}`;
             container.querySelector('#deepDiveSubtitle').innerText = `Level: ${activeNode.node_level.replace('_', ' ')}`;
             container.querySelector('#deepDiveContent').innerHTML = `
                 <div class="flex justify-between items-center bg-[color:var(--active-bg)] border border-[color:var(--border)] rounded p-2 shadow-sm text-[color:var(--text)]">
@@ -399,16 +399,16 @@ export async function initRegionsEngine(containerId) {
                     data.forEach(node => {
                         const div = document.createElement('div');
                         div.className = "p-2.5 rounded border border-[color:var(--border)] hover:bg-[color:var(--hover-bg)] cursor-pointer transition flex justify-between items-center";
-                        div.innerHTML = `<div><div class="font-bold text-[color:var(--text)] text-xs">${node.node_name}</div><div class="text-[9px] text-[color:var(--muted)] uppercase font-mono font-bold">${node.node_level.replace('_', ' ')} \vert{} ID:${node.node_id}</div></div><i class="fas fa-edit text-xs text-[color:var(--muted)]"></i>`;
+                        div.innerHTML = `<div><div class="font-bold text-[color:var(--text)] text-xs">${node.node_name}</div><div class="text-[9px] text-[color:var(--muted)] uppercase font-mono font-bold">${node.node_level.replace('_', ' ')} | ID: ${node.node_id}</div></div><i class="fas fa-edit text-xs text-[color:var(--muted)]"></i>`;
                         div.onclick = () => {
                             container.querySelector('#configNodeTitle').innerText = node.node_name;
-                            container.querySelector('#configNodeMeta').innerText = `Level: ${node.node_level.toUpperCase()} \vert{} ID:${node.node_id}`;
+                            container.querySelector('#configNodeMeta').innerText = `Level: ${node.node_level.toUpperCase()} | ID: ${node.node_id}`;
                             const ta = container.querySelector('#jsonConfigTextarea');
                             ta.value = JSON.stringify(node.dynamic_config_payload, null, 4);
                             ta.disabled = false;
                             
                             const auditBox = container.querySelector('#auditReasonBox');
-                            auditBox.innerHTML = `<div class="flex flex-col gap-0.5"><span class="text-[color:var(--text)] font-bold">Reasoning:</span> <span class="text-[color:var(--muted)]">${node.architectural_reasoning \vert{}\vert{} 'No reason recorded.'}</span><span class="text-[color:var(--muted)] text-[9px] mt-1 font-mono uppercase">Last Modified: ${node.updated_at || 'Never'}</span></div>`;
+                            auditBox.innerHTML = `<div class="flex flex-col gap-0.5"><span class="text-[color:var(--text)] font-bold">Reasoning:</span> <span class="text-[color:var(--muted)]">${node.architectural_reasoning || 'No reason recorded.'}</span><span class="text-[color:var(--muted)] text-[9px] mt-1 font-mono uppercase">Last Modified: ${node.updated_at || 'Never'}</span></div>`;
 
                             const btn = container.querySelector('#btnSaveConfigPayload');
                             btn.style.display = 'flex';
