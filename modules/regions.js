@@ -402,7 +402,7 @@ export async function initRegionsEngine(containerId) {
                     // HIGHLIGHT VS GHOST STYLING: Neighbors get clean white borders and 60% pastel fill
                     let styleOptions = isActive 
                         ? { color: '#D35400', weight: 2.0, fillColor: polyColor, fillOpacity: 0.95 } 
-                        : { color: '#ffffff', weight: 1.0, fillColor: polyColor, fillOpacity: 0.60 };
+                        : { color: '#ffffff', weight: 1.0, fillColor: polyColor, fillOpacity: 0.25 };
                         
                     let l = window.L.geoJSON(geom, { style: styleOptions });
                     
