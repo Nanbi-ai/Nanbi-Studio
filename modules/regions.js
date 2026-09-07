@@ -227,96 +227,112 @@ export async function initRegionsEngine(containerId) {
             return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
         }
 
+        // =========================================================================================
+        // EXACT VECTEEZY COLOR MAPPING: Direct 1-to-1 match to avoid math-based visual clashing
+        // =========================================================================================
         function getDistinctColor(name) {
             const key = name.toLowerCase().trim();
             
             // Explicitly mapped to the exact hex values from your reference image
-            const anchorColors = {
-                'india': '#FF9933', 
-                'russia': '#FCD55A', 'russian federation': '#FCD55A',
-                'china': '#F47E99', 
+            const exactMapColors = {
+                'india': '#FF9933', // User explicitly requested Saffron
+                
+                // North America
                 'canada': '#59C3C3', 
-                'united states of america': '#C7E07E', 'united states': '#C7E07E',
-                'australia': '#9B7EDE', 
+                'united states of america': '#C7E07E', 'united states': '#C7E07E', 
+                'mexico': '#F47E99', 
+                'greenland': '#4DBEEA', 
+                'cuba': '#9B7EDE', 
+
+                // South America
                 'brazil': '#F47E99', 
                 'argentina': '#C7E07E', 
-                'greenland': '#4DBEEA', 
-                'kazakhstan': '#9B7EDE', 
-                'algeria': '#FCD55A', 
-                'sudan': '#9B7EDE', 
-                'iran': '#59C3C3', 'iran (islamic republic of)': '#59C3C3',
-                'iraq': '#FCD55A', 
-                'pakistan': '#C7E07E', 
-                'mexico': '#F47E99', 
-                'colombia': '#59C3C3', 
-                'venezuela': '#4DBEEA', 'venezuela (bolivarian republic of)': '#4DBEEA',
-                'peru': '#FCD55A', 
-                'bolivia': '#9B7EDE', 'bolivia (plurinational state of)': '#9B7EDE',
                 'chile': '#FCD55A', 
-                'paraguay': '#F3A759', 
+                'peru': '#9B7EDE', 
+                'bolivia': '#59C3C3', 'bolivia (plurinational state of)': '#59C3C3', 
+                'paraguay': '#FCD55A', 
                 'uruguay': '#59C3C3', 
-                'egypt': '#4DBEEA', 
+                'colombia': '#59C3C3', 
+                'venezuela': '#4DBEEA', 'venezuela (bolivarian republic of)': '#4DBEEA', 
+                'ecuador': '#F47E99', 
+                'guyana': '#C7E07E', 
+
+                // Europe
+                'russia': '#FCD55A', 'russian federation': '#FCD55A', 
+                'ukraine': '#4DBEEA', 
+                'poland': '#F47E99', 
+                'germany': '#C7E07E', 
+                'france': '#4DBEEA', 
+                'spain': '#FCD55A', 
+                'portugal': '#C7E07E', 
+                'italy': '#59C3C3', 
+                'united kingdom': '#F47E99', 'united kingdom of great britain and northern ireland': '#F47E99', 
+                'ireland': '#C7E07E', 
+                'norway': '#F47E99', 
+                'sweden': '#FCD55A', 
+                'finland': '#C7E07E', 
+                'belarus': '#59C3C3', 
+                'romania': '#FCD55A', 
+                'greece': '#F47E99', 
+                'iceland': '#F47E99', 
+
+                // Asia & Middle East
+                'china': '#F47E99', 
+                'kazakhstan': '#9B7EDE', 
+                'mongolia': '#9B7EDE', 
+                'saudi arabia': '#FCD55A', 
+                'iran': '#59C3C3', 'iran (islamic republic of)': '#59C3C3', 
+                'iraq': '#9B7EDE', 
+                'pakistan': '#C7E07E', 
+                'afghanistan': '#4DBEEA', 
+                'turkey': '#F47E99', 'türkiye': '#F47E99', 
+                'syria': '#C7E07E', 'syrian arab republic': '#C7E07E', 
+                'yemen': '#F47E99', 
+                'oman': '#C7E07E', 
+                'indonesia': '#4DBEEA', 
+                'malaysia': '#FCD55A', 
+                'thailand': '#9B7EDE', 
+                'myanmar': '#59C3C3', 
+                'vietnam': '#F47E99', 'viet nam': '#F47E99', 
+                'philippines': '#C7E07E', 
+                'japan': '#C7E07E', 
+                'south korea': '#F47E99', 'republic of korea': '#F47E99', 
+                'north korea': '#59C3C3', 'democratic people\'s republic of korea': '#59C3C3', 
+                'uzbekistan': '#C7E07E', 
+                'turkmenistan': '#F47E99', 
+
+                // Africa
+                'algeria': '#FCD55A', 
                 'libya': '#F47E99', 
+                'egypt': '#4DBEEA', 
+                'sudan': '#9B7EDE', 
                 'chad': '#C7E07E', 
                 'niger': '#59C3C3', 
                 'mali': '#F47E99', 
                 'mauritania': '#4DBEEA', 
                 'morocco': '#C7E07E', 
-                'western sahara': '#F47E99', 
                 'nigeria': '#9B7EDE', 
                 'cameroon': '#59C3C3', 
                 'central african republic': '#F47E99', 
-                'democratic republic of the congo': '#59C3C3', 'congo': '#C7E07E',
+                'democratic republic of the congo': '#59C3C3', 'congo': '#C7E07E', 
                 'angola': '#FCD55A', 
                 'zambia': '#C7E07E', 
                 'namibia': '#F47E99', 
                 'botswana': '#59C3C3', 
                 'south africa': '#C7E07E', 
                 'madagascar': '#59C3C3', 
-                'tanzania': '#FCD55A', 'united republic of tanzania': '#FCD55A',
+                'tanzania': '#FCD55A', 'united republic of tanzania': '#FCD55A', 
                 'kenya': '#F47E99', 
                 'ethiopia': '#FCD55A', 
                 'somalia': '#59C3C3', 
-                'saudi arabia': '#FCD55A', 
-                'yemen': '#F47E99', 
-                'oman': '#C7E07E', 
-                'syria': '#C7E07E', 'syrian arab republic': '#C7E07E',
-                'jordan': '#9B7EDE', 
-                'turkey': '#F47E99', 'türkiye': '#F47E99',
-                'afghanistan': '#4DBEEA', 
-                'turkmenistan': '#F47E99', 
-                'uzbekistan': '#C7E07E', 
-                'mongolia': '#9B7EDE', 
-                'indonesia': '#4DBEEA', 
-                'malaysia': '#FCD55A', 
-                'thailand': '#9B7EDE', 
-                'myanmar': '#59C3C3', 
-                'vietnam': '#F47E99', 'viet nam': '#F47E99',
-                'philippines': '#C7E07E', 
-                'japan': '#C7E07E', 
-                'south korea': '#F47E99', 'republic of korea': '#F47E99',
-                'north korea': '#59C3C3', 'democratic people\'s republic of korea': '#59C3C3',
+
+                // Oceania
+                'australia': '#9B7EDE', 
                 'new zealand': '#4DBEEA', 
-                'papua new guinea': '#FCD55A', 
-                'united kingdom': '#F47E99', 'united kingdom of great britain and northern ireland': '#F47E99',
-                'ireland': '#C7E07E', 
-                'france': '#4DBEEA', 
-                'spain': '#FCD55A', 
-                'portugal': '#C7E07E', 
-                'italy': '#59C3C3', 
-                'germany': '#C7E07E', 
-                'poland': '#F47E99', 
-                'ukraine': '#4DBEEA', 
-                'belarus': '#59C3C3', 
-                'romania': '#FCD55A', 
-                'greece': '#F47E99', 
-                'sweden': '#FCD55A', 
-                'norway': '#F47E99', 
-                'finland': '#C7E07E', 
-                'iceland': '#F47E99'
+                'papua new guinea': '#FCD55A' 
             };
 
-            if (anchorColors[key]) return anchorColors[key];
+            if (exactMapColors[key]) return exactMapColors[key];
 
             // Curated fallback palette for smaller unmapped island nations 
             const curatedPalette = [
@@ -325,8 +341,7 @@ export async function initRegionsEngine(containerId) {
                 '#59C3C3', // Pastel Teal
                 '#C7E07E', // Mint Green
                 '#9B7EDE', // Lilac
-                '#4DBEEA', // Sky Blue
-                '#FFB5A7'  // Peach
+                '#4DBEEA'  // Sky Blue
             ];
 
             let hash = 0;
@@ -496,6 +511,10 @@ export async function initRegionsEngine(containerId) {
                 return n.node_id === nodeId || isDescendant(n, nodeId);
             });
 
+            // Adjust opacity dynamically to prevent Dark Mode colors from shattering against black
+            let activeOpacity = isDark ? 0.75 : 0.95;
+            let ghostOpacity = isDark ? 0.15 : 0.15;
+
             mapNodes.forEach(n => {
                 try {
                     let isActive = (nodeId === 'GLOBAL') || (n.node_id === nodeId || isDescendant(n, nodeId));
@@ -504,8 +523,8 @@ export async function initRegionsEngine(containerId) {
                     let formattedName = toTitleCase(n.node_name);
                     
                     let styleOptions = isActive 
-                        ? { color: '#D35400', weight: 0.8, fillColor: polyColor, fillOpacity: 0.85 } 
-                        : { color: '#94a3b8', weight: 0.3, fillColor: polyColor, fillOpacity: 0.15 };
+                        ? { color: '#D35400', weight: 0.8, fillColor: polyColor, fillOpacity: activeOpacity } 
+                        : { color: '#94a3b8', weight: 0.3, fillColor: polyColor, fillOpacity: ghostOpacity };
                         
                     let l = window.L.geoJSON(geom, { style: styleOptions });
                     
