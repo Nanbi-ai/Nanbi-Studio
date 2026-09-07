@@ -27,15 +27,24 @@ export async function initRegionsEngine(containerId) {
                 #regions-module td { text-align: left; border-bottom: 1px solid var(--border); color: var(--text); font-weight: 600; font-size: 11px; padding: 10px; }
                 #regions-module .row-active { background-color: var(--hover-bg) !important; border-left: 4px solid var(--brand-orange-dark) !important; } 
                 
-                #regions-module #map { position: absolute; inset: 0; border-radius: 5px; z-index: 1; background-color: var(--card); }
+                /* MAP CONTAINER: Forced absolute sizing to fix Edge browser collapsing */
+                #regions-module #map-wrapper { position: relative; width: 100%; height: 100%; min-height: 250px; border-radius: 5px; background-color: var(--card); overflow: hidden; }
+                #regions-module #map { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
                 
-                /* ZERO-API DARK MODE: Magically inverts standard free OSM tiles into dark mode */
+                /* DARK MODE INVERSION */
                 .dark-map-tiles .leaflet-tile-pane { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
                 
+                /* POLYGON HOVER EFFECT: Thin Nanbi Orange Line */
                 #regions-module path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s, stroke 0.2s; outline: none; }
-                #regions-module path.leaflet-interactive:hover { fill-opacity: 0.9 !important; stroke-width: 2.5px !important; stroke: var(--text) !important; cursor: pointer; }
+                #regions-module path.leaflet-interactive:hover { stroke: #D35400 !important; stroke-width: 1.5px !important; fill-opacity: 0.95 !important; cursor: pointer; }
                 
-                .id-label { background: transparent !important; border: none !important; box-shadow: none !important; font-weight: 800; font-size: 11px; color: var(--text); text-shadow: none; text-align: center; }
+                /* CENTERED SHORT-ID LABELS: Highly readable slate text with strong white outline */
+                .region-label { 
+                    background: transparent !important; border: none !important; box-shadow: none !important; 
+                    font-weight: 800; font-size: 10px; color: #0f172a; 
+                    text-shadow: 1px 1px 1.5px rgba(255,255,255,0.9), -1px -1px 1.5px rgba(255,255,255,0.9), 1px -1px 1.5px rgba(255,255,255,0.9), -1px 1px 1.5px rgba(255,255,255,0.9); 
+                    text-align: center; margin: 0; padding: 0;
+                }
                 
                 #regions-module ::-webkit-scrollbar { width: 6px; }
                 #regions-module ::-webkit-scrollbar-thumb { background-color: var(--border); border-radius: 4px; }
@@ -57,8 +66,10 @@ export async function initRegionsEngine(containerId) {
                     
                     <!-- LEFT COLUMN: MAP & DROPDOWNS -->
                     <aside class="flex-1 lg:max-w-[45%] flex flex-col h-full min-h-0 min-w-0 gap-2 z-10">
-                        <div class="flex-1 panel-card relative min-h-[200px]">
-                            <div id="map"></div>
+                        <div class="flex-1 panel-card flex flex-col h-full w-full relative">
+                            <div id="map-wrapper">
+                                <div id="map"></div>
+                            </div>
                         </div>
                         
                         <div class="shrink-0 panel-card p-3 shadow-sm z-20">
@@ -181,10 +192,11 @@ export async function initRegionsEngine(containerId) {
         let treeNodes = [];
         let layerMapByNodeId = new Map();
 
+        // RETUNED: Subtle, muted pastel colors
         function getDistinctColor(name) {
             let hash = 0;
             for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-            return `hsl(${Math.abs(hash % 360)}, 65%, 55%)`;
+            return `hsl(${Math.abs(hash % 360)}, 50%, 75%)`;
         }
 
         // Initialize Map
@@ -199,21 +211,19 @@ export async function initRegionsEngine(containerId) {
         if (mapEl) mapEl._leaflet_id = null;
 
         map = window.L.map('map', { zoomControl: true, attributionControl: false }).setView([20.0, 0.0], 2);
-        
-        // 100% Free OpenStreetMap Base Layer
         window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, opacity: 1 }).addTo(map);
 
-        // Apply CSS Invert Filter if App is in Dark Mode
         const isDark = localStorage.getItem('nanbi_theme') === 'dark' || document.documentElement.classList.contains('dark') || document.body.classList.contains('dark');
         if (isDark) {
             container.querySelector('#map').classList.add('dark-map-tiles');
         }
 
-        new ResizeObserver(() => {
-            if (map) map.invalidateSize();
-        }).observe(container.querySelector('#map'));
+        // AGGRESSIVE RESIZE OBSERVER (Edge Browser Fix)
+        const resizeObs = new ResizeObserver(() => {
+            if (map) requestAnimationFrame(() => map.invalidateSize(true));
+        });
+        resizeObs.observe(container.querySelector('#map-wrapper'));
 
-        // Fetch DB Data
         async function fetchTreeData() {
             try {
                 const { data, error } = await window.nanbiDB.from('regional_hierarchy_nodes').select('*').order('node_level');
@@ -336,27 +346,51 @@ export async function initRegionsEngine(containerId) {
                 try {
                     let geom = n.dynamic_config_payload.geojson;
                     let polyColor = getDistinctColor(n.node_name);
+                    let isSelected = (n.node_id === nodeId && nodeId !== 'GLOBAL');
+                    
                     let l = window.L.geoJSON(geom, { 
-                        style: { color: '#ffffff', weight: 1.2, fillColor: polyColor, fillOpacity: 0.85 } 
+                        style: { 
+                            color: isSelected ? '#D35400' : '#ffffff', // Highlight specific boundary with Orange
+                            weight: isSelected ? 2 : 1, 
+                            fillColor: polyColor, 
+                            fillOpacity: 0.9 
+                        } 
                     });
-                    l.bindTooltip(n.node_name, { direction: 'center', className: 'id-label', permanent: false });
+                    
+                    // Center the Short Code permanently on the shape
+                    l.bindTooltip(n.node_id, { permanent: true, direction: 'center', className: 'region-label' });
+                    
+                    // Tag layer for exclusion processing
+                    l.node_id = n.node_id; 
+                    
                     l.on('click', () => applyGlobalSelection(n.node_id));
-
                     polygonLayerGroup.addLayer(l);
                     layerMapByNodeId.set(n.node_id, l);
                 } catch(e) {}
             });
 
-            // Delayed rendering block guarantees container size is calculated before zooming
             setTimeout(() => {
                 map.invalidateSize(true);
                 if (polygonLayerGroup.getLayers().length > 0) {
                     polygonLayerGroup.addTo(map);
-                    map.fitBounds(polygonLayerGroup.getBounds(), { padding: [30, 30], animate: true, maxZoom: 7 });
-                } else if (nodeId === 'GLOBAL') {
-                    map.setView([20.0, 0.0], 2);
+                    
+                    if (nodeId === 'GLOBAL') {
+                        // Exclude Antarctica from bounds calculation to naturally zoom in on inhabited world
+                        let boundsGroup = window.L.featureGroup();
+                        polygonLayerGroup.eachLayer(layer => {
+                            if (layer.node_id !== 'ATA' && layer.node_id !== 'AN') { boundsGroup.addLayer(layer); }
+                        });
+                        
+                        if (boundsGroup.getLayers().length > 0) {
+                            map.fitBounds(boundsGroup.getBounds(), { padding: [15, 15], animate: true });
+                        } else {
+                            map.setView([25.0, 0.0], 2);
+                        }
+                    } else {
+                        map.fitBounds(polygonLayerGroup.getBounds(), { padding: [25, 25], animate: true, maxZoom: 8 });
+                    }
                 }
-            }, 150);
+            }, 100);
         }
 
         // Dropdown -> Engine Event Handlers
