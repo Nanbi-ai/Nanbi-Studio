@@ -35,17 +35,22 @@ export async function initRegionsEngine(containerId) {
                 .dark-theme-map { background-color: #0f172a !important; }
                 .dark-theme-map .leaflet-tile-pane { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
                 
-                /* POLYGON HOVER EFFECT: Nanbi Orange Hairline */
+                /* POLYGON HOVER EFFECT */
                 #regions-module path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s, stroke 0.2s; outline: none; }
                 #regions-module path.leaflet-interactive:hover { stroke: #D35400 !important; stroke-width: 1.5px !important; fill-opacity: 0.95 !important; cursor: pointer; }
                 
-                /* PERMANENT COUNTRY LABELS: Title Case, Unbolded, White Outline */
+                /* DYNAMIC NEIGHBOR LABELS */
                 .region-label { 
                     background: transparent !important; border: none !important; box-shadow: none !important; 
-                    font-weight: 500; font-size: 11px; color: #1e293b; 
+                    text-align: center; margin: 0; padding: 0; pointer-events: none; white-space: nowrap !important;
+                }
+                .label-active { 
+                    font-weight: 600; font-size: 11px; color: #0f172a; 
                     text-shadow: 1px 1px 2px rgba(255,255,255,0.9), -1px -1px 2px rgba(255,255,255,0.9), 1px -1px 2px rgba(255,255,255,0.9), -1px 1px 2px rgba(255,255,255,0.9); 
-                    text-align: center; margin: 0; padding: 0;
-                    pointer-events: none; white-space: nowrap !important;
+                }
+                .label-neighbor { 
+                    font-weight: 500; font-size: 10px; color: #475569; 
+                    text-shadow: 1px 1px 2px rgba(255,255,255,0.6), -1px -1px 2px rgba(255,255,255,0.6), 1px -1px 2px rgba(255,255,255,0.6), -1px 1px 2px rgba(255,255,255,0.6); 
                 }
 
                 .region-label-hover { 
@@ -190,14 +195,14 @@ export async function initRegionsEngine(containerId) {
             loadJurisdictionalTree();
         };
 
-        let map = null, polygonLayerGroup = null;
+        let map = null, polygonLayerGroup = null, activeLayerGroup = null;
         let treeNodes = [];
         let layerMapByNodeId = new Map();
 
-       // STRICT ANCHORS: Perfects Continent framing & prevents stretching to overseas islands
+        // STRICT ANCHORS: Perfects Continent framing & prevents stretching
         const strictBounds = {
             'EU': [[34.0, -25.0], [75.0, 65.0]],     
-            'AS': [[-11.0, 26.0], [55.0, 150.0]],    // FIXED: Tightly frames Asia (excluding Russia which is in Europe)
+            'AS': [[-11.0, 26.0], [55.0, 150.0]],    
             'AF': [[-35.0, -20.0], [38.0, 55.0]],    
             'NO': [[5.0, -170.0], [84.0, -10.0]],    
             'SO': [[-56.0, -85.0], [15.0, -35.0]],   
@@ -208,7 +213,6 @@ export async function initRegionsEngine(containerId) {
             'GBR': [[49.0, -8.0], [61.0, 2.0]]       
         };
 
-        // Center anchors for specific countries
         const centroidOverrides = {
             'IND': [22.5, 79.0],  
             'USA': [39.8, -98.5],  
@@ -225,7 +229,6 @@ export async function initRegionsEngine(containerId) {
             return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
         }
 
-        // Muted Pastel Colors
         function getDistinctColor(name) {
             let hash = 0;
             for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -251,9 +254,9 @@ export async function initRegionsEngine(containerId) {
             attributionControl: false,
             zoomSnap: 0.1, 
             worldCopyJump: true,
-            minZoom: 0, // Unlocks the map so it can shrink to fit your panel
+            minZoom: 0, 
             maxBounds: null
-        }).setView([20.0, 0.0], 1);
+        }).setView([20.0, 0.0], 2);
         
         window.nanbiMapInstance = map;
         window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, opacity: 1, noWrap: false }).addTo(map);
@@ -264,7 +267,6 @@ export async function initRegionsEngine(containerId) {
             container.querySelector('#map-wrapper').style.backgroundColor = '#0f172a';
         }
 
-        // Simple debounce to clear grey patches without causing infinite zoom loops
         let resizeTimer;
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimer);
@@ -278,7 +280,6 @@ export async function initRegionsEngine(containerId) {
                 const { data, error } = await window.nanbiDB.from('regional_hierarchy_nodes').select('*').order('node_level');
                 if (error) throw error;
                 if (data) {
-                    // Stripping Antarctica
                     treeNodes = data.filter(n => n.node_id !== 'ATA' && n.node_id !== 'AN'); 
                     populateDropdown('selContinent', 'continent', 'GLOBAL');
                     applyGlobalSelection('GLOBAL');
@@ -381,34 +382,43 @@ export async function initRegionsEngine(containerId) {
 
             if (polygonLayerGroup) map.removeLayer(polygonLayerGroup);
             polygonLayerGroup = window.L.featureGroup();
+            activeLayerGroup = window.L.featureGroup(); // Isolate active bounds
             layerMapByNodeId.clear();
 
+            // NEIGHBOR CONTEXT ENGINE: Render ALL countries to provide neighborhood base layer
             let mapNodes = treeNodes.filter(n => {
                 if (!n.dynamic_config_payload || !n.dynamic_config_payload.geojson) return false;
-                if (nodeId === 'GLOBAL') return n.node_level === 'country';
+                if (n.node_level === 'country') return true; 
                 return n.node_id === nodeId || isDescendant(n, nodeId);
             });
 
             mapNodes.forEach(n => {
                 try {
+                    let isActive = (nodeId === 'GLOBAL') || (n.node_id === nodeId || isDescendant(n, nodeId));
                     let geom = n.dynamic_config_payload.geojson;
                     let polyColor = getDistinctColor(n.node_name);
                     let formattedName = toTitleCase(n.node_name);
                     
-                    let l = window.L.geoJSON(geom, { 
-                        style: { color: '#D35400', weight: 0.4, fillColor: polyColor, fillOpacity: 0.85 } 
-                    });
+                    // Ghost inactive neighbors with muted opacity/borders
+                    let styleOptions = isActive 
+                        ? { color: '#D35400', weight: 0.5, fillColor: polyColor, fillOpacity: 0.85 } 
+                        : { color: '#94a3b8', weight: 0.3, fillColor: polyColor, fillOpacity: 0.15 };
+                    
+                    let l = window.L.geoJSON(geom, { style: styleOptions });
                     
                     l.bindTooltip(formattedName, { sticky: true, className: 'region-label-hover' });
                     polygonLayerGroup.addLayer(l);
+                    
+                    if (isActive) activeLayerGroup.addLayer(l); // Used for tight zoom calculation
+                    
                     layerMapByNodeId.set(n.node_id, l);
 
-                    // LABEL LOGIC: Hidden on World/Continent macro views to prevent unreadable text overlap
+                    // Dynamic Label Selection: Printed for active & neighbor countries, hidden on World/Continent view
                     if (n.node_level === 'country' && !isMacroView) {
                         let centerPoint = centroidOverrides[n.node_id] ? centroidOverrides[n.node_id] : l.getBounds().getCenter();
                         let labelMarker = window.L.marker(centerPoint, {
                             icon: window.L.divIcon({
-                                className: 'region-label',
+                                className: 'region-label ' + (isActive ? 'label-active' : 'label-neighbor'),
                                 html: formattedName,
                                 iconSize: [150, 20],
                                 iconAnchor: [75, 10]
@@ -435,15 +445,14 @@ export async function initRegionsEngine(containerId) {
                     
                     let targetBounds;
                     if (nodeId === 'GLOBAL') {
-                        // FULL PLANETARY BOUNDS: Alaska (-180) to New Zealand (+180), cuts off Antarctica (-60)
                         targetBounds = window.L.latLngBounds([[-60, -180], [85, 180]]);
                     } else if (strictBounds[nodeId]) {
                         targetBounds = window.L.latLngBounds(strictBounds[nodeId][0], strictBounds[nodeId][1]);
                     } else {
-                        targetBounds = polygonLayerGroup.getBounds();
+                        // Dynamically pull bounds from active nodes only, ignoring ghosted neighbors
+                        targetBounds = activeLayerGroup.getBounds();
                     }
                     
-                    // 5% margin for the full world so it perfectly frames within the box, 10% (80% fit) for regions
                     let appliedPadding = nodeId === 'GLOBAL' ? [mapDom.clientWidth * 0.05, mapDom.clientHeight * 0.05] : [padX, padY];
                     
                     map.fitBounds(targetBounds, { padding: appliedPadding, animate: false });
