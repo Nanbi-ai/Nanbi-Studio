@@ -5,11 +5,9 @@ import { CryptoEngine } from './crypto_engine.js';
 // =======================================================================
 
 // Switch from Cloud to Localhost for SDLC
-const SUPABASE_URL = "https://quality-pellet-gem.ngrok-free.dev";
+const SUPABASE_URL = "http://127.0.0.1:54321";
 const SUPABASE_ANON_KEY = "sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH";
-window.nanbiDB = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: { headers: { 'ngrok-skip-browser-warning': 'true' } }
-});
+window.nanbiDB = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let themeLedger = null;
 let appLedger = null;
