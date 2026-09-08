@@ -384,6 +384,8 @@ export async function initRegionsEngine(containerId) {
         
         window.nanbiMapInstance = map;
         window.L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19
+}).addTo(map);
 
         const isDark = localStorage.getItem('nanbi_theme') === 'dark' || document.documentElement.classList.contains('dark') || document.body.classList.contains('dark');
         if (isDark) {
