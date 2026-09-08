@@ -383,8 +383,9 @@ export async function initRegionsEngine(containerId) {
         }).setView([20.0, 0.0], 2);
         
         window.nanbiMapInstance = map;
-        window.L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
-    maxZoom: 19
+        window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
 }).addTo(map);
 
         const isDark = localStorage.getItem('nanbi_theme') === 'dark' || document.documentElement.classList.contains('dark') || document.body.classList.contains('dark');
