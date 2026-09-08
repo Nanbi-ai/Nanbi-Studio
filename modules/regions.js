@@ -383,7 +383,7 @@ export async function initRegionsEngine(containerId) {
         }).setView([20.0, 0.0], 2);
         
         window.nanbiMapInstance = map;
-        window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, opacity: 1, noWrap: false }).addTo(map);
+        window.L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
 
         const isDark = localStorage.getItem('nanbi_theme') === 'dark' || document.documentElement.classList.contains('dark') || document.body.classList.contains('dark');
         if (isDark) {
