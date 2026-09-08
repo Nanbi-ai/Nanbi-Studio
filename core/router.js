@@ -4,8 +4,9 @@ import { CryptoEngine } from './crypto_engine.js';
 // NANBI V5.0 MASTER ROUTER (SWITCHBOARD, E2E CRYPTO & REGIONS WIRED)
 // =======================================================================
 
-const SUPABASE_URL = "https://yeoracoxyjzgpsyxgwri.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inllb3JhY294eWp6Z3BzeXhnd3JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3MzgzNzUsImV4cCI6MjEwMzMxNDM3NX0.rNcvhRCw4KyfNpsWH6IYxlQT07zJ7i68Zg5jnpqj9yc";
+// Switch from Cloud to Localhost for SDLC
+const SUPABASE_URL = "http://127.0.0.1:54321";
+const SUPABASE_ANON_KEY = "sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH";
 window.nanbiDB = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let themeLedger = null;
