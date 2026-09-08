@@ -373,6 +373,7 @@ export async function initRegionsEngine(containerId) {
         if (mapEl) mapEl._leaflet_id = null;
 
         map = window.L.map('map', { 
+            preferCanvas: true, // Forces high-performance canvas rendering
             zoomControl: true, 
             attributionControl: false,
             zoomSnap: 0.1, 
