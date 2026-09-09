@@ -26,7 +26,7 @@ export async function initRegionsEngine(containerId) {
                 #regions-module td { text-align: left; border-bottom: 1px solid var(--border); color: var(--text); font-weight: 600; font-size: 11px; padding: 10px; }
                 #regions-module .row-active { background-color: var(--hover-bg) !important; border-left: 4px solid var(--brand-orange-dark) !important; } 
                 
-                /* SOVEREIGN MAP CONTAINER - OCEANIC BLUE LOCKED */
+                /* SOVEREIGN MAP CONTAINER */
                 #regions-module #map-wrapper { position: relative; width: 100%; height: 100%; min-height: 0; flex: 1; border-radius: 5px; background-color: #D4F1F9; overflow: hidden; }
                 #regions-module #map { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; background-color: #D4F1F9; }
                 .leaflet-container { background: transparent !important; }
@@ -38,32 +38,16 @@ export async function initRegionsEngine(containerId) {
                 #regions-module path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s, stroke 0.2s; outline: none; }
                 #regions-module path.leaflet-interactive:hover { stroke: #1e293b !important; stroke-width: 2.0px !important; fill-opacity: 1 !important; cursor: pointer; }
                 
-                /* DYNAMIC HIERARCHY TYPOGRAPHY - REGULAR FONT, SOFT HALO */
+                /* HIERARCHICAL TYPOGRAPHY */
                 .map-label { 
                     background: transparent !important; border: none !important; box-shadow: none !important; 
                     text-align: center; white-space: nowrap; pointer-events: none;
-                    transition: opacity 0.4s ease, font-size 0.4s ease;
                 }
                 
-                .map-lbl-continent { opacity: 0; display: none; font-weight: 700; color: #1e293b; text-transform: uppercase; letter-spacing: 1px; text-shadow: 0px 0px 3px rgba(255,255,255,0.9), 0px 0px 5px rgba(255,255,255,0.7); }
-                .map-lbl-subcontinent { opacity: 0; display: none; font-weight: 600; color: #334155; text-transform: uppercase; text-shadow: 0px 0px 3px rgba(255,255,255,0.9), 0px 0px 5px rgba(255,255,255,0.7); }
-                .map-lbl-country { opacity: 0; display: none; font-weight: 500; color: #0f172a; text-shadow: 0px 0px 3px rgba(255,255,255,0.9), 0px 0px 5px rgba(255,255,255,0.7); }
-                
-                /* ZOOM 1-2: CONTINENT MACRO VIEW */
-                #map[data-zoom="1"] .map-lbl-continent, #map[data-zoom="2"] .map-lbl-continent { display: block; opacity: 1; font-size: 14px; }
-                
-                /* ZOOM 3: SUB-CONTINENT TRANSITION */
-                #map[data-zoom="3"] .map-lbl-continent { display: block; opacity: 0.5; font-size: 16px; }
-                #map[data-zoom="3"] .map-lbl-subcontinent { display: block; opacity: 1; font-size: 12px; }
-                
-                /* ZOOM 4: SUB-CONTINENT TO COUNTRY TRANSITION */
-                #map[data-zoom="4"] .map-lbl-subcontinent { display: block; opacity: 0.6; font-size: 14px; }
-                #map[data-zoom="4"] .map-lbl-country { display: block; opacity: 0.9; font-size: 11px; }
-                
-                /* ZOOM 5+: COUNTRY MICRO VIEW */
-                #map[data-zoom="5"] .map-lbl-subcontinent, #map[data-zoom="6"] .map-lbl-subcontinent, #map[data-zoom="7"] .map-lbl-subcontinent { display: none; }
-                #map[data-zoom="5"] .map-lbl-country { display: block; opacity: 1; font-size: 13px; }
-                #map[data-zoom="6"] .map-lbl-country, #map[data-zoom="7"] .map-lbl-country, #map[data-zoom="8"] .map-lbl-country { display: block; opacity: 1; font-size: 14px; }
+                /* The label classes define the text properties, visibility is handled in JS */
+                .map-lbl-continent { font-weight: 800; font-size: 15px; color: #0f172a; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0px 0px 4px rgba(255,255,255,0.9), 0px 0px 8px rgba(255,255,255,0.7); }
+                .map-lbl-subcontinent { font-weight: 700; font-size: 13px; color: #1e293b; text-transform: uppercase; text-shadow: 0px 0px 4px rgba(255,255,255,0.9), 0px 0px 8px rgba(255,255,255,0.7); }
+                .map-lbl-country { font-weight: 600; font-size: 11px; color: #334155; text-shadow: 0px 0px 3px rgba(255,255,255,0.9), 0px 0px 6px rgba(255,255,255,0.7); }
                 
                 #regions-module ::-webkit-scrollbar { width: 6px; }
                 #regions-module ::-webkit-scrollbar-thumb { background-color: var(--border); border-radius: 4px; }
@@ -83,7 +67,7 @@ export async function initRegionsEngine(containerId) {
                     <aside class="flex-1 lg:max-w-[45%] flex flex-col h-full min-h-0 min-w-0 gap-2 z-10">
                         <div class="flex-1 panel-card flex flex-col h-full w-full relative min-h-0">
                             <div id="map-wrapper" class="flex-1 min-h-0">
-                                <div id="map" data-zoom="2"></div>
+                                <div id="map"></div>
                             </div>
                         </div>
                         
@@ -205,7 +189,6 @@ export async function initRegionsEngine(containerId) {
         let map = null, polygonLayerGroup = null;
         let treeNodes = [];
 
-        // STRICT CENTROID OVERRIDES (Ensures math doesn't drop labels into oceans)
         const centroidOverrides = {
             'AS': [34.0, 90.0], 'AF': [2.0, 20.0], 'EU': [51.0, 15.0], 
             'NO': [45.0, -100.0], 'SO': [-15.0, -60.0], 'OC': [-25.0, 135.0],
@@ -230,19 +213,12 @@ export async function initRegionsEngine(containerId) {
         const mapEl = window.L.DomUtil.get('map');
         if (mapEl) mapEl._leaflet_id = null;
 
-        // PURE SOVEREIGN ZERO-API MAP
         map = window.L.map('map', { 
             preferCanvas: true, zoomControl: true, attributionControl: false,
             zoomSnap: 0.1, worldCopyJump: true, minZoom: 1.5, maxBounds: null
         }).setView([20.0, 0.0], 2);
         
         window.nanbiMapInstance = map;
-
-        // Data-Zoom tracking for CSS Progressive Typography
-        map.on('zoomend', function() {
-            let currentZoom = Math.floor(map.getZoom());
-            container.querySelector('#map').setAttribute('data-zoom', currentZoom);
-        });
 
         const isDark = localStorage.getItem('nanbi_theme') === 'dark' || document.documentElement.classList.contains('dark') || document.body.classList.contains('dark');
         if (isDark) {
@@ -325,7 +301,7 @@ export async function initRegionsEngine(containerId) {
         function applyGlobalSelection(nodeId) {
             const activeNode = treeNodes.find(n => n.node_id === nodeId) || { node_id: 'GLOBAL', node_name: 'World', node_level: 'root' };
 
-            // 1. SYNC DROPDOWNS (Flawless Waterfall Reset)
+            // 1. SYNC DROPDOWNS
             const lineage = getLineage(nodeId);
             if (nodeId === 'GLOBAL') {
                 container.querySelector('#selContinent').value = 'All';
@@ -386,87 +362,111 @@ export async function initRegionsEngine(containerId) {
                 </div>
             `;
 
-            // 3. SYNC MAP BOUNDARIES, STYLING, AND DYNAMIC LABELS
+            // 3. SYNC MAP BOUNDARIES, COLOR GROUPING & LABELS
             if (polygonLayerGroup) map.removeLayer(polygonLayerGroup);
             polygonLayerGroup = window.L.featureGroup();
             
             let countryNodes = treeNodes.filter(n => n.node_level === 'country' && n.dynamic_config_payload && n.dynamic_config_payload.geojson);
-            
             let activeBoundsLayer = window.L.featureGroup(); 
             
-            // Tiered Label Data Tracker
-            let labelData = {
-                continents: new Map(),
-                subcontinents: new Map(),
-                countries: new Map()
-            };
+            // Map Label Trackers
+            let labelData = { continents: new Map(), subcontinents: new Map(), countries: new Map() };
 
             countryNodes.forEach(n => {
                 try {
                     let isActiveRegion = (nodeId === 'GLOBAL') || (n.node_id === nodeId || isDescendant(n, nodeId));
                     let geom = n.dynamic_config_payload.geojson;
-                    let displayColor = n.dynamic_config_payload.fill_color || '#e2e8f0'; 
                     
+                    // =======================================================================
+                    // COLOR HIERARCHY LOGIC (The Back-Seat Color Rule)
+                    // If viewing World -> Countries take the Continent's master color.
+                    // If viewing Continent -> Countries take the Sub-Continent's master color.
+                    // If viewing Sub-Cont/Country -> Countries show their unique color.
+                    // =======================================================================
+                    let effectiveColor = n.dynamic_config_payload.fill_color || '#e2e8f0'; 
+                    
+                    if (activeNode.node_level === 'root') {
+                        let cont = getAncestorAtLevel(n.node_id, 'continent');
+                        if (cont && cont.dynamic_config_payload) { effectiveColor = cont.dynamic_config_payload.fill_color || effectiveColor; }
+                    } else if (activeNode.node_level === 'continent') {
+                        let sub = getAncestorAtLevel(n.node_id, 'sub_continent');
+                        if (sub && sub.dynamic_config_payload) { effectiveColor = sub.dynamic_config_payload.fill_color || effectiveColor; }
+                    }
+
+                    // Strict border visibility on all levels
                     let styleOptions = isActiveRegion 
-                        ? { color: '#1e293b', weight: 0.8, fillColor: displayColor, fillOpacity: 0.95 } 
-                        : { color: '#475569', weight: 0.4, fillColor: displayColor, fillOpacity: 0.35 };
+                        ? { color: '#1e293b', weight: 0.8, fillColor: effectiveColor, fillOpacity: 0.95 } 
+                        : { color: '#475569', weight: 0.4, fillColor: effectiveColor, fillOpacity: 0.25 };
                         
                     let l = window.L.geoJSON(geom, { style: styleOptions });
                     polygonLayerGroup.addLayer(l);
                     
                     if (isActiveRegion) activeBoundsLayer.addLayer(l);
                     
-                    // Populate dynamic labels ONLY for the active region to prevent clutter
+                    // Populate Label Data ONLY for the specific hierarchy level requested
                     if (isActiveRegion) {
                         let b = l.getBounds();
-                        labelData.countries.set(n.node_id, { name: n.node_name, bounds: b });
-                        
-                        let sub = getAncestorAtLevel(n.node_id, 'sub_continent');
-                        if (sub) {
-                            if (!labelData.subcontinents.has(sub.node_id)) labelData.subcontinents.set(sub.node_id, { name: sub.node_name, bounds: window.L.latLngBounds() });
-                            labelData.subcontinents.get(sub.node_id).bounds.extend(b);
-                        }
-                        
-                        let cont = getAncestorAtLevel(n.node_id, 'continent');
-                        if (cont) {
-                            if (!labelData.continents.has(cont.node_id)) labelData.continents.set(cont.node_id, { name: cont.node_name, bounds: window.L.latLngBounds() });
-                            labelData.continents.get(cont.node_id).bounds.extend(b);
+                        if (activeNode.node_level === 'root') {
+                            let cont = getAncestorAtLevel(n.node_id, 'continent');
+                            if (cont) {
+                                if (!labelData.continents.has(cont.node_id)) labelData.continents.set(cont.node_id, { name: cont.node_name, bounds: window.L.latLngBounds() });
+                                labelData.continents.get(cont.node_id).bounds.extend(b);
+                            }
+                        } else if (activeNode.node_level === 'continent') {
+                            let sub = getAncestorAtLevel(n.node_id, 'sub_continent');
+                            if (sub) {
+                                if (!labelData.subcontinents.has(sub.node_id)) labelData.subcontinents.set(sub.node_id, { name: sub.node_name, bounds: window.L.latLngBounds() });
+                                labelData.subcontinents.get(sub.node_id).bounds.extend(b);
+                            }
+                        } else {
+                            labelData.countries.set(n.node_id, { name: n.node_name, bounds: b });
                         }
                     }
                     
-                    l.on('click', () => applyGlobalSelection(n.node_id));
+                    l.on('click', () => {
+                        // Intelligent Map Drill-Down
+                        if (activeNode.node_level === 'root') {
+                            let cont = getAncestorAtLevel(n.node_id, 'continent');
+                            if (cont) applyGlobalSelection(cont.node_id);
+                        } else if (activeNode.node_level === 'continent') {
+                            let sub = getAncestorAtLevel(n.node_id, 'sub_continent');
+                            if (sub) applyGlobalSelection(sub.node_id);
+                        } else {
+                            applyGlobalSelection(n.node_id);
+                        }
+                    });
                 } catch(e) {}
             });
 
-            // Inject Continent Labels
-            labelData.continents.forEach((data, id) => {
-                let center = centroidOverrides[id] ? centroidOverrides[id] : data.bounds.getCenter();
-                let marker = window.L.marker(center, {
-                    icon: window.L.divIcon({ className: 'map-label map-lbl-continent', html: toTitleCase(data.name), iconSize: [200,30], iconAnchor: [100,15] }),
-                    interactive: false
+            // Render Labels based on Hierarchy
+            if (activeNode.node_level === 'root') {
+                labelData.continents.forEach((data, id) => {
+                    let center = centroidOverrides[id] ? centroidOverrides[id] : data.bounds.getCenter();
+                    let marker = window.L.marker(center, {
+                        icon: window.L.divIcon({ className: 'map-label map-lbl-continent', html: data.name, iconSize: [200,30], iconAnchor: [100,15] }),
+                        interactive: false
+                    });
+                    polygonLayerGroup.addLayer(marker);
                 });
-                polygonLayerGroup.addLayer(marker);
-            });
-
-            // Inject Sub-Continent Labels
-            labelData.subcontinents.forEach((data, id) => {
-                let center = centroidOverrides[id] ? centroidOverrides[id] : data.bounds.getCenter();
-                let marker = window.L.marker(center, {
-                    icon: window.L.divIcon({ className: 'map-label map-lbl-subcontinent', html: toTitleCase(data.name), iconSize: [200,30], iconAnchor: [100,15] }),
-                    interactive: false
+            } else if (activeNode.node_level === 'continent') {
+                labelData.subcontinents.forEach((data, id) => {
+                    let center = centroidOverrides[id] ? centroidOverrides[id] : data.bounds.getCenter();
+                    let marker = window.L.marker(center, {
+                        icon: window.L.divIcon({ className: 'map-label map-lbl-subcontinent', html: data.name, iconSize: [200,30], iconAnchor: [100,15] }),
+                        interactive: false
+                    });
+                    polygonLayerGroup.addLayer(marker);
                 });
-                polygonLayerGroup.addLayer(marker);
-            });
-
-            // Inject Country Labels
-            labelData.countries.forEach((data, id) => {
-                let center = centroidOverrides[id] ? centroidOverrides[id] : data.bounds.getCenter();
-                let marker = window.L.marker(center, {
-                    icon: window.L.divIcon({ className: 'map-label map-lbl-country', html: toTitleCase(data.name), iconSize: [120,20], iconAnchor: [60,10] }),
-                    interactive: false
+            } else {
+                labelData.countries.forEach((data, id) => {
+                    let center = centroidOverrides[id] ? centroidOverrides[id] : data.bounds.getCenter();
+                    let marker = window.L.marker(center, {
+                        icon: window.L.divIcon({ className: 'map-label map-lbl-country', html: toTitleCase(data.name), iconSize: [120,20], iconAnchor: [60,10] }),
+                        interactive: false
+                    });
+                    polygonLayerGroup.addLayer(marker);
                 });
-                polygonLayerGroup.addLayer(marker);
-            });
+            }
 
             // 4. TRUE 80% VIEWPORT CALCULATION
             setTimeout(() => {
@@ -476,7 +476,7 @@ export async function initRegionsEngine(containerId) {
                     
                     const mapDom = container.querySelector('#map-wrapper');
                     
-                    // Mathematical 10% padding on all 4 sides perfectly boxes the map to 80% of the container
+                    // Calculate exact 10% padding on all sides to reserve 80% for the map
                     const padX = Math.max(10, Math.floor(mapDom.clientWidth * 0.1));
                     const padY = Math.max(10, Math.floor(mapDom.clientHeight * 0.1));
                     
