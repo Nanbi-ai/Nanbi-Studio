@@ -38,38 +38,32 @@ export async function initRegionsEngine(containerId) {
                 #regions-module path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s, stroke 0.2s; outline: none; }
                 #regions-module path.leaflet-interactive:hover { stroke: #1e293b !important; stroke-width: 2.0px !important; fill-opacity: 1 !important; cursor: pointer; }
                 
-                /* SOFT, PROFESSIONAL TYPOGRAPHY (NO BLACK/BOLD HACKS) */
+                /* DYNAMIC HIERARCHY TYPOGRAPHY - REGULAR FONT, SOFT HALO */
                 .map-label { 
                     background: transparent !important; border: none !important; box-shadow: none !important; 
                     text-align: center; white-space: nowrap; pointer-events: none;
                     transition: opacity 0.4s ease, font-size 0.4s ease;
                 }
                 
-                .label-active { 
-                    font-weight: 600; color: #1e293b; 
-                    text-shadow: 0px 0px 4px rgba(255,255,255,0.95), 0px 0px 8px rgba(255,255,255,0.8); 
-                    z-index: 1000 !important;
-                }
+                .map-lbl-continent { opacity: 0; display: none; font-weight: 700; color: #1e293b; text-transform: uppercase; letter-spacing: 1px; text-shadow: 0px 0px 3px rgba(255,255,255,0.9), 0px 0px 5px rgba(255,255,255,0.7); }
+                .map-lbl-subcontinent { opacity: 0; display: none; font-weight: 600; color: #334155; text-transform: uppercase; text-shadow: 0px 0px 3px rgba(255,255,255,0.9), 0px 0px 5px rgba(255,255,255,0.7); }
+                .map-lbl-country { opacity: 0; display: none; font-weight: 500; color: #0f172a; text-shadow: 0px 0px 3px rgba(255,255,255,0.9), 0px 0px 5px rgba(255,255,255,0.7); }
                 
-                .label-neighbor { 
-                    font-weight: 500; color: #475569; 
-                    text-shadow: 0px 0px 3px rgba(255,255,255,0.85);
-                    z-index: 500 !important;
-                }
+                /* ZOOM 1-2: CONTINENT MACRO VIEW */
+                #map[data-zoom="1"] .map-lbl-continent, #map[data-zoom="2"] .map-lbl-continent { display: block; opacity: 1; font-size: 14px; }
                 
-                /* DYNAMIC VISIBILITY THRESHOLDS DRIVEN BY LEAFLET ZOOM */
-                .label-active, .label-neighbor { opacity: 0; font-size: 0px; }
+                /* ZOOM 3: SUB-CONTINENT TRANSITION */
+                #map[data-zoom="3"] .map-lbl-continent { display: block; opacity: 0.5; font-size: 16px; }
+                #map[data-zoom="3"] .map-lbl-subcontinent { display: block; opacity: 1; font-size: 12px; }
                 
-                /* Zoom 2 (World View) - Anchor visibility */
-                #map[data-zoom="2"] .label-active { opacity: 1; font-size: 10px; }
+                /* ZOOM 4: SUB-CONTINENT TO COUNTRY TRANSITION */
+                #map[data-zoom="4"] .map-lbl-subcontinent { display: block; opacity: 0.6; font-size: 14px; }
+                #map[data-zoom="4"] .map-lbl-country { display: block; opacity: 0.9; font-size: 11px; }
                 
-                /* Zoom 3 (Continent View) */
-                #map[data-zoom="3"] .label-active { opacity: 1; font-size: 12px; }
-                #map[data-zoom="3"] .label-neighbor { opacity: 0.6; font-size: 9px; }
-                
-                /* Zoom 4+ (Sub-Continent & Country View) - Reveals adjacent macro geography */
-                #map[data-zoom="4"] .label-active, #map[data-zoom="5"] .label-active, #map[data-zoom="6"] .label-active { opacity: 1; font-size: 14px; }
-                #map[data-zoom="4"] .label-neighbor, #map[data-zoom="5"] .label-neighbor, #map[data-zoom="6"] .label-neighbor { opacity: 0.85; font-size: 11px; }
+                /* ZOOM 5+: COUNTRY MICRO VIEW */
+                #map[data-zoom="5"] .map-lbl-subcontinent, #map[data-zoom="6"] .map-lbl-subcontinent, #map[data-zoom="7"] .map-lbl-subcontinent { display: none; }
+                #map[data-zoom="5"] .map-lbl-country { display: block; opacity: 1; font-size: 13px; }
+                #map[data-zoom="6"] .map-lbl-country, #map[data-zoom="7"] .map-lbl-country, #map[data-zoom="8"] .map-lbl-country { display: block; opacity: 1; font-size: 14px; }
                 
                 #regions-module ::-webkit-scrollbar { width: 6px; }
                 #regions-module ::-webkit-scrollbar-thumb { background-color: var(--border); border-radius: 4px; }
@@ -211,17 +205,14 @@ export async function initRegionsEngine(containerId) {
         let map = null, polygonLayerGroup = null;
         let treeNodes = [];
 
-        // Center coordinates strictly enforced to prevent island/ocean drifting
+        // STRICT CENTROID OVERRIDES (Ensures math doesn't drop labels into oceans)
         const centroidOverrides = {
-            'IND': [22.0, 79.0],   // Madhya Pradesh
-            'USA': [39.8, -98.5], 
-            'FRA': [46.2, 2.2],    
-            'GBR': [53.0, -1.5],   
-            'CAN': [56.1, -106.3], 
-            'RUS': [61.5, 105.3],  
-            'AUS': [-25.2, 133.7],
-            'NZL': [-40.9, 174.8],
-            'ZAF': [-28.5, 24.9]
+            'AS': [34.0, 90.0], 'AF': [2.0, 20.0], 'EU': [51.0, 15.0], 
+            'NO': [45.0, -100.0], 'SO': [-15.0, -60.0], 'OC': [-25.0, 135.0],
+            'IND': [22.0, 79.0], 'USA': [39.8, -98.5], 'FRA': [46.2, 2.2], 
+            'GBR': [53.0, -1.5], 'CAN': [56.1, -106.3], 'RUS': [61.5, 105.3], 
+            'AUS': [-25.2, 133.7], 'NZL': [-40.9, 174.8], 'ZAF': [-28.5, 24.9],
+            'NO-CAR': [19.0, -74.0], 'NO-CAM': [14.0, -86.0]
         };
 
         function toTitleCase(str) {
@@ -239,19 +230,15 @@ export async function initRegionsEngine(containerId) {
         const mapEl = window.L.DomUtil.get('map');
         if (mapEl) mapEl._leaflet_id = null;
 
+        // PURE SOVEREIGN ZERO-API MAP
         map = window.L.map('map', { 
-            preferCanvas: true,
-            zoomControl: true, 
-            attributionControl: false,
-            zoomSnap: 0.1, 
-            worldCopyJump: true,
-            minZoom: 1.5, 
-            maxBounds: null
+            preferCanvas: true, zoomControl: true, attributionControl: false,
+            zoomSnap: 0.1, worldCopyJump: true, minZoom: 1.5, maxBounds: null
         }).setView([20.0, 0.0], 2);
         
         window.nanbiMapInstance = map;
 
-        // Tracks zoom events to seamlessly reveal adjacent geography
+        // Data-Zoom tracking for CSS Progressive Typography
         map.on('zoomend', function() {
             let currentZoom = Math.floor(map.getZoom());
             container.querySelector('#map').setAttribute('data-zoom', currentZoom);
@@ -284,6 +271,15 @@ export async function initRegionsEngine(containerId) {
             } catch (err) {
                 console.error("Fetch tree data error:", err);
             }
+        }
+
+        function getAncestorAtLevel(nodeId, level) {
+            let curr = treeNodes.find(n => n.node_id === nodeId);
+            while (curr && curr.node_id !== 'GLOBAL') {
+                if (curr.node_level === level) return curr;
+                curr = treeNodes.find(n => n.node_id === curr.parent_id);
+            }
+            return null;
         }
 
         function getLineage(nodeId) {
@@ -324,20 +320,27 @@ export async function initRegionsEngine(containerId) {
         }
 
         // =========================================================================================
-        // THE MASTER 3-WAY SYNCHRONIZATION ENGINE
-        // Triggers simultaneously across Dropdowns, Tables, and Map Framing
+        // MASTER 3-WAY SYNCHRONIZATION ENGINE
         // =========================================================================================
         function applyGlobalSelection(nodeId) {
             const activeNode = treeNodes.find(n => n.node_id === nodeId) || { node_id: 'GLOBAL', node_name: 'World', node_level: 'root' };
 
-            // 1. SYNC DROPDOWNS
+            // 1. SYNC DROPDOWNS (Flawless Waterfall Reset)
             const lineage = getLineage(nodeId);
-            if (lineage.continent) { container.querySelector('#selContinent').value = lineage.continent; populateDropdown('selSubContinent', 'sub_continent', lineage.continent); } else cascadeClear(['selSubContinent', 'selCountry', 'selState', 'selDistrict', 'selTaluk']);
-            if (lineage.sub_continent) { container.querySelector('#selSubContinent').value = lineage.sub_continent; populateDropdown('selCountry', 'country', lineage.sub_continent); } else cascadeClear(['selCountry', 'selState', 'selDistrict', 'selTaluk']);
-            if (lineage.country) { container.querySelector('#selCountry').value = lineage.country; populateDropdown('selState', 'state', lineage.country); } else cascadeClear(['selState', 'selDistrict', 'selTaluk']);
-            if (lineage.state) { container.querySelector('#selState').value = lineage.state; populateDropdown('selDistrict', 'district', lineage.state); } else cascadeClear(['selDistrict', 'selTaluk']);
-            if (lineage.district) { container.querySelector('#selDistrict').value = lineage.district; populateDropdown('selTaluk', 'taluk', lineage.district); } else cascadeClear(['selTaluk']);
-            if (lineage.taluk) { container.querySelector('#selTaluk').value = lineage.taluk; }
+            if (nodeId === 'GLOBAL') {
+                container.querySelector('#selContinent').value = 'All';
+                cascadeClear(['selSubContinent', 'selCountry', 'selState', 'selDistrict', 'selTaluk']);
+            } else {
+                if (lineage.continent) { 
+                    container.querySelector('#selContinent').value = lineage.continent; 
+                    populateDropdown('selSubContinent', 'sub_continent', lineage.continent); 
+                }
+                if (lineage.sub_continent) { container.querySelector('#selSubContinent').value = lineage.sub_continent; populateDropdown('selCountry', 'country', lineage.sub_continent); } else cascadeClear(['selCountry', 'selState', 'selDistrict', 'selTaluk']);
+                if (lineage.country) { container.querySelector('#selCountry').value = lineage.country; populateDropdown('selState', 'state', lineage.country); } else cascadeClear(['selState', 'selDistrict', 'selTaluk']);
+                if (lineage.state) { container.querySelector('#selState').value = lineage.state; populateDropdown('selDistrict', 'district', lineage.state); } else cascadeClear(['selDistrict', 'selTaluk']);
+                if (lineage.district) { container.querySelector('#selDistrict').value = lineage.district; populateDropdown('selTaluk', 'taluk', lineage.district); } else cascadeClear(['selTaluk']);
+                if (lineage.taluk) { container.querySelector('#selTaluk').value = lineage.taluk; }
+            }
 
             // 2. SYNC TABLE LIST
             let tableNodes = [];
@@ -383,25 +386,27 @@ export async function initRegionsEngine(containerId) {
                 </div>
             `;
 
-            // 3. SYNC MAP BOUNDARIES & SPATIAL GROUPING
+            // 3. SYNC MAP BOUNDARIES, STYLING, AND DYNAMIC LABELS
             if (polygonLayerGroup) map.removeLayer(polygonLayerGroup);
             polygonLayerGroup = window.L.featureGroup();
             
             let countryNodes = treeNodes.filter(n => n.node_level === 'country' && n.dynamic_config_payload && n.dynamic_config_payload.geojson);
             
-            // This captures ONLY the active selection to enforce the 80% Viewport Rule
             let activeBoundsLayer = window.L.featureGroup(); 
+            
+            // Tiered Label Data Tracker
+            let labelData = {
+                continents: new Map(),
+                subcontinents: new Map(),
+                countries: new Map()
+            };
 
             countryNodes.forEach(n => {
                 try {
-                    // Logic: Is this country part of the active Sub-Continent / Continent / Search?
                     let isActiveRegion = (nodeId === 'GLOBAL') || (n.node_id === nodeId || isDescendant(n, nodeId));
                     let geom = n.dynamic_config_payload.geojson;
-                    let displayName = toTitleCase(n.node_name);
-                    
                     let displayColor = n.dynamic_config_payload.fill_color || '#e2e8f0'; 
                     
-                    // High opacity for active regions, ghosted styling for adjacent neighbors
                     let styleOptions = isActiveRegion 
                         ? { color: '#1e293b', weight: 0.8, fillColor: displayColor, fillOpacity: 0.95 } 
                         : { color: '#475569', weight: 0.4, fillColor: displayColor, fillOpacity: 0.35 };
@@ -411,26 +416,59 @@ export async function initRegionsEngine(containerId) {
                     
                     if (isActiveRegion) activeBoundsLayer.addLayer(l);
                     
-                    // Dynamic Typographical Classes
-                    let centerPoint = centroidOverrides[n.node_id] ? centroidOverrides[n.node_id] : l.getBounds().getCenter();
-                    let labelClass = isActiveRegion ? 'label-active' : 'label-neighbor';
-                    
-                    let labelMarker = window.L.marker(centerPoint, {
-                        icon: window.L.divIcon({
-                            className: `map-label ${labelClass}`,
-                            html: displayName,
-                            iconSize: [120, 20],
-                            iconAnchor: [60, 10]
-                        }),
-                        interactive: false
-                    });
-                    polygonLayerGroup.addLayer(labelMarker);
+                    // Populate dynamic labels ONLY for the active region to prevent clutter
+                    if (isActiveRegion) {
+                        let b = l.getBounds();
+                        labelData.countries.set(n.node_id, { name: n.node_name, bounds: b });
+                        
+                        let sub = getAncestorAtLevel(n.node_id, 'sub_continent');
+                        if (sub) {
+                            if (!labelData.subcontinents.has(sub.node_id)) labelData.subcontinents.set(sub.node_id, { name: sub.node_name, bounds: window.L.latLngBounds() });
+                            labelData.subcontinents.get(sub.node_id).bounds.extend(b);
+                        }
+                        
+                        let cont = getAncestorAtLevel(n.node_id, 'continent');
+                        if (cont) {
+                            if (!labelData.continents.has(cont.node_id)) labelData.continents.set(cont.node_id, { name: cont.node_name, bounds: window.L.latLngBounds() });
+                            labelData.continents.get(cont.node_id).bounds.extend(b);
+                        }
+                    }
                     
                     l.on('click', () => applyGlobalSelection(n.node_id));
                 } catch(e) {}
             });
 
-            // 4. EXECUTE 80% VIEWPORT CALCULATION
+            // Inject Continent Labels
+            labelData.continents.forEach((data, id) => {
+                let center = centroidOverrides[id] ? centroidOverrides[id] : data.bounds.getCenter();
+                let marker = window.L.marker(center, {
+                    icon: window.L.divIcon({ className: 'map-label map-lbl-continent', html: toTitleCase(data.name), iconSize: [200,30], iconAnchor: [100,15] }),
+                    interactive: false
+                });
+                polygonLayerGroup.addLayer(marker);
+            });
+
+            // Inject Sub-Continent Labels
+            labelData.subcontinents.forEach((data, id) => {
+                let center = centroidOverrides[id] ? centroidOverrides[id] : data.bounds.getCenter();
+                let marker = window.L.marker(center, {
+                    icon: window.L.divIcon({ className: 'map-label map-lbl-subcontinent', html: toTitleCase(data.name), iconSize: [200,30], iconAnchor: [100,15] }),
+                    interactive: false
+                });
+                polygonLayerGroup.addLayer(marker);
+            });
+
+            // Inject Country Labels
+            labelData.countries.forEach((data, id) => {
+                let center = centroidOverrides[id] ? centroidOverrides[id] : data.bounds.getCenter();
+                let marker = window.L.marker(center, {
+                    icon: window.L.divIcon({ className: 'map-label map-lbl-country', html: toTitleCase(data.name), iconSize: [120,20], iconAnchor: [60,10] }),
+                    interactive: false
+                });
+                polygonLayerGroup.addLayer(marker);
+            });
+
+            // 4. TRUE 80% VIEWPORT CALCULATION
             setTimeout(() => {
                 map.invalidateSize(false);
                 if (polygonLayerGroup.getLayers().length > 0) {
@@ -438,19 +476,20 @@ export async function initRegionsEngine(containerId) {
                     
                     const mapDom = container.querySelector('#map-wrapper');
                     
-                    // Calculate exact 10% padding on all sides to reserve 80% for the map
-                    const padX = Math.floor(mapDom.clientWidth * 0.1);
-                    const padY = Math.floor(mapDom.clientHeight * 0.1);
+                    // Mathematical 10% padding on all 4 sides perfectly boxes the map to 80% of the container
+                    const padX = Math.max(10, Math.floor(mapDom.clientWidth * 0.1));
+                    const padY = Math.max(10, Math.floor(mapDom.clientHeight * 0.1));
                     
                     let targetBounds;
                     if (nodeId === 'GLOBAL') {
                         targetBounds = window.L.latLngBounds([[-60, -180], [85, 180]]);
+                        map.fitBounds(targetBounds, { padding: [0, 0], animate: true, duration: 1.2 });
                     } else {
-                        // Frame ONLY the active selection (e.g., just Southern Asia)
                         targetBounds = activeBoundsLayer.getBounds();
+                        if (targetBounds.isValid()) {
+                            map.fitBounds(targetBounds, { padding: [padX, padY], animate: true, duration: 1.2 });
+                        }
                     }
-                    
-                    map.fitBounds(targetBounds, { padding: [padX, padY], animate: true, duration: 1.2 });
                 }
             }, 50);
         }
