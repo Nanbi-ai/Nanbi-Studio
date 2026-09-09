@@ -38,24 +38,27 @@ export async function initRegionsEngine(containerId) {
                 #regions-module path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s, stroke 0.2s; outline: none; }
                 #regions-module path.leaflet-interactive:hover { stroke: #1e293b !important; stroke-width: 2.5px !important; fill-opacity: 1 !important; cursor: pointer; }
                 
-                /* PROGRESSIVE ZOOM TYPOGRAPHY */
+                /* PROGRESSIVE ZOOM TYPOGRAPHY - REGULAR FONT, SOFT HALO */
                 .perm-label { 
                     background: transparent !important; border: none !important; box-shadow: none !important; 
-                    font-weight: 800; color: #0f172a; text-align: center; white-space: nowrap; pointer-events: none;
-                    text-shadow: 1.5px 1.5px 0 #fff, -1.5px -1.5px 0 #fff, 1.5px -1.5px 0 #fff, -1.5px 1.5px 0 #fff, 0 1.5px 0 #fff, 0 -1.5px 0 #fff, 1.5px 0 0 #fff, -1.5px 0 0 #fff;
+                    font-weight: 500; color: #1e293b; text-align: center; white-space: nowrap; pointer-events: none;
+                    text-shadow: 0px 0px 3px rgba(255,255,255,0.9), 0px 0px 5px rgba(255,255,255,0.7);
                     transition: opacity 0.3s ease, font-size 0.3s ease;
                 }
                 
-                .label-macro { opacity: 1; font-size: 11px; }
-                .label-micro { opacity: 0; font-size: 10px; }
+                /* STRICT CSS RENDER THRESHOLDS */
+                .label-macro { display: block; opacity: 1; font-size: 11px; }
+                .label-micro { display: none; opacity: 0; font-size: 10px; }
                 
-                #map[data-zoom="2"] .label-macro { font-size: 11px; }
-                #map[data-zoom="3"] .label-macro { font-size: 13px; }
-                #map[data-zoom="4"] .label-macro, #map[data-zoom="5"] .label-macro, #map[data-zoom="6"] .label-macro { font-size: 15px; }
+                /* Map Zoom Level Breakpoints */
+                #map[data-zoom="1"] .label-macro, #map[data-zoom="2"] .label-macro { font-size: 10px; }
+                #map[data-zoom="3"] .label-macro { font-size: 12px; }
+                #map[data-zoom="4"] .label-macro { font-size: 14px; }
                 
-                #map[data-zoom="3"] .label-micro { opacity: 0.8; font-size: 10px; }
-                #map[data-zoom="4"] .label-micro { opacity: 1; font-size: 12px; }
-                #map[data-zoom="5"] .label-micro, #map[data-zoom="6"] .label-micro { opacity: 1; font-size: 14px; }
+                /* Reveal smaller labels ONLY when safely zoomed in */
+                #map[data-zoom="4"] .label-micro { display: block; opacity: 0.8; font-size: 10px; }
+                #map[data-zoom="5"] .label-micro { display: block; opacity: 1; font-size: 12px; }
+                #map[data-zoom="6"] .label-micro { display: block; opacity: 1; font-size: 14px; }
                 
                 #regions-module ::-webkit-scrollbar { width: 6px; }
                 #regions-module ::-webkit-scrollbar-thumb { background-color: var(--border); border-radius: 4px; }
@@ -198,7 +201,20 @@ export async function initRegionsEngine(containerId) {
         let treeNodes = [];
 
         // Anchor Labels that are visible even when fully zoomed out
-        const macroAnchorLabels = ['IND', 'USA', 'CAN', 'BRA', 'RUS', 'CHN', 'AUS', 'ZAF', 'FRA', 'ARG', 'DZA', 'KAZ', 'SAU'];
+        const macroAnchorLabels = ['IND', 'USA', 'CAN', 'BRA', 'RUS', 'CHN', 'AUS', 'ZAF', 'FRA', 'ARG', 'DZA', 'KAZ', 'SAU', 'GRL'];
+
+        // Strict Center Coordinates (Prevents India's label from sinking into the ocean due to islands)
+        const centroidOverrides = {
+            'IND': [22.0, 79.0],  // Madhya Pradesh, exact center
+            'USA': [39.8, -98.5], 
+            'FRA': [46.2, 2.2],    
+            'GBR': [53.0, -1.5],   
+            'CAN': [56.1, -106.3], 
+            'RUS': [61.5, 105.3],  
+            'AUS': [-25.2, 133.7],
+            'NZL': [-40.9, 174.8],
+            'ZAF': [-28.5, 24.9]
+        };
 
         const strictBounds = {
             'EU': [[34.0, -25.0], [75.0, 65.0]],     
@@ -366,7 +382,6 @@ export async function initRegionsEngine(containerId) {
             if (polygonLayerGroup) map.removeLayer(polygonLayerGroup);
             polygonLayerGroup = window.L.featureGroup();
             
-            // STRICT RULE: ALL countries are rendered with UHD borders
             let countryNodes = treeNodes.filter(n => n.node_level === 'country' && n.dynamic_config_payload && n.dynamic_config_payload.geojson);
             let activeBoundsLayer = window.L.featureGroup(); 
 
@@ -376,10 +391,6 @@ export async function initRegionsEngine(containerId) {
                     let geom = n.dynamic_config_payload.geojson;
                     let displayName = toTitleCase(n.node_name);
                     
-                    // =========================================================================
-                    // METADATA-DRIVEN COLOR INJECTION
-                    // Reads the 15-shade palette directly from the database
-                    // =========================================================================
                     let displayColor = n.dynamic_config_payload.fill_color || '#e2e8f0'; 
                     
                     let styleOptions = isActiveRegion 
@@ -387,12 +398,23 @@ export async function initRegionsEngine(containerId) {
                         : { color: '#475569', weight: 0.4, fillColor: displayColor, fillOpacity: 0.35 };
                         
                     let l = window.L.geoJSON(geom, { style: styleOptions });
-                    
-                    let labelClass = macroAnchorLabels.includes(n.node_id) ? 'label-macro' : 'label-micro';
-                    l.bindTooltip(displayName, { permanent: true, direction: 'center', className: `perm-label ${labelClass}` });
-                    
                     polygonLayerGroup.addLayer(l);
                     if (isActiveRegion) activeBoundsLayer.addLayer(l);
+                    
+                    // FIX: Direct Coordinate Injection (No auto-center guessing)
+                    let centerPoint = centroidOverrides[n.node_id] ? centroidOverrides[n.node_id] : l.getBounds().getCenter();
+                    let labelClass = macroAnchorLabels.includes(n.node_id) ? 'label-macro' : 'label-micro';
+                    
+                    let labelMarker = window.L.marker(centerPoint, {
+                        icon: window.L.divIcon({
+                            className: `perm-label ${labelClass}`,
+                            html: displayName,
+                            iconSize: [120, 20],
+                            iconAnchor: [60, 10]
+                        }),
+                        interactive: false
+                    });
+                    polygonLayerGroup.addLayer(labelMarker);
                     
                     l.on('click', () => applyGlobalSelection(n.node_id));
                 } catch(e) {}
