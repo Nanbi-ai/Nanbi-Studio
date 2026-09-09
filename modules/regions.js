@@ -36,29 +36,40 @@ export async function initRegionsEngine(containerId) {
                 
                 /* POLYGON HOVER & UHD BORDERS */
                 #regions-module path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s, stroke 0.2s; outline: none; }
-                #regions-module path.leaflet-interactive:hover { stroke: #1e293b !important; stroke-width: 2.5px !important; fill-opacity: 1 !important; cursor: pointer; }
+                #regions-module path.leaflet-interactive:hover { stroke: #1e293b !important; stroke-width: 2.0px !important; fill-opacity: 1 !important; cursor: pointer; }
                 
-                /* PROGRESSIVE ZOOM TYPOGRAPHY - REGULAR FONT, SOFT HALO */
-                .perm-label { 
+                /* SOFT, PROFESSIONAL TYPOGRAPHY (NO BLACK/BOLD HACKS) */
+                .map-label { 
                     background: transparent !important; border: none !important; box-shadow: none !important; 
-                    font-weight: 500; color: #1e293b; text-align: center; white-space: nowrap; pointer-events: none;
-                    text-shadow: 0px 0px 3px rgba(255,255,255,0.9), 0px 0px 5px rgba(255,255,255,0.7);
-                    transition: opacity 0.3s ease, font-size 0.3s ease;
+                    text-align: center; white-space: nowrap; pointer-events: none;
+                    transition: opacity 0.4s ease, font-size 0.4s ease;
                 }
                 
-                /* STRICT CSS RENDER THRESHOLDS */
-                .label-macro { display: block; opacity: 1; font-size: 11px; }
-                .label-micro { display: none; opacity: 0; font-size: 10px; }
+                .label-active { 
+                    font-weight: 600; color: #1e293b; 
+                    text-shadow: 0px 0px 4px rgba(255,255,255,0.95), 0px 0px 8px rgba(255,255,255,0.8); 
+                    z-index: 1000 !important;
+                }
                 
-                /* Map Zoom Level Breakpoints */
-                #map[data-zoom="1"] .label-macro, #map[data-zoom="2"] .label-macro { font-size: 10px; }
-                #map[data-zoom="3"] .label-macro { font-size: 12px; }
-                #map[data-zoom="4"] .label-macro { font-size: 14px; }
+                .label-neighbor { 
+                    font-weight: 500; color: #475569; 
+                    text-shadow: 0px 0px 3px rgba(255,255,255,0.85);
+                    z-index: 500 !important;
+                }
                 
-                /* Reveal smaller labels ONLY when safely zoomed in */
-                #map[data-zoom="4"] .label-micro { display: block; opacity: 0.8; font-size: 10px; }
-                #map[data-zoom="5"] .label-micro { display: block; opacity: 1; font-size: 12px; }
-                #map[data-zoom="6"] .label-micro { display: block; opacity: 1; font-size: 14px; }
+                /* DYNAMIC VISIBILITY THRESHOLDS DRIVEN BY LEAFLET ZOOM */
+                .label-active, .label-neighbor { opacity: 0; font-size: 0px; }
+                
+                /* Zoom 2 (World View) - Anchor visibility */
+                #map[data-zoom="2"] .label-active { opacity: 1; font-size: 10px; }
+                
+                /* Zoom 3 (Continent View) */
+                #map[data-zoom="3"] .label-active { opacity: 1; font-size: 12px; }
+                #map[data-zoom="3"] .label-neighbor { opacity: 0.6; font-size: 9px; }
+                
+                /* Zoom 4+ (Sub-Continent & Country View) - Reveals adjacent macro geography */
+                #map[data-zoom="4"] .label-active, #map[data-zoom="5"] .label-active, #map[data-zoom="6"] .label-active { opacity: 1; font-size: 14px; }
+                #map[data-zoom="4"] .label-neighbor, #map[data-zoom="5"] .label-neighbor, #map[data-zoom="6"] .label-neighbor { opacity: 0.85; font-size: 11px; }
                 
                 #regions-module ::-webkit-scrollbar { width: 6px; }
                 #regions-module ::-webkit-scrollbar-thumb { background-color: var(--border); border-radius: 4px; }
@@ -200,12 +211,9 @@ export async function initRegionsEngine(containerId) {
         let map = null, polygonLayerGroup = null;
         let treeNodes = [];
 
-        // Anchor Labels that are visible even when fully zoomed out
-        const macroAnchorLabels = ['IND', 'USA', 'CAN', 'BRA', 'RUS', 'CHN', 'AUS', 'ZAF', 'FRA', 'ARG', 'DZA', 'KAZ', 'SAU', 'GRL'];
-
-        // Strict Center Coordinates (Prevents India's label from sinking into the ocean due to islands)
+        // Center coordinates strictly enforced to prevent island/ocean drifting
         const centroidOverrides = {
-            'IND': [22.0, 79.0],  // Madhya Pradesh, exact center
+            'IND': [22.0, 79.0],   // Madhya Pradesh
             'USA': [39.8, -98.5], 
             'FRA': [46.2, 2.2],    
             'GBR': [53.0, -1.5],   
@@ -214,15 +222,6 @@ export async function initRegionsEngine(containerId) {
             'AUS': [-25.2, 133.7],
             'NZL': [-40.9, 174.8],
             'ZAF': [-28.5, 24.9]
-        };
-
-        const strictBounds = {
-            'EU': [[34.0, -25.0], [75.0, 65.0]],     
-            'AS': [[-11.0, 26.0], [55.0, 150.0]],    
-            'AF': [[-35.0, -20.0], [38.0, 55.0]],    
-            'NO': [[5.0, -170.0], [84.0, -10.0]],    
-            'SO': [[-56.0, -85.0], [15.0, -35.0]],   
-            'OC': [[-50.0, 110.0], [10.0, 180.0]]    
         };
 
         function toTitleCase(str) {
@@ -240,7 +239,6 @@ export async function initRegionsEngine(containerId) {
         const mapEl = window.L.DomUtil.get('map');
         if (mapEl) mapEl._leaflet_id = null;
 
-        // ZERO API: Pure Sovereign Leaflet Container
         map = window.L.map('map', { 
             preferCanvas: true,
             zoomControl: true, 
@@ -253,7 +251,7 @@ export async function initRegionsEngine(containerId) {
         
         window.nanbiMapInstance = map;
 
-        // Progressive Typography Listener
+        // Tracks zoom events to seamlessly reveal adjacent geography
         map.on('zoomend', function() {
             let currentZoom = Math.floor(map.getZoom());
             container.querySelector('#map').setAttribute('data-zoom', currentZoom);
@@ -325,9 +323,14 @@ export async function initRegionsEngine(containerId) {
             });
         }
 
+        // =========================================================================================
+        // THE MASTER 3-WAY SYNCHRONIZATION ENGINE
+        // Triggers simultaneously across Dropdowns, Tables, and Map Framing
+        // =========================================================================================
         function applyGlobalSelection(nodeId) {
             const activeNode = treeNodes.find(n => n.node_id === nodeId) || { node_id: 'GLOBAL', node_name: 'World', node_level: 'root' };
 
+            // 1. SYNC DROPDOWNS
             const lineage = getLineage(nodeId);
             if (lineage.continent) { container.querySelector('#selContinent').value = lineage.continent; populateDropdown('selSubContinent', 'sub_continent', lineage.continent); } else cascadeClear(['selSubContinent', 'selCountry', 'selState', 'selDistrict', 'selTaluk']);
             if (lineage.sub_continent) { container.querySelector('#selSubContinent').value = lineage.sub_continent; populateDropdown('selCountry', 'country', lineage.sub_continent); } else cascadeClear(['selCountry', 'selState', 'selDistrict', 'selTaluk']);
@@ -336,6 +339,7 @@ export async function initRegionsEngine(containerId) {
             if (lineage.district) { container.querySelector('#selDistrict').value = lineage.district; populateDropdown('selTaluk', 'taluk', lineage.district); } else cascadeClear(['selTaluk']);
             if (lineage.taluk) { container.querySelector('#selTaluk').value = lineage.taluk; }
 
+            // 2. SYNC TABLE LIST
             let tableNodes = [];
             if (nodeId === 'GLOBAL') {
                 tableNodes = treeNodes.filter(n => n.node_level === 'continent');
@@ -379,35 +383,41 @@ export async function initRegionsEngine(containerId) {
                 </div>
             `;
 
+            // 3. SYNC MAP BOUNDARIES & SPATIAL GROUPING
             if (polygonLayerGroup) map.removeLayer(polygonLayerGroup);
             polygonLayerGroup = window.L.featureGroup();
             
             let countryNodes = treeNodes.filter(n => n.node_level === 'country' && n.dynamic_config_payload && n.dynamic_config_payload.geojson);
+            
+            // This captures ONLY the active selection to enforce the 80% Viewport Rule
             let activeBoundsLayer = window.L.featureGroup(); 
 
             countryNodes.forEach(n => {
                 try {
+                    // Logic: Is this country part of the active Sub-Continent / Continent / Search?
                     let isActiveRegion = (nodeId === 'GLOBAL') || (n.node_id === nodeId || isDescendant(n, nodeId));
                     let geom = n.dynamic_config_payload.geojson;
                     let displayName = toTitleCase(n.node_name);
                     
                     let displayColor = n.dynamic_config_payload.fill_color || '#e2e8f0'; 
                     
+                    // High opacity for active regions, ghosted styling for adjacent neighbors
                     let styleOptions = isActiveRegion 
                         ? { color: '#1e293b', weight: 0.8, fillColor: displayColor, fillOpacity: 0.95 } 
                         : { color: '#475569', weight: 0.4, fillColor: displayColor, fillOpacity: 0.35 };
                         
                     let l = window.L.geoJSON(geom, { style: styleOptions });
                     polygonLayerGroup.addLayer(l);
+                    
                     if (isActiveRegion) activeBoundsLayer.addLayer(l);
                     
-                    // FIX: Direct Coordinate Injection (No auto-center guessing)
+                    // Dynamic Typographical Classes
                     let centerPoint = centroidOverrides[n.node_id] ? centroidOverrides[n.node_id] : l.getBounds().getCenter();
-                    let labelClass = macroAnchorLabels.includes(n.node_id) ? 'label-macro' : 'label-micro';
+                    let labelClass = isActiveRegion ? 'label-active' : 'label-neighbor';
                     
                     let labelMarker = window.L.marker(centerPoint, {
                         icon: window.L.divIcon({
-                            className: `perm-label ${labelClass}`,
+                            className: `map-label ${labelClass}`,
                             html: displayName,
                             iconSize: [120, 20],
                             iconAnchor: [60, 10]
@@ -420,21 +430,23 @@ export async function initRegionsEngine(containerId) {
                 } catch(e) {}
             });
 
+            // 4. EXECUTE 80% VIEWPORT CALCULATION
             setTimeout(() => {
                 map.invalidateSize(false);
                 if (polygonLayerGroup.getLayers().length > 0) {
                     polygonLayerGroup.addTo(map); 
                     
                     const mapDom = container.querySelector('#map-wrapper');
+                    
+                    // Calculate exact 10% padding on all sides to reserve 80% for the map
                     const padX = Math.floor(mapDom.clientWidth * 0.1);
                     const padY = Math.floor(mapDom.clientHeight * 0.1);
                     
                     let targetBounds;
                     if (nodeId === 'GLOBAL') {
                         targetBounds = window.L.latLngBounds([[-60, -180], [85, 180]]);
-                    } else if (strictBounds[nodeId]) {
-                        targetBounds = window.L.latLngBounds(strictBounds[nodeId][0], strictBounds[nodeId][1]);
                     } else {
+                        // Frame ONLY the active selection (e.g., just Southern Asia)
                         targetBounds = activeBoundsLayer.getBounds();
                     }
                     
