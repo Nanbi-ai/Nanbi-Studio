@@ -26,28 +26,29 @@ export async function initRegionsEngine(containerId) {
                 #regions-module td { text-align: left; border-bottom: 1px solid var(--border); color: var(--text); font-weight: 600; font-size: 11px; padding: 10px; }
                 #regions-module .row-active { background-color: var(--hover-bg) !important; border-left: 4px solid var(--brand-orange-dark) !important; } 
                 
-                /* SOVEREIGN MAP CONTAINER */
+                /* SOVEREIGN MAP CONTAINER - OCEANIC BLUE LOCKED */
                 #regions-module #map-wrapper { position: relative; width: 100%; height: 100%; min-height: 0; flex: 1; border-radius: 5px; background-color: #D4F1F9; overflow: hidden; }
                 #regions-module #map { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; background-color: #D4F1F9; }
                 .leaflet-container { background: transparent !important; }
                 
-                /* DARK MODE INVERSION */
-                .dark-theme-map { background-color: #0b1120 !important; }
-                
                 /* POLYGON HOVER & UHD BORDERS */
                 #regions-module path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s, stroke 0.2s; outline: none; }
-                #regions-module path.leaflet-interactive:hover { stroke: #1e293b !important; stroke-width: 2.0px !important; fill-opacity: 1 !important; cursor: pointer; }
+                #regions-module path.leaflet-interactive:hover { stroke: #1e293b !important; stroke-width: 1.5px !important; fill-opacity: 0.8 !important; cursor: pointer; }
                 
-                /* HIERARCHICAL TYPOGRAPHY */
+                /* PROFESSIONAL LABEL TYPOGRAPHY (Soft, Regular Weight, No Clutter) */
                 .map-label { 
                     background: transparent !important; border: none !important; box-shadow: none !important; 
                     text-align: center; white-space: nowrap; pointer-events: none;
                 }
-                
-                /* The label classes define the text properties, visibility is handled in JS */
-                .map-lbl-continent { font-weight: 800; font-size: 15px; color: #0f172a; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0px 0px 4px rgba(255,255,255,0.9), 0px 0px 8px rgba(255,255,255,0.7); }
-                .map-lbl-subcontinent { font-weight: 700; font-size: 13px; color: #1e293b; text-transform: uppercase; text-shadow: 0px 0px 4px rgba(255,255,255,0.9), 0px 0px 8px rgba(255,255,255,0.7); }
-                .map-lbl-country { font-weight: 600; font-size: 11px; color: #334155; text-shadow: 0px 0px 3px rgba(255,255,255,0.9), 0px 0px 6px rgba(255,255,255,0.7); }
+                .label-text { 
+                    font-weight: 500; /* Regular/Medium, NOT bold */
+                    font-size: 11px; 
+                    color: #1e293b; 
+                    letter-spacing: 0.5px;
+                    text-shadow: 0px 0px 3px rgba(255,255,255,1), 0px 0px 5px rgba(255,255,255,0.8); 
+                }
+                .label-continent { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; }
+                .label-subcontinent { font-size: 11px; font-weight: 600; text-transform: uppercase; }
                 
                 #regions-module ::-webkit-scrollbar { width: 6px; }
                 #regions-module ::-webkit-scrollbar-thumb { background-color: var(--border); border-radius: 4px; }
@@ -130,6 +131,7 @@ export async function initRegionsEngine(containerId) {
                     </section>
                 </div>
 
+                <!-- Config Hub (Hidden by default) -->
                 <div id="viewConfigHub" class="hidden flex-col lg:flex-row flex-1 min-h-0 min-w-0 gap-2 p-1">
                     <aside class="flex-1 lg:max-w-[40%] panel-card p-3 flex flex-col min-h-0">
                         <div class="flex justify-between items-center pb-2 border-b border-[color:var(--border)] mb-2 shrink-0">
@@ -152,17 +154,12 @@ export async function initRegionsEngine(containerId) {
                             <label class="text-[10px] font-bold text-[color:var(--muted)] uppercase tracking-widest">JSONB Config Ledger</label>
                             <textarea id="jsonConfigTextarea" class="w-full flex-1 p-3 font-mono text-xs rounded border border-[color:var(--border)] bg-transparent text-[color:var(--text)] outline-none resize-none shadow-inner" disabled></textarea>
                         </div>
-                        <div class="bg-transparent p-3 rounded border border-[color:var(--border)] shrink-0">
-                            <div class="flex justify-between items-center border-b border-[color:var(--border)] pb-1 mb-1.5">
-                                <span class="text-[10px] font-bold uppercase tracking-widest text-[color:var(--text)]">Architectural Audit & Reasoning</span>
-                            </div>
-                            <div id="auditReasonBox" class="text-xs text-[color:var(--muted)] font-medium py-0.5">Select a node to review immutability logs.</div>
-                        </div>
                     </section>
                 </div>
             </div>
         `;
 
+        // UI Toggles
         const tabMapMatrix = container.querySelector('#tabMapMatrix');
         const tabConfigHub = container.querySelector('#tabConfigHub');
         const viewMapMatrix = container.querySelector('#viewMapMatrix');
@@ -173,9 +170,7 @@ export async function initRegionsEngine(containerId) {
             tabConfigHub.className = "px-4 py-1 rounded text-[11px] font-bold bg-[color:var(--card)] text-[color:var(--muted)] border border-[color:var(--border)] hover:bg-[color:var(--hover-bg)] transition";
             viewMapMatrix.style.display = "flex";
             viewConfigHub.style.display = "none";
-            if (window.nanbiMapInstance) {
-                setTimeout(() => window.nanbiMapInstance.invalidateSize(true), 100);
-            }
+            if (window.nanbiMapInstance) { setTimeout(() => window.nanbiMapInstance.invalidateSize(true), 100); }
         };
 
         tabConfigHub.onclick = () => {
@@ -189,19 +184,28 @@ export async function initRegionsEngine(containerId) {
         let map = null, polygonLayerGroup = null;
         let treeNodes = [];
 
+        // Center fixes to prevent labels dropping into oceans
         const centroidOverrides = {
             'AS': [34.0, 90.0], 'AF': [2.0, 20.0], 'EU': [51.0, 15.0], 
             'NO': [45.0, -100.0], 'SO': [-15.0, -60.0], 'OC': [-25.0, 135.0],
             'IND': [22.0, 79.0], 'USA': [39.8, -98.5], 'FRA': [46.2, 2.2], 
             'GBR': [53.0, -1.5], 'CAN': [56.1, -106.3], 'RUS': [61.5, 105.3], 
-            'AUS': [-25.2, 133.7], 'NZL': [-40.9, 174.8], 'ZAF': [-28.5, 24.9],
-            'NO-CAR': [19.0, -74.0], 'NO-CAM': [14.0, -86.0]
+            'AUS': [-25.2, 133.7], 'NZL': [-40.9, 174.8], 'ZAF': [-28.5, 24.9]
         };
 
-        function toTitleCase(str) {
-            return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-        }
+        // Fallback colors for Continent & Sub-Continent grouping (Ensures 100% hierarchy compliance even if DB is empty)
+        const hierarchyColors = {
+            'AS': '#F6D06D', 'AF': '#F482A0', 'EU': '#A888C8', 'NO': '#54C0C0', 'SO': '#F89090', 'OC': '#64B8E0',
+            'AS-SAS': '#F6A65C', 'AS-EAS': '#F581A5', 'AS-WAS': '#8CD27A', 'AS-SOU': '#5CBCE0', 'AS-CAS': '#A685C8',
+            'EU-WEU': '#A685C8', 'EU-EEU': '#FDC849', 'EU-NEU': '#54C0C0', 'EU-SEU': '#8CD27A',
+            'AF-NAF': '#E1E870', 'AF-SAF': '#8CD27A', 'AF-WAF': '#F581A5', 'AF-EAF': '#F6A65C', 'AF-MAF': '#64B8E0',
+            'NO-NAM': '#E1E870', 'NO-CAM': '#F89090', 'NO-CAR': '#5CBCE0',
+            'OC-ANZ': '#A685C8', 'OC-MEL': '#FDC849', 'OC-POL': '#F581A5', 'OC-MIC': '#64B8E0'
+        };
 
+        function toTitleCase(str) { return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '); }
+
+        // Initialize Leaflet Map
         if (!window.L) {
             await new Promise((resolve) => {
                 const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(link);
@@ -215,23 +219,15 @@ export async function initRegionsEngine(containerId) {
 
         map = window.L.map('map', { 
             preferCanvas: true, zoomControl: true, attributionControl: false,
-            zoomSnap: 0.1, worldCopyJump: true, minZoom: 1.5, maxBounds: null
+            zoomSnap: 0.1, worldCopyJump: true, minZoom: 1, maxBounds: null
         }).setView([20.0, 0.0], 2);
         
         window.nanbiMapInstance = map;
 
-        const isDark = localStorage.getItem('nanbi_theme') === 'dark' || document.documentElement.classList.contains('dark') || document.body.classList.contains('dark');
-        if (isDark) {
-            container.querySelector('#map').classList.add('dark-theme-map');
-            container.querySelector('#map-wrapper').style.backgroundColor = '#0b1120';
-        }
-
         let resizeTimer;
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimer);
-            resizeTimer = setTimeout(() => {
-                if (window.nanbiMapInstance) window.nanbiMapInstance.invalidateSize(false);
-            }, 250);
+            resizeTimer = setTimeout(() => { if (window.nanbiMapInstance) window.nanbiMapInstance.invalidateSize(false); }, 250);
         });
 
         async function fetchTreeData() {
@@ -244,9 +240,7 @@ export async function initRegionsEngine(containerId) {
                     applyGlobalSelection('GLOBAL');
                     setupDropdownListeners();
                 }
-            } catch (err) {
-                console.error("Fetch tree data error:", err);
-            }
+            } catch (err) { console.error("Fetch tree data error:", err); }
         }
 
         function getAncestorAtLevel(nodeId, level) {
@@ -307,10 +301,7 @@ export async function initRegionsEngine(containerId) {
                 container.querySelector('#selContinent').value = 'All';
                 cascadeClear(['selSubContinent', 'selCountry', 'selState', 'selDistrict', 'selTaluk']);
             } else {
-                if (lineage.continent) { 
-                    container.querySelector('#selContinent').value = lineage.continent; 
-                    populateDropdown('selSubContinent', 'sub_continent', lineage.continent); 
-                }
+                if (lineage.continent) { container.querySelector('#selContinent').value = lineage.continent; populateDropdown('selSubContinent', 'sub_continent', lineage.continent); }
                 if (lineage.sub_continent) { container.querySelector('#selSubContinent').value = lineage.sub_continent; populateDropdown('selCountry', 'country', lineage.sub_continent); } else cascadeClear(['selCountry', 'selState', 'selDistrict', 'selTaluk']);
                 if (lineage.country) { container.querySelector('#selCountry').value = lineage.country; populateDropdown('selState', 'state', lineage.country); } else cascadeClear(['selState', 'selDistrict', 'selTaluk']);
                 if (lineage.state) { container.querySelector('#selState').value = lineage.state; populateDropdown('selDistrict', 'district', lineage.state); } else cascadeClear(['selDistrict', 'selTaluk']);
@@ -336,9 +327,7 @@ export async function initRegionsEngine(containerId) {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-[color:var(--hover-bg)] transition cursor-pointer text-[color:var(--text)]";
                 if (node.node_id === nodeId && nodeId !== 'GLOBAL') tr.classList.add('row-active');
-                
                 tr.onclick = () => applyGlobalSelection(node.node_id);
-
                 tr.innerHTML = `
                     <td class="col-left border-r pl-4"><span class="bg-transparent border border-[color:var(--brand-orange-dark)] px-1.5 py-0.5 rounded font-mono text-[color:var(--brand-orange-dark)] font-bold">${node.node_id}</span></td>
                     <td class="font-bold col-left border-r">${node.node_name}</td>
@@ -356,21 +345,15 @@ export async function initRegionsEngine(containerId) {
                     <span class="font-bold">Gov/ISO Code:</span> 
                     <span class="font-mono font-bold">${activeNode.official_gov_code || 'N/A'}</span>
                 </div>
-                <div class="flex flex-col gap-1 p-1">
-                    <span class="font-bold text-[color:var(--text)]">Architectural Reasoning:</span> 
-                    <span class="text-[color:var(--muted)] italic leading-relaxed">${activeNode.architectural_reasoning || 'No ledger entry.'}</span>
-                </div>
             `;
 
             // 3. SYNC MAP BOUNDARIES, COLOR GROUPING & LABELS
             if (polygonLayerGroup) map.removeLayer(polygonLayerGroup);
             polygonLayerGroup = window.L.featureGroup();
-            
-            let countryNodes = treeNodes.filter(n => n.node_level === 'country' && n.dynamic_config_payload && n.dynamic_config_payload.geojson);
             let activeBoundsLayer = window.L.featureGroup(); 
             
-            // Map Label Trackers
-            let labelData = { continents: new Map(), subcontinents: new Map(), countries: new Map() };
+            let countryNodes = treeNodes.filter(n => n.node_level === 'country' && n.dynamic_config_payload && n.dynamic_config_payload.geojson);
+            let labelData = new Map();
 
             countryNodes.forEach(n => {
                 try {
@@ -378,53 +361,53 @@ export async function initRegionsEngine(containerId) {
                     let geom = n.dynamic_config_payload.geojson;
                     
                     // =======================================================================
-                    // COLOR HIERARCHY LOGIC (The Back-Seat Color Rule)
-                    // If viewing World -> Countries take the Continent's master color.
-                    // If viewing Continent -> Countries take the Sub-Continent's master color.
-                    // If viewing Sub-Cont/Country -> Countries show their unique color.
+                    // HIERARCHICAL COLOR LOGIC (The "Back Seat" Rule)
+                    // Forces countries to merge into a single Continent/Sub-Continent color
+                    // but completely retains their internal borders for visual reference.
                     // =======================================================================
                     let effectiveColor = n.dynamic_config_payload.fill_color || '#e2e8f0'; 
                     
                     if (activeNode.node_level === 'root') {
                         let cont = getAncestorAtLevel(n.node_id, 'continent');
-                        if (cont && cont.dynamic_config_payload) { effectiveColor = cont.dynamic_config_payload.fill_color || effectiveColor; }
+                        if (cont) effectiveColor = (cont.dynamic_config_payload && cont.dynamic_config_payload.fill_color) ? cont.dynamic_config_payload.fill_color : (hierarchyColors[cont.node_id] || effectiveColor);
                     } else if (activeNode.node_level === 'continent') {
                         let sub = getAncestorAtLevel(n.node_id, 'sub_continent');
-                        if (sub && sub.dynamic_config_payload) { effectiveColor = sub.dynamic_config_payload.fill_color || effectiveColor; }
+                        if (sub) effectiveColor = (sub.dynamic_config_payload && sub.dynamic_config_payload.fill_color) ? sub.dynamic_config_payload.fill_color : (hierarchyColors[sub.node_id] || effectiveColor);
                     }
 
-                    // Strict border visibility on all levels
-                    let styleOptions = isActiveRegion 
-                        ? { color: '#1e293b', weight: 0.8, fillColor: effectiveColor, fillOpacity: 0.95 } 
-                        : { color: '#475569', weight: 0.4, fillColor: effectiveColor, fillOpacity: 0.25 };
+                    // Strict border visibility: weight 0.5px, color #1e293b
+                    let styleOptions = { 
+                        color: '#1e293b', 
+                        weight: 0.5, 
+                        fillColor: effectiveColor, 
+                        fillOpacity: isActiveRegion ? 0.9 : 0.25 
+                    };
                         
                     let l = window.L.geoJSON(geom, { style: styleOptions });
                     polygonLayerGroup.addLayer(l);
-                    
                     if (isActiveRegion) activeBoundsLayer.addLayer(l);
                     
-                    // Populate Label Data ONLY for the specific hierarchy level requested
+                    // Collect Label Data based on current hierarchical focus
                     if (isActiveRegion) {
                         let b = l.getBounds();
                         if (activeNode.node_level === 'root') {
                             let cont = getAncestorAtLevel(n.node_id, 'continent');
                             if (cont) {
-                                if (!labelData.continents.has(cont.node_id)) labelData.continents.set(cont.node_id, { name: cont.node_name, bounds: window.L.latLngBounds() });
-                                labelData.continents.get(cont.node_id).bounds.extend(b);
+                                if (!labelData.has(cont.node_id)) labelData.set(cont.node_id, { name: cont.node_name, bounds: window.L.latLngBounds(), type: 'continent' });
+                                labelData.get(cont.node_id).bounds.extend(b);
                             }
                         } else if (activeNode.node_level === 'continent') {
                             let sub = getAncestorAtLevel(n.node_id, 'sub_continent');
                             if (sub) {
-                                if (!labelData.subcontinents.has(sub.node_id)) labelData.subcontinents.set(sub.node_id, { name: sub.node_name, bounds: window.L.latLngBounds() });
-                                labelData.subcontinents.get(sub.node_id).bounds.extend(b);
+                                if (!labelData.has(sub.node_id)) labelData.set(sub.node_id, { name: sub.node_name, bounds: window.L.latLngBounds(), type: 'subcontinent' });
+                                labelData.get(sub.node_id).bounds.extend(b);
                             }
                         } else {
-                            labelData.countries.set(n.node_id, { name: n.node_name, bounds: b });
+                            labelData.set(n.node_id, { name: n.node_name, bounds: b, type: 'country' });
                         }
                     }
                     
                     l.on('click', () => {
-                        // Intelligent Map Drill-Down
                         if (activeNode.node_level === 'root') {
                             let cont = getAncestorAtLevel(n.node_id, 'continent');
                             if (cont) applyGlobalSelection(cont.node_id);
@@ -438,60 +421,49 @@ export async function initRegionsEngine(containerId) {
                 } catch(e) {}
             });
 
-            // Render Labels based on Hierarchy
-            if (activeNode.node_level === 'root') {
-                labelData.continents.forEach((data, id) => {
-                    let center = centroidOverrides[id] ? centroidOverrides[id] : data.bounds.getCenter();
-                    let marker = window.L.marker(center, {
-                        icon: window.L.divIcon({ className: 'map-label map-lbl-continent', html: data.name, iconSize: [200,30], iconAnchor: [100,15] }),
-                        interactive: false
-                    });
-                    polygonLayerGroup.addLayer(marker);
+            // Inject the Hierarchical Labels
+            labelData.forEach((data, id) => {
+                let center = centroidOverrides[id] ? centroidOverrides[id] : data.bounds.getCenter();
+                let cssClass = data.type === 'continent' ? 'label-continent' : (data.type === 'subcontinent' ? 'label-subcontinent' : '');
+                
+                let marker = window.L.marker(center, {
+                    icon: window.L.divIcon({ 
+                        className: 'map-label', 
+                        html: `<div class="label-text ${cssClass}">${data.type === 'country' ? toTitleCase(data.name) : data.name}</div>`,
+                        iconSize: [200,30], 
+                        iconAnchor: [100,15] 
+                    }),
+                    interactive: false
                 });
-            } else if (activeNode.node_level === 'continent') {
-                labelData.subcontinents.forEach((data, id) => {
-                    let center = centroidOverrides[id] ? centroidOverrides[id] : data.bounds.getCenter();
-                    let marker = window.L.marker(center, {
-                        icon: window.L.divIcon({ className: 'map-label map-lbl-subcontinent', html: data.name, iconSize: [200,30], iconAnchor: [100,15] }),
-                        interactive: false
-                    });
-                    polygonLayerGroup.addLayer(marker);
-                });
-            } else {
-                labelData.countries.forEach((data, id) => {
-                    let center = centroidOverrides[id] ? centroidOverrides[id] : data.bounds.getCenter();
-                    let marker = window.L.marker(center, {
-                        icon: window.L.divIcon({ className: 'map-label map-lbl-country', html: toTitleCase(data.name), iconSize: [120,20], iconAnchor: [60,10] }),
-                        interactive: false
-                    });
-                    polygonLayerGroup.addLayer(marker);
-                });
-            }
+                polygonLayerGroup.addLayer(marker);
+            });
 
             // 4. TRUE 80% VIEWPORT CALCULATION
-            setTimeout(() => {
-                map.invalidateSize(false);
+            // Using requestAnimationFrame ensures the browser has finished rendering the layout before calculating dimensions
+            requestAnimationFrame(() => {
+                map.invalidateSize(true);
                 if (polygonLayerGroup.getLayers().length > 0) {
                     polygonLayerGroup.addTo(map); 
                     
                     const mapDom = container.querySelector('#map-wrapper');
+                    const width = mapDom.clientWidth;
+                    const height = mapDom.clientHeight;
                     
-                    // Calculate exact 10% padding on all sides to reserve 80% for the map
-                    const padX = Math.max(10, Math.floor(mapDom.clientWidth * 0.1));
-                    const padY = Math.max(10, Math.floor(mapDom.clientHeight * 0.1));
+                    // Exact 10% padding on all sides guarantees the map object occupies exactly 80% of the canvas
+                    const padX = Math.max(10, Math.floor(width * 0.10));
+                    const padY = Math.max(10, Math.floor(height * 0.10));
                     
-                    let targetBounds;
                     if (nodeId === 'GLOBAL') {
-                        targetBounds = window.L.latLngBounds([[-60, -180], [85, 180]]);
-                        map.fitBounds(targetBounds, { padding: [0, 0], animate: true, duration: 1.2 });
+                        // Safe anchor bounds for the whole earth
+                        map.fitBounds([[-55, -130], [75, 130]], { padding: [padX, padY], animate: true, duration: 1.0 });
                     } else {
-                        targetBounds = activeBoundsLayer.getBounds();
+                        let targetBounds = activeBoundsLayer.getBounds();
                         if (targetBounds.isValid()) {
-                            map.fitBounds(targetBounds, { padding: [padX, padY], animate: true, duration: 1.2 });
+                            map.fitBounds(targetBounds, { padding: [padX, padY], animate: true, duration: 1.0 });
                         }
                     }
                 }
-            }, 50);
+            });
         }
 
         function setupDropdownListeners() {
@@ -509,7 +481,6 @@ export async function initRegionsEngine(containerId) {
                     }
                 });
             });
-
             container.querySelector('#btnResetView').addEventListener('click', () => applyGlobalSelection('GLOBAL'));
         }
 
@@ -535,9 +506,6 @@ export async function initRegionsEngine(containerId) {
                             ta.value = JSON.stringify(node.dynamic_config_payload, null, 4);
                             ta.disabled = false;
                             
-                            const auditBox = container.querySelector('#auditReasonBox');
-                            auditBox.innerHTML = `<div class="flex flex-col gap-0.5"><span class="text-[color:var(--text)] font-bold">Reasoning:</span> <span class="text-[color:var(--muted)]">${node.architectural_reasoning || 'No reason recorded.'}</span><span class="text-[color:var(--muted)] text-[9px] mt-1 font-mono uppercase">Last Modified: ${node.updated_at || 'Never'}</span></div>`;
-
                             const btn = container.querySelector('#btnSaveConfigPayload');
                             btn.style.display = 'flex';
                             btn.onclick = async () => {
@@ -554,9 +522,7 @@ export async function initRegionsEngine(containerId) {
                         treeContainer.appendChild(div);
                     });
                 }
-            } catch (err) {
-                console.error("Tree load error:", err);
-            }
+            } catch (err) {}
         }
 
         await fetchTreeData();
