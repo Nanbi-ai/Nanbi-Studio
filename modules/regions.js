@@ -227,8 +227,18 @@ export async function initRegionsEngine(containerId) {
             return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
         }
 
+        // --- HIERARCHY HELPER ---
+        function getAncestor(nodeId, targetLevel) {
+            let curr = treeNodes.find(n => n.node_id === nodeId);
+            while (curr && curr.node_id !== 'GLOBAL') {
+                if (curr.node_level === targetLevel) return curr;
+                curr = treeNodes.find(n => n.node_id === curr.parent_id);
+            }
+            return null;
+        }
+
         // =========================================================================================
-        // CORRECTED ATLAS MAPPING: 100% matched to the provided Vecteezy image reference
+        // CORRECTED ATLAS MAPPING
         // =========================================================================================
         function getDistinctColor(name) {
             const key = name.toLowerCase().trim();
@@ -373,7 +383,7 @@ export async function initRegionsEngine(containerId) {
         if (mapEl) mapEl._leaflet_id = null;
 
         map = window.L.map('map', { 
-            preferCanvas: true, // Forces high-performance canvas rendering
+            preferCanvas: true,
             zoomControl: true, 
             attributionControl: false,
             zoomSnap: 0.1, 
@@ -383,10 +393,9 @@ export async function initRegionsEngine(containerId) {
         }).setView([20.0, 0.0], 2);
         
         window.nanbiMapInstance = map;
-        window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; OpenStreetMap contributors'
-}).addTo(map);
+        window.L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+            maxZoom: 19
+        }).addTo(map);
 
         const isDark = localStorage.getItem('nanbi_theme') === 'dark' || document.documentElement.classList.contains('dark') || document.body.classList.contains('dark');
         if (isDark) {
@@ -514,11 +523,9 @@ export async function initRegionsEngine(containerId) {
             activeLayerGroup = window.L.featureGroup(); 
             layerMapByNodeId.clear();
 
-            let mapNodes = treeNodes.filter(n => {
-                if (!n.dynamic_config_payload || !n.dynamic_config_payload.geojson) return false;
-                if (n.node_level === 'country') return true; 
-                return n.node_id === nodeId || isDescendant(n, nodeId);
-            });
+            // STRICT GEOMETRY OVERRIDE: We ONLY use Country boundaries to draw the map.
+            // This prevents sub-continent junk geometries from overlapping.
+            let mapNodes = treeNodes.filter(n => n.node_level === 'country' && n.dynamic_config_payload && n.dynamic_config_payload.geojson);
 
             let activeOpacity = isDark ? 0.75 : 0.95;
             let ghostOpacity = isDark ? 0.15 : 0.15;
@@ -527,27 +534,54 @@ export async function initRegionsEngine(containerId) {
                 try {
                     let isActive = (nodeId === 'GLOBAL') || (n.node_id === nodeId || isDescendant(n, nodeId));
                     let geom = n.dynamic_config_payload.geojson;
-                    let polyColor = getDistinctColor(n.node_name);
-                    let formattedName = toTitleCase(n.node_name);
+                    
+                    let displayColor = '';
+                    let displayName = '';
+                    let strokeColor = '';
+                    let strokeW = 0.8;
+
+                    // DYNAMIC SPATIAL MERGING
+                    if (activeNode.node_level === 'root') {
+                        // Level 1: Merge countries into Continent blocks
+                        let cont = getAncestor(n.node_id, 'continent');
+                        displayName = cont ? cont.node_name : n.node_name;
+                        displayColor = getDistinctColor(displayName);
+                        strokeColor = displayColor; // Seamless merging
+                        strokeW = 1.0;
+                    } else if (activeNode.node_level === 'continent') {
+                        // Level 2: Merge countries into Sub-Continent blocks
+                        let sub = getAncestor(n.node_id, 'sub_continent');
+                        displayName = sub ? sub.node_name : n.node_name;
+                        displayColor = getDistinctColor(displayName);
+                        strokeColor = displayColor; // Seamless merging
+                        strokeW = 1.0;
+                    } else {
+                        // Level 3: Show individual Countries
+                        displayName = toTitleCase(n.node_name);
+                        displayColor = getDistinctColor(n.node_name);
+                        strokeColor = isDark ? '#1e293b' : '#ffffff'; 
+                        strokeW = 0.8;
+                    }
                     
                     let styleOptions = isActive 
-                        ? { color: '#D35400', weight: 0.8, fillColor: polyColor, fillOpacity: activeOpacity } 
-                        : { color: '#94a3b8', weight: 0.3, fillColor: polyColor, fillOpacity: ghostOpacity };
+                        ? { color: strokeColor, weight: strokeW, fillColor: displayColor, fillOpacity: activeOpacity } 
+                        : { color: '#94a3b8', weight: 0.3, fillColor: displayColor, fillOpacity: ghostOpacity };
                         
                     let l = window.L.geoJSON(geom, { style: styleOptions });
                     
-                    l.bindTooltip(formattedName, { sticky: true, className: 'region-label-hover' });
+                    l.bindTooltip(displayName, { sticky: true, className: 'region-label-hover' });
                     polygonLayerGroup.addLayer(l);
                     
                     if (isActive) activeLayerGroup.addLayer(l); 
                     layerMapByNodeId.set(n.node_id, l);
 
+                    // Only place static text labels for the specific Country when we drill down past the Macro view
                     if (n.node_level === 'country' && !isMacroView) {
                         let centerPoint = centroidOverrides[n.node_id] ? centroidOverrides[n.node_id] : l.getBounds().getCenter();
                         let labelMarker = window.L.marker(centerPoint, {
                             icon: window.L.divIcon({
                                 className: 'region-label ' + (isActive ? 'label-active' : 'label-neighbor'),
-                                html: formattedName,
+                                html: toTitleCase(n.node_name),
                                 iconSize: [150, 20],
                                 iconAnchor: [75, 10]
                             }),
@@ -556,8 +590,19 @@ export async function initRegionsEngine(containerId) {
                         polygonLayerGroup.addLayer(labelMarker);
                     }
                     
+                    // Route the clicks based on the current drill-down depth
                     l.node_id = n.node_id; 
-                    l.on('click', () => applyGlobalSelection(n.node_id));
+                    l.on('click', () => {
+                        if (activeNode.node_level === 'root') {
+                            let cont = getAncestor(n.node_id, 'continent');
+                            if (cont) applyGlobalSelection(cont.node_id);
+                        } else if (activeNode.node_level === 'continent') {
+                            let sub = getAncestor(n.node_id, 'sub_continent');
+                            if (sub) applyGlobalSelection(sub.node_id);
+                        } else {
+                            applyGlobalSelection(n.node_id);
+                        }
+                    });
                     
                 } catch(e) {}
             });
