@@ -45,9 +45,10 @@ export async function initRegionsEngine(containerId) {
                     font-weight: 600; 
                     font-size: 11px; 
                     color: #1e293b; 
-                    line-height: 1.1; /* Tightly packs 2-3 rows */
-                    max-width: 75px;  /* Forces text to wrap dynamically */
-                    white-space: normal; /* Allows wrapping */
+                    line-height: 1.1; 
+                    max-width: 75px; /* Forces text to wrap dynamically */
+                    white-space: normal; 
+                    word-wrap: break-word;
                     text-shadow: 0px 0px 3px rgba(255,255,255,1), 0px 0px 5px rgba(255,255,255,0.8); 
                 }
                 
@@ -56,7 +57,7 @@ export async function initRegionsEngine(containerId) {
                     color: #475569;
                     font-size: 9px;
                     font-weight: 500;
-                    opacity: 0.6;
+                    opacity: 0.7;
                     text-shadow: 0px 0px 2px rgba(255,255,255,0.5);
                 }
                 
@@ -192,13 +193,12 @@ export async function initRegionsEngine(containerId) {
         let map = null, polygonLayerGroup = null;
         let treeNodes = [];
 
-        // STRICT TITLE CASE (First Letter Caps Only)
+        // ENFORCED TITLE CASE (e.g., "South America")
         function toTitleCase(str) { 
             if (!str) return '';
             return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '); 
         }
 
-        // Initialize Leaflet Map
         if (!window.L) {
             await new Promise((resolve) => {
                 const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(link);
@@ -290,7 +290,6 @@ export async function initRegionsEngine(containerId) {
         function applyGlobalSelection(nodeId) {
             const activeNode = treeNodes.find(n => n.node_id === nodeId) || { node_id: 'GLOBAL', node_name: 'World', node_level: 'root' };
 
-            // 1. SYNC DROPDOWNS
             const lineage = getLineage(nodeId);
             if (nodeId === 'GLOBAL') {
                 container.querySelector('#selContinent').value = 'All';
@@ -304,7 +303,6 @@ export async function initRegionsEngine(containerId) {
                 if (lineage.taluk) { container.querySelector('#selTaluk').value = lineage.taluk; }
             }
 
-            // 2. SYNC TABLE LIST
             let tableNodes = [];
             if (nodeId === 'GLOBAL') {
                 tableNodes = treeNodes.filter(n => n.node_level === 'continent');
@@ -335,14 +333,7 @@ export async function initRegionsEngine(containerId) {
             container.querySelector('#geoHierarchyBreadcrumb').innerText = activeNode.node_name;
             container.querySelector('#deepDiveTitle').innerText = `${activeNode.node_id} — ${activeNode.node_name}`;
             container.querySelector('#deepDiveSubtitle').innerText = `Level: ${activeNode.node_level.replace('_', ' ')}`;
-            container.querySelector('#deepDiveContent').innerHTML = `
-                <div class="flex justify-between items-center bg-transparent border border-[color:var(--border)] rounded p-2 text-[color:var(--text)]">
-                    <span class="font-bold">Gov/ISO Code:</span> 
-                    <span class="font-mono font-bold">${activeNode.official_gov_code || 'N/A'}</span>
-                </div>
-            `;
 
-            // 3. SYNC MAP BOUNDARIES, COLOR GROUPING & GHOSTING
             if (polygonLayerGroup) map.removeLayer(polygonLayerGroup);
             polygonLayerGroup = window.L.featureGroup();
             let activeBoundsLayer = window.L.featureGroup(); 
@@ -366,16 +357,16 @@ export async function initRegionsEngine(containerId) {
                         if (sub && sub.dynamic_config_payload && sub.dynamic_config_payload.fill_color) effectiveColor = sub.dynamic_config_payload.fill_color;
                     }
 
-                    // STRICT HIGHLIGHT VS GHOSTING RULES
+                    // HIGHLIGHT AND GHOSTING RULES
                     let styleOptions = isActiveRegion 
-                        ? { color: '#1e293b', weight: 0.6, fillColor: effectiveColor, fillOpacity: 0.95 }  // Active Highlight
-                        : { color: '#94a3b8', weight: 0.3, fillColor: effectiveColor, fillOpacity: 0.15 }; // Ghosted Neighbor
+                        ? { color: '#1e293b', weight: 0.6, fillColor: effectiveColor, fillOpacity: 0.95 } 
+                        : { color: '#cbd5e1', weight: 0.4, fillColor: effectiveColor, fillOpacity: 0.15 }; 
 
                     let l = window.L.geoJSON(geom, { style: styleOptions });
                     polygonLayerGroup.addLayer(l);
                     if (isActiveRegion) activeBoundsLayer.addLayer(l);
                     
-                    // PURE MATHEMATICAL LABEL EXTRACTION
+                    // LABEL EXTRACTION LOGIC
                     let labelLevel = 'country';
                     if (activeNode.node_level === 'root') {
                         labelLevel = 'continent';
@@ -416,7 +407,7 @@ export async function initRegionsEngine(containerId) {
                 } catch(e) {}
             });
 
-            // INJECT DYNAMIC MULTILINE LABELS (Mathematically Centered)
+            // INJECT MULTI-LINE CENTERED LABELS
             labelData.forEach((data, id) => {
                 let center = data.bounds.getCenter();
                 let cssClass = data.isActive ? 'label-active' : 'label-shadowed';
@@ -426,7 +417,7 @@ export async function initRegionsEngine(containerId) {
                     icon: window.L.divIcon({ 
                         className: `map-label ${cssClass}`, 
                         html: `<div class="label-text">${formattedName}</div>`,
-                        iconSize: [80, 40], // Provides exact sizing to force CSS multiline wrap
+                        iconSize: [80, 40], 
                         iconAnchor: [40, 20] 
                     }),
                     interactive: false
@@ -434,14 +425,15 @@ export async function initRegionsEngine(containerId) {
                 polygonLayerGroup.addLayer(marker);
             });
 
-            // 4. PRECISE MATHEMATICAL VIEWPORT CENTERING
+            // CRITICAL FIX: Add Layer Group to Map, THEN calculate Bounds
             setTimeout(() => {
                 map.invalidateSize(true);
-                if (activeBoundsLayer.getLayers().length > 0) {
+                if (polygonLayerGroup.getLayers().length > 0) {
+                    polygonLayerGroup.addTo(map); 
+                    
                     let targetBounds = activeBoundsLayer.getBounds();
                     if (targetBounds.isValid()) {
-                        // Natively bounds the exact active landmasses, cropping out empty space.
-                        // Safe 20px padding prevents edge clipping on any resolution.
+                        // Dynamically fits strictly the active boundaries
                         map.fitBounds(targetBounds, { 
                             padding: [20, 20], 
                             animate: true, 
