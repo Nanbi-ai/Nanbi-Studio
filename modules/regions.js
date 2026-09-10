@@ -196,7 +196,10 @@ export async function initRegionsEngine(containerId) {
             'AUS': [-25.2, 133.7], 'NZL': [-40.9, 174.8], 'ZAF': [-28.5, 24.9]
         };
 
-        function toTitleCase(str) { return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '); }
+        function toTitleCase(str) { 
+            if (!str) return '';
+            return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '); 
+        }
 
         // Initialize Leaflet Map
         if (!window.L) {
@@ -216,9 +219,9 @@ export async function initRegionsEngine(containerId) {
             attributionControl: false,
             zoomSnap: 0.1, 
             worldCopyJump: true, 
-            minZoom: 1, 
+            minZoom: 0, // CRITICAL FIX: Unlocks the map allowing global fitBounds to scale down accurately 
             maxBounds: null
-        }).setView([20.0, 0.0], 2);
+        }).setView([20.0, 0.0], 1.5);
         
         window.nanbiMapInstance = map;
 
@@ -287,6 +290,9 @@ export async function initRegionsEngine(containerId) {
             });
         }
 
+        // =========================================================================================
+        // MASTER 3-WAY SYNCHRONIZATION ENGINE
+        // =========================================================================================
         function applyGlobalSelection(nodeId) {
             const activeNode = treeNodes.find(n => n.node_id === nodeId) || { node_id: 'GLOBAL', node_name: 'World', node_level: 'root' };
 
@@ -315,7 +321,7 @@ export async function initRegionsEngine(containerId) {
 
             container.querySelector('#metricCount').innerText = tableNodes.length;
             container.querySelector('#metricMPS').innerText = "₹" + (tableNodes.length * 35000).toLocaleString('en-IN');
-
+            
             const tbody = container.querySelector('#territoryTbody');
             tbody.innerHTML = '';
             tableNodes.forEach(node => {
@@ -346,7 +352,7 @@ export async function initRegionsEngine(containerId) {
             if (polygonLayerGroup) map.removeLayer(polygonLayerGroup);
             polygonLayerGroup = window.L.featureGroup();
             let activeBoundsLayer = window.L.featureGroup(); 
-
+            
             let countryNodes = treeNodes.filter(n => n.node_level === 'country' && n.dynamic_config_payload && n.dynamic_config_payload.geojson);
             let labelData = new Map();
 
@@ -354,12 +360,13 @@ export async function initRegionsEngine(containerId) {
                 try {
                     let isActiveRegion = (nodeId === 'GLOBAL') || (n.node_id === nodeId || isDescendant(n, nodeId));
                     let geom = n.dynamic_config_payload.geojson;
-
+                    
+                    // PURE METADATA-DRIVEN HIERARCHICAL COLOR LOGIC
                     let effectiveColor = '#e2e8f0'; 
                     if (n.dynamic_config_payload && n.dynamic_config_payload.fill_color) {
                         effectiveColor = n.dynamic_config_payload.fill_color;
                     }
-
+                    
                     if (activeNode.node_level === 'root') {
                         let cont = getAncestorAtLevel(n.node_id, 'continent');
                         if (cont && cont.dynamic_config_payload && cont.dynamic_config_payload.fill_color) { 
@@ -372,17 +379,19 @@ export async function initRegionsEngine(containerId) {
                         }
                     }
 
+                    // Strict border visibility: weight 0.5px, color #1e293b
                     let styleOptions = { 
                         color: '#1e293b', 
                         weight: 0.5, 
                         fillColor: effectiveColor, 
                         fillOpacity: isActiveRegion ? 0.9 : 0.25 
                     };
-
+                        
                     let l = window.L.geoJSON(geom, { style: styleOptions });
                     polygonLayerGroup.addLayer(l);
                     if (isActiveRegion) activeBoundsLayer.addLayer(l);
-
+                    
+                    // Collect Label Data based exclusively on the current active tier
                     if (isActiveRegion) {
                         let b = l.getBounds();
                         if (activeNode.node_level === 'root') {
@@ -401,7 +410,7 @@ export async function initRegionsEngine(containerId) {
                             labelData.set(n.node_id, { name: n.node_name, bounds: b, type: 'country' });
                         }
                     }
-
+                    
                     l.on('click', () => {
                         if (activeNode.node_level === 'root') {
                             let cont = getAncestorAtLevel(n.node_id, 'continent');
@@ -416,14 +425,15 @@ export async function initRegionsEngine(containerId) {
                 } catch(e) {}
             });
 
+            // Inject the Hierarchical Labels
             labelData.forEach((data, id) => {
                 let center = centroidOverrides[id] ? centroidOverrides[id] : data.bounds.getCenter();
-                let cssClass = data.type === 'continent' ? 'label-continent' : (data.type === 'subcontinent' ? 'label-subcontinent' : '');
-
+                let cssClass = data.type === 'continent' ? 'label-continent' : (data.type === 'subcontinent' ? 'label-subcontinent' : 'label-country');
+                
                 let marker = window.L.marker(center, {
                     icon: window.L.divIcon({ 
                         className: 'map-label', 
-                        html: `<div class="label-text ${cssClass}">${data.type === 'country' ? toTitleCase(data.name) : data.name}</div>`,
+                        html: `<div class="label-text ${cssClass}">${data.type === 'country' ? toTitleCase(data.name || '') : (data.name || '')}</div>`,
                         iconSize: [200,30], 
                         iconAnchor: [100,15] 
                     }),
@@ -432,16 +442,14 @@ export async function initRegionsEngine(containerId) {
                 polygonLayerGroup.addLayer(marker);
             });
 
-            // 4. FLUID VIEWPORT CENTERING (Agnostic to all screen sizes)
+            // 4. FLUID VIEWPORT CENTERING
             setTimeout(() => {
                 map.invalidateSize(true);
                 if (polygonLayerGroup.getLayers().length > 0) {
                     polygonLayerGroup.addTo(map); 
-
+                    
                     let targetBounds = activeBoundsLayer.getBounds();
                     if (targetBounds.isValid()) {
-                        // Natively bounds the exact active landmasses (the entire world or a single ward)
-                        // A uniform 25px safe-padding ensures perfect centering without clipping, on any device
                         map.fitBounds(targetBounds, { 
                             padding: [25, 25], 
                             maxZoom: nodeId === 'GLOBAL' ? 3 : 11, 
@@ -475,13 +483,13 @@ export async function initRegionsEngine(containerId) {
             try {
                 const treeContainer = container.querySelector('#treeListContainer');
                 treeContainer.innerHTML = `<p class="text-[color:var(--muted)] italic text-center py-10">Synchronizing with Edge Ledger...</p>`;
-
+                
                 const { data } = await window.nanbiDB.from('regional_hierarchy_nodes').select('*').order('node_level');
                 if (data) {
                     treeNodes = data.filter(n => n.node_id !== 'ATA' && n.node_id !== 'AN'); 
                     container.querySelector('#treeNodeCountBadge').innerText = treeNodes.length + " Nodes";
                     treeContainer.innerHTML = '';
-
+                    
                     treeNodes.forEach(node => {
                         const div = document.createElement('div');
                         div.className = "p-2.5 rounded border border-[color:var(--border)] hover:bg-[color:var(--hover-bg)] cursor-pointer transition flex justify-between items-center";
@@ -492,7 +500,7 @@ export async function initRegionsEngine(containerId) {
                             const ta = container.querySelector('#jsonConfigTextarea');
                             ta.value = JSON.stringify(node.dynamic_config_payload, null, 4);
                             ta.disabled = false;
-
+                            
                             const btn = container.querySelector('#btnSaveConfigPayload');
                             btn.style.display = 'flex';
                             btn.onclick = async () => {
@@ -500,7 +508,7 @@ export async function initRegionsEngine(containerId) {
                                 try { parsed = JSON.parse(ta.value); } catch(e) { alert("Invalid JSON Syntax."); return; }
                                 let reason = prompt("Enter Architectural Reasoning (DEC-12):", "Configured via Config Hub");
                                 if (!reason) return;
-
+                                
                                 await window.nanbiDB.from('regional_hierarchy_nodes').update({ dynamic_config_payload: parsed, architectural_reasoning: reason, updated_at: new Date().toISOString() }).eq('node_id', node.node_id);
                                 alert("Payload successfully locked and encrypted.");
                                 loadJurisdictionalTree();
