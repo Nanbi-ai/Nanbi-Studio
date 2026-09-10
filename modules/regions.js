@@ -219,7 +219,7 @@ export async function initRegionsEngine(containerId) {
             attributionControl: false,
             zoomSnap: 0.1, 
             worldCopyJump: true, 
-            minZoom: 0, // CRITICAL FIX: Unlocks the map allowing global fitBounds to scale down accurately 
+            minZoom: 0, 
             maxBounds: null
         }).setView([20.0, 0.0], 1.5);
         
@@ -361,7 +361,6 @@ export async function initRegionsEngine(containerId) {
                     let isActiveRegion = (nodeId === 'GLOBAL') || (n.node_id === nodeId || isDescendant(n, nodeId));
                     let geom = n.dynamic_config_payload.geojson;
                     
-                    // PURE METADATA-DRIVEN HIERARCHICAL COLOR LOGIC
                     let effectiveColor = '#e2e8f0'; 
                     if (n.dynamic_config_payload && n.dynamic_config_payload.fill_color) {
                         effectiveColor = n.dynamic_config_payload.fill_color;
@@ -379,7 +378,6 @@ export async function initRegionsEngine(containerId) {
                         }
                     }
 
-                    // Strict border visibility: weight 0.5px, color #1e293b
                     let styleOptions = { 
                         color: '#1e293b', 
                         weight: 0.5, 
@@ -391,7 +389,6 @@ export async function initRegionsEngine(containerId) {
                     polygonLayerGroup.addLayer(l);
                     if (isActiveRegion) activeBoundsLayer.addLayer(l);
                     
-                    // Collect Label Data based exclusively on the current active tier
                     if (isActiveRegion) {
                         let b = l.getBounds();
                         if (activeNode.node_level === 'root') {
@@ -425,7 +422,6 @@ export async function initRegionsEngine(containerId) {
                 } catch(e) {}
             });
 
-            // Inject the Hierarchical Labels
             labelData.forEach((data, id) => {
                 let center = centroidOverrides[id] ? centroidOverrides[id] : data.bounds.getCenter();
                 let cssClass = data.type === 'continent' ? 'label-continent' : (data.type === 'subcontinent' ? 'label-subcontinent' : 'label-country');
@@ -448,14 +444,25 @@ export async function initRegionsEngine(containerId) {
                 if (polygonLayerGroup.getLayers().length > 0) {
                     polygonLayerGroup.addTo(map); 
                     
-                    let targetBounds = activeBoundsLayer.getBounds();
-                    if (targetBounds.isValid()) {
-                        map.fitBounds(targetBounds, { 
-                            padding: [25, 25], 
-                            maxZoom: nodeId === 'GLOBAL' ? 3 : 11, 
+                    if (nodeId === 'GLOBAL') {
+                        // Tighter bounding box crops out the extreme empty Pacific Ocean.
+                        // This natively forces Leaflet to zoom in closer, utilizing the wasted space.
+                        let optimizedWorldBounds = window.L.latLngBounds([[-55, -135], [75, 175]]);
+                        map.fitBounds(optimizedWorldBounds, { 
+                            padding: [0, 0], 
                             animate: true, 
                             duration: 1.0 
                         });
+                    } else {
+                        let targetBounds = activeBoundsLayer.getBounds();
+                        if (targetBounds.isValid()) {
+                            map.fitBounds(targetBounds, { 
+                                padding: [25, 25], 
+                                maxZoom: 11, 
+                                animate: true, 
+                                duration: 1.0 
+                            });
+                        }
                     }
                 }
             }, 150);
