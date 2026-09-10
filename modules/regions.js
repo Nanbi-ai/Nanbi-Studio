@@ -26,22 +26,25 @@ export async function initRegionsEngine(containerId) {
                 #regions-module td { text-align: left; border-bottom: 1px solid var(--border); color: var(--text); font-weight: 600; font-size: 11px; padding: 10px; }
                 #regions-module .row-active { background-color: var(--hover-bg) !important; border-left: 4px solid var(--brand-orange-dark) !important; } 
                 
-                /* SOVEREIGN MAP CONTAINER - OCEANIC BLUE LOCKED */
+                /* SOVEREIGN MAP CONTAINER */
                 #regions-module #map-wrapper { position: relative; width: 100%; height: 100%; min-height: 0; flex: 1; border-radius: 5px; background-color: #D4F1F9; overflow: hidden; }
                 #regions-module #map { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; background-color: #D4F1F9; }
                 .leaflet-container { background: transparent !important; }
+                
+                /* DARK MODE INVERSION */
+                .dark-theme-map { background-color: #0b1120 !important; }
                 
                 /* POLYGON HOVER & UHD BORDERS */
                 #regions-module path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s, stroke 0.2s; outline: none; }
                 #regions-module path.leaflet-interactive:hover { stroke: #1e293b !important; stroke-width: 1.5px !important; fill-opacity: 0.8 !important; cursor: pointer; }
                 
-                /* PROFESSIONAL LABEL TYPOGRAPHY (Soft, Regular Weight, No Clutter) */
+                /* PROFESSIONAL LABEL TYPOGRAPHY */
                 .map-label { 
                     background: transparent !important; border: none !important; box-shadow: none !important; 
                     text-align: center; white-space: nowrap; pointer-events: none;
                 }
                 .label-text { 
-                    font-weight: 500; /* Regular/Medium, NOT bold */
+                    font-weight: 500; 
                     font-size: 11px; 
                     color: #1e293b; 
                     letter-spacing: 0.5px;
@@ -131,7 +134,7 @@ export async function initRegionsEngine(containerId) {
                     </section>
                 </div>
 
-                <!-- Config Hub (Hidden by default) -->
+                <!-- Config Hub -->
                 <div id="viewConfigHub" class="hidden flex-col lg:flex-row flex-1 min-h-0 min-w-0 gap-2 p-1">
                     <aside class="flex-1 lg:max-w-[40%] panel-card p-3 flex flex-col min-h-0">
                         <div class="flex justify-between items-center pb-2 border-b border-[color:var(--border)] mb-2 shrink-0">
@@ -191,16 +194,6 @@ export async function initRegionsEngine(containerId) {
             'IND': [22.0, 79.0], 'USA': [39.8, -98.5], 'FRA': [46.2, 2.2], 
             'GBR': [53.0, -1.5], 'CAN': [56.1, -106.3], 'RUS': [61.5, 105.3], 
             'AUS': [-25.2, 133.7], 'NZL': [-40.9, 174.8], 'ZAF': [-28.5, 24.9]
-        };
-
-        // Fallback colors for Continent & Sub-Continent grouping (Ensures 100% hierarchy compliance even if DB is empty)
-        const hierarchyColors = {
-            'AS': '#F6D06D', 'AF': '#F482A0', 'EU': '#A888C8', 'NO': '#54C0C0', 'SO': '#F89090', 'OC': '#64B8E0',
-            'AS-SAS': '#F6A65C', 'AS-EAS': '#F581A5', 'AS-WAS': '#8CD27A', 'AS-SOU': '#5CBCE0', 'AS-CAS': '#A685C8',
-            'EU-WEU': '#A685C8', 'EU-EEU': '#FDC849', 'EU-NEU': '#54C0C0', 'EU-SEU': '#8CD27A',
-            'AF-NAF': '#E1E870', 'AF-SAF': '#8CD27A', 'AF-WAF': '#F581A5', 'AF-EAF': '#F6A65C', 'AF-MAF': '#64B8E0',
-            'NO-NAM': '#E1E870', 'NO-CAM': '#F89090', 'NO-CAR': '#5CBCE0',
-            'OC-ANZ': '#A685C8', 'OC-MEL': '#FDC849', 'OC-POL': '#F581A5', 'OC-MIC': '#64B8E0'
         };
 
         function toTitleCase(str) { return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '); }
@@ -347,7 +340,7 @@ export async function initRegionsEngine(containerId) {
                 </div>
             `;
 
-            // 3. SYNC MAP BOUNDARIES, COLOR GROUPING & LABELS
+            // 3. SYNC MAP BOUNDARIES, METADATA COLOR GROUPING & LABELS
             if (polygonLayerGroup) map.removeLayer(polygonLayerGroup);
             polygonLayerGroup = window.L.featureGroup();
             let activeBoundsLayer = window.L.featureGroup(); 
@@ -360,19 +353,23 @@ export async function initRegionsEngine(containerId) {
                     let isActiveRegion = (nodeId === 'GLOBAL') || (n.node_id === nodeId || isDescendant(n, nodeId));
                     let geom = n.dynamic_config_payload.geojson;
                     
-                    // =======================================================================
-                    // HIERARCHICAL COLOR LOGIC (The "Back Seat" Rule)
-                    // Forces countries to merge into a single Continent/Sub-Continent color
-                    // but completely retains their internal borders for visual reference.
-                    // =======================================================================
-                    let effectiveColor = n.dynamic_config_payload.fill_color || '#e2e8f0'; 
+                    // PURE METADATA-DRIVEN HIERARCHICAL COLOR LOGIC
+                    // Fetches exclusively from dynamic_config_payload with zero hardcoding
+                    let effectiveColor = '#e2e8f0'; // Default fallback
+                    if (n.dynamic_config_payload && n.dynamic_config_payload.fill_color) {
+                        effectiveColor = n.dynamic_config_payload.fill_color;
+                    }
                     
                     if (activeNode.node_level === 'root') {
                         let cont = getAncestorAtLevel(n.node_id, 'continent');
-                        if (cont) effectiveColor = (cont.dynamic_config_payload && cont.dynamic_config_payload.fill_color) ? cont.dynamic_config_payload.fill_color : (hierarchyColors[cont.node_id] || effectiveColor);
+                        if (cont && cont.dynamic_config_payload && cont.dynamic_config_payload.fill_color) { 
+                            effectiveColor = cont.dynamic_config_payload.fill_color; 
+                        }
                     } else if (activeNode.node_level === 'continent') {
                         let sub = getAncestorAtLevel(n.node_id, 'sub_continent');
-                        if (sub) effectiveColor = (sub.dynamic_config_payload && sub.dynamic_config_payload.fill_color) ? sub.dynamic_config_payload.fill_color : (hierarchyColors[sub.node_id] || effectiveColor);
+                        if (sub && sub.dynamic_config_payload && sub.dynamic_config_payload.fill_color) { 
+                            effectiveColor = sub.dynamic_config_payload.fill_color; 
+                        }
                     }
 
                     // Strict border visibility: weight 0.5px, color #1e293b
@@ -387,7 +384,7 @@ export async function initRegionsEngine(containerId) {
                     polygonLayerGroup.addLayer(l);
                     if (isActiveRegion) activeBoundsLayer.addLayer(l);
                     
-                    // Collect Label Data based on current hierarchical focus
+                    // Collect Label Data based exclusively on the current active tier
                     if (isActiveRegion) {
                         let b = l.getBounds();
                         if (activeNode.node_level === 'root') {
@@ -438,26 +435,32 @@ export async function initRegionsEngine(containerId) {
                 polygonLayerGroup.addLayer(marker);
             });
 
-            // 4. AGNOSTIC VIEWPORT CENTERING
+            // 4. TRUE AGNOSTIC 80% VIEWPORT CENTERING
             setTimeout(() => {
                 map.invalidateSize(true);
                 if (polygonLayerGroup.getLayers().length > 0) {
                     polygonLayerGroup.addTo(map); 
                     
+                    // NATIVE LEAFLET SIZING: Ask Leaflet for its exact rendered pixel dimensions at this very millisecond
+                    const currentSize = map.getSize(); 
+                    
+                    // Dynamic 10% padding on X and Y creates a perfect 80% center frame automatically on any device
+                    const padX = Math.max(10, Math.floor(currentSize.x * 0.10));
+                    const padY = Math.max(10, Math.floor(currentSize.y * 0.10));
+                    
                     if (nodeId === 'GLOBAL') {
-                        // Let Leaflet natively fit the globe
-                        map.fitWorld({ animate: true, duration: 1.0 });
+                        // Safe global bounds that prevent Antarctica/Oceans from ruining the aspect ratio
+                        map.fitBounds([[-60, -180], [80, 180]], { padding: [padX, padY], animate: true, duration: 1.0 });
                     } else {
                         let targetBounds = activeBoundsLayer.getBounds();
                         if (targetBounds.isValid()) {
-                            // paddingFraction: 0.1 natively forces a 10% margin on all sides (an 80% viewport frame)
-                            // regardless of what device, orientation, or container size is currently active.
-                            map.fitBounds(targetBounds, { paddingFraction: 0.1, animate: true, duration: 1.0 });
+                            map.fitBounds(targetBounds, { padding: [padX, padY], animate: true, duration: 1.0 });
                         }
                     }
                 }
             }, 100);
-            
+        }
+
         function setupDropdownListeners() {
             ['selContinent', 'selSubContinent', 'selCountry', 'selState', 'selDistrict', 'selTaluk'].forEach(id => {
                 container.querySelector(`#${id}`).addEventListener('change', (e) => {
