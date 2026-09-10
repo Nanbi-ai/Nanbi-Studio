@@ -38,20 +38,18 @@ export async function initRegionsEngine(containerId) {
                 #regions-module path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s, stroke 0.2s; outline: none; }
                 #regions-module path.leaflet-interactive:hover { stroke: #1e293b !important; stroke-width: 1.5px !important; fill-opacity: 0.8 !important; cursor: pointer; }
                 
-                /* PROFESSIONAL LABEL TYPOGRAPHY */
+                /* PROFESSIONAL LABEL TYPOGRAPHY (Small, Tracked, and Rotatable) */
                 .map-label { 
                     background: transparent !important; border: none !important; box-shadow: none !important; 
                     text-align: center; white-space: nowrap; pointer-events: none;
                 }
                 .label-text { 
-                    font-weight: 500; 
-                    font-size: 11px; 
                     color: #1e293b; 
-                    letter-spacing: 0.5px;
                     text-shadow: 0px 0px 3px rgba(255,255,255,1), 0px 0px 5px rgba(255,255,255,0.8); 
                 }
-                .label-continent { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; }
-                .label-subcontinent { font-size: 11px; font-weight: 600; text-transform: uppercase; }
+                .label-continent { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 2.0px; }
+                .label-subcontinent { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.0px; }
+                .label-country { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
                 
                 #regions-module ::-webkit-scrollbar { width: 6px; }
                 #regions-module ::-webkit-scrollbar-thumb { background-color: var(--border); border-radius: 4px; }
@@ -187,13 +185,24 @@ export async function initRegionsEngine(containerId) {
         let map = null, polygonLayerGroup = null;
         let treeNodes = [];
 
-        // Center fixes to prevent labels dropping into oceans
-        const centroidOverrides = {
-            'AS': [34.0, 90.0], 'AF': [2.0, 20.0], 'EU': [51.0, 15.0], 
-            'NO': [45.0, -100.0], 'SO': [-15.0, -60.0], 'OC': [-25.0, 135.0],
-            'IND': [22.0, 79.0], 'USA': [39.8, -98.5], 'FRA': [46.2, 2.2], 
-            'GBR': [53.0, -1.5], 'CAN': [56.1, -106.3], 'RUS': [61.5, 105.3], 
-            'AUS': [-25.2, 133.7], 'NZL': [-40.9, 174.8], 'ZAF': [-28.5, 24.9]
+        // Geopolitical Map Label Placement Engine (Centroids + Native CSS Rotation)
+        const geoConfig = {
+            'AS': { center: [42.0, 95.0], rotate: 0 }, 
+            'AF': { center: [5.0, 20.0], rotate: 0 }, 
+            'EU': { center: [53.0, 15.0], rotate: 0 }, 
+            'NO': { center: [48.0, -100.0], rotate: -5 }, // Slight tilt to follow US/Canada border
+            'SO': { center: [-15.0, -60.0], rotate: -35 }, // Dynamic tilt to follow the Andes and fit the continent perfectly
+            'OC': { center: [-25.0, 135.0], rotate: 0 },
+            'SE': { center: [-45.0, -140.0], rotate: 0 }, // Pushed safely into the deep South Pacific so it never overlaps landmasses
+            'IND': { center: [22.0, 79.0], rotate: 0 }, 
+            'USA': { center: [39.8, -98.5], rotate: 0 }, 
+            'FRA': { center: [46.2, 2.2], rotate: 0 }, 
+            'GBR': { center: [53.0, -1.5], rotate: 0 }, 
+            'CAN': { center: [56.1, -106.3], rotate: 0 }, 
+            'RUS': { center: [61.5, 105.3], rotate: 0 }, 
+            'AUS': { center: [-25.2, 133.7], rotate: 0 }, 
+            'NZL': { center: [-40.9, 174.8], rotate: 0 }, 
+            'ZAF': { center: [-28.5, 24.9], rotate: 0 }
         };
 
         function toTitleCase(str) { 
@@ -419,14 +428,25 @@ export async function initRegionsEngine(containerId) {
                 } catch(e) {}
             });
 
+            // Inject the Hierarchical Typography (with Native Rotation Support)
             labelData.forEach((data, id) => {
-                let center = centroidOverrides[id] ? centroidOverrides[id] : data.bounds.getCenter();
+                let center = data.bounds.getCenter();
+                let rotate = 0;
+                
+                if (geoConfig[id]) {
+                    center = geoConfig[id].center;
+                    rotate = geoConfig[id].rotate || 0;
+                }
+                
                 let cssClass = data.type === 'continent' ? 'label-continent' : (data.type === 'subcontinent' ? 'label-subcontinent' : 'label-country');
                 
+                // Natively applies CSS rotation directly to the HTML container ensuring perfect alignment without external libraries
+                let rotationStyle = rotate ? `transform: rotate(${rotate}deg); display: inline-block;` : 'display: inline-block;';
+
                 let marker = window.L.marker(center, {
                     icon: window.L.divIcon({ 
                         className: 'map-label', 
-                        html: `<div class="label-text ${cssClass}">${data.type === 'country' ? toTitleCase(data.name || '') : (data.name || '')}</div>`,
+                        html: `<div class="label-text ${cssClass}" style="${rotationStyle}">${data.type === 'country' ? toTitleCase(data.name || '') : (data.name || '')}</div>`,
                         iconSize: [200,30], 
                         iconAnchor: [100,15] 
                     }),
@@ -441,19 +461,23 @@ export async function initRegionsEngine(containerId) {
                 if (polygonLayerGroup.getLayers().length > 0) {
                     polygonLayerGroup.addTo(map); 
                     
-                    let targetBounds = activeBoundsLayer.getBounds();
-                    if (targetBounds.isValid()) {
-                        // Dynamically measures the actual landmasses. 
-                        // Tighter 15px padding for the World to utilize wasted space without cropping.
-                        // Standard 30px padding for drilled-down regions.
-                        let pad = nodeId === 'GLOBAL' ? [15, 15] : [30, 30];
-                        
-                        map.fitBounds(targetBounds, { 
-                            padding: pad, 
-                            maxZoom: nodeId === 'GLOBAL' ? 3 : 11, 
+                    if (nodeId === 'GLOBAL') {
+                        let optimizedWorldBounds = window.L.latLngBounds([[-55, -135], [75, 175]]);
+                        map.fitBounds(optimizedWorldBounds, { 
+                            padding: [0, 0], 
                             animate: true, 
                             duration: 1.0 
                         });
+                    } else {
+                        let targetBounds = activeBoundsLayer.getBounds();
+                        if (targetBounds.isValid()) {
+                            map.fitBounds(targetBounds, { 
+                                padding: [25, 25], 
+                                maxZoom: 11, 
+                                animate: true, 
+                                duration: 1.0 
+                            });
+                        }
                     }
                 }
             }, 150);
