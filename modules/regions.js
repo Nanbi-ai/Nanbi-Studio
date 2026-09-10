@@ -210,18 +210,15 @@ export async function initRegionsEngine(containerId) {
         const mapEl = window.L.DomUtil.get('map');
         if (mapEl) mapEl._leaflet_id = null;
 
-        // =========================================================================================
-        // FIX: Re-applied the critical minZoom: 0 unlocking rule from your historical patch
-        // =========================================================================================
         map = window.L.map('map', { 
             preferCanvas: true, 
             zoomControl: true, 
             attributionControl: false,
             zoomSnap: 0.1, 
             worldCopyJump: true, 
-            minZoom: 0, // Unlocks the map so it can shrink to fit any panel naturally
+            minZoom: 1, 
             maxBounds: null
-        }).setView([20.0, 0.0], 1);
+        }).setView([20.0, 0.0], 2);
         
         window.nanbiMapInstance = map;
 
@@ -318,7 +315,7 @@ export async function initRegionsEngine(containerId) {
 
             container.querySelector('#metricCount').innerText = tableNodes.length;
             container.querySelector('#metricMPS').innerText = "₹" + (tableNodes.length * 35000).toLocaleString('en-IN');
-            
+
             const tbody = container.querySelector('#territoryTbody');
             tbody.innerHTML = '';
             tableNodes.forEach(node => {
@@ -349,7 +346,7 @@ export async function initRegionsEngine(containerId) {
             if (polygonLayerGroup) map.removeLayer(polygonLayerGroup);
             polygonLayerGroup = window.L.featureGroup();
             let activeBoundsLayer = window.L.featureGroup(); 
-            
+
             let countryNodes = treeNodes.filter(n => n.node_level === 'country' && n.dynamic_config_payload && n.dynamic_config_payload.geojson);
             let labelData = new Map();
 
@@ -357,13 +354,12 @@ export async function initRegionsEngine(containerId) {
                 try {
                     let isActiveRegion = (nodeId === 'GLOBAL') || (n.node_id === nodeId || isDescendant(n, nodeId));
                     let geom = n.dynamic_config_payload.geojson;
-                    
-                    // PURE METADATA-DRIVEN HIERARCHICAL COLOR LOGIC
+
                     let effectiveColor = '#e2e8f0'; 
                     if (n.dynamic_config_payload && n.dynamic_config_payload.fill_color) {
                         effectiveColor = n.dynamic_config_payload.fill_color;
                     }
-                    
+
                     if (activeNode.node_level === 'root') {
                         let cont = getAncestorAtLevel(n.node_id, 'continent');
                         if (cont && cont.dynamic_config_payload && cont.dynamic_config_payload.fill_color) { 
@@ -382,11 +378,11 @@ export async function initRegionsEngine(containerId) {
                         fillColor: effectiveColor, 
                         fillOpacity: isActiveRegion ? 0.9 : 0.25 
                     };
-                        
+
                     let l = window.L.geoJSON(geom, { style: styleOptions });
                     polygonLayerGroup.addLayer(l);
                     if (isActiveRegion) activeBoundsLayer.addLayer(l);
-                    
+
                     if (isActiveRegion) {
                         let b = l.getBounds();
                         if (activeNode.node_level === 'root') {
@@ -405,7 +401,7 @@ export async function initRegionsEngine(containerId) {
                             labelData.set(n.node_id, { name: n.node_name, bounds: b, type: 'country' });
                         }
                     }
-                    
+
                     l.on('click', () => {
                         if (activeNode.node_level === 'root') {
                             let cont = getAncestorAtLevel(n.node_id, 'continent');
@@ -420,11 +416,10 @@ export async function initRegionsEngine(containerId) {
                 } catch(e) {}
             });
 
-            // Inject the Hierarchical Labels
             labelData.forEach((data, id) => {
                 let center = centroidOverrides[id] ? centroidOverrides[id] : data.bounds.getCenter();
                 let cssClass = data.type === 'continent' ? 'label-continent' : (data.type === 'subcontinent' ? 'label-subcontinent' : '');
-                
+
                 let marker = window.L.marker(center, {
                     icon: window.L.divIcon({ 
                         className: 'map-label', 
@@ -456,7 +451,8 @@ export async function initRegionsEngine(containerId) {
                     }
                 }
             }, 150);
-            
+        }
+
         function setupDropdownListeners() {
             ['selContinent', 'selSubContinent', 'selCountry', 'selState', 'selDistrict', 'selTaluk'].forEach(id => {
                 container.querySelector(`#${id}`).addEventListener('change', (e) => {
@@ -479,13 +475,13 @@ export async function initRegionsEngine(containerId) {
             try {
                 const treeContainer = container.querySelector('#treeListContainer');
                 treeContainer.innerHTML = `<p class="text-[color:var(--muted)] italic text-center py-10">Synchronizing with Edge Ledger...</p>`;
-                
+
                 const { data } = await window.nanbiDB.from('regional_hierarchy_nodes').select('*').order('node_level');
                 if (data) {
                     treeNodes = data.filter(n => n.node_id !== 'ATA' && n.node_id !== 'AN'); 
                     container.querySelector('#treeNodeCountBadge').innerText = treeNodes.length + " Nodes";
                     treeContainer.innerHTML = '';
-                    
+
                     treeNodes.forEach(node => {
                         const div = document.createElement('div');
                         div.className = "p-2.5 rounded border border-[color:var(--border)] hover:bg-[color:var(--hover-bg)] cursor-pointer transition flex justify-between items-center";
@@ -496,7 +492,7 @@ export async function initRegionsEngine(containerId) {
                             const ta = container.querySelector('#jsonConfigTextarea');
                             ta.value = JSON.stringify(node.dynamic_config_payload, null, 4);
                             ta.disabled = false;
-                            
+
                             const btn = container.querySelector('#btnSaveConfigPayload');
                             btn.style.display = 'flex';
                             btn.onclick = async () => {
@@ -504,7 +500,7 @@ export async function initRegionsEngine(containerId) {
                                 try { parsed = JSON.parse(ta.value); } catch(e) { alert("Invalid JSON Syntax."); return; }
                                 let reason = prompt("Enter Architectural Reasoning (DEC-12):", "Configured via Config Hub");
                                 if (!reason) return;
-                                
+
                                 await window.nanbiDB.from('regional_hierarchy_nodes').update({ dynamic_config_payload: parsed, architectural_reasoning: reason, updated_at: new Date().toISOString() }).eq('node_id', node.node_id);
                                 alert("Payload successfully locked and encrypted.");
                                 loadJurisdictionalTree();
