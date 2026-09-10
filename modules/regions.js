@@ -437,29 +437,26 @@ export async function initRegionsEngine(containerId) {
                 polygonLayerGroup.addLayer(marker);
             });
 
-            // 4. FLUID VIEWPORT CENTERING (With the minZoom: 0 unlock)
+            // 4. FLUID VIEWPORT CENTERING (Agnostic to all screen sizes)
             setTimeout(() => {
                 map.invalidateSize(true);
                 if (polygonLayerGroup.getLayers().length > 0) {
                     polygonLayerGroup.addTo(map); 
-                    
-                    if (nodeId === 'GLOBAL') {
-                        // Resets to center [20,0] perfectly without breaking container bounds
-                        map.setView([20.0, 0.0], 1, { animate: true, duration: 1.0 });
-                    } else {
-                        const currentSize = map.getSize(); 
-                        const padX = Math.max(10, Math.floor(currentSize.x * 0.10));
-                        const padY = Math.max(10, Math.floor(currentSize.y * 0.10));
-                        
-                        let targetBounds = activeBoundsLayer.getBounds();
-                        if (targetBounds.isValid()) {
-                            map.fitBounds(targetBounds, { padding: [padX, padY], animate: true, duration: 1.0 });
-                        }
+
+                    let targetBounds = activeBoundsLayer.getBounds();
+                    if (targetBounds.isValid()) {
+                        // Natively bounds the exact active landmasses (the entire world or a single ward)
+                        // A uniform 25px safe-padding ensures perfect centering without clipping, on any device
+                        map.fitBounds(targetBounds, { 
+                            padding: [25, 25], 
+                            maxZoom: nodeId === 'GLOBAL' ? 3 : 11, 
+                            animate: true, 
+                            duration: 1.0 
+                        });
                     }
                 }
-            }, 100);
-        }
-
+            }, 150);
+            
         function setupDropdownListeners() {
             ['selContinent', 'selSubContinent', 'selCountry', 'selState', 'selDistrict', 'selTaluk'].forEach(id => {
                 container.querySelector(`#${id}`).addEventListener('change', (e) => {
