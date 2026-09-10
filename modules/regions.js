@@ -31,17 +31,34 @@ export async function initRegionsEngine(containerId) {
                 #regions-module #map { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; background-color: #D4F1F9; }
                 .leaflet-container { background: transparent !important; }
                 
-                /* DARK MODE INVERSION */
-                .dark-theme-map { background-color: #0b1120 !important; }
-                
-                /* POLYGON HOVER */
+                /* POLYGON INTERACTION */
                 #regions-module path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s, stroke 0.2s; outline: none; }
                 #regions-module path.leaflet-interactive:hover { stroke: #0f172a !important; stroke-width: 1.5px !important; fill-opacity: 0.9 !important; cursor: pointer; }
                 
-                /* PROFESSIONAL LABEL TYPOGRAPHY */
-                .map-label { background: transparent !important; border: none !important; box-shadow: none !important; text-align: center; white-space: nowrap; pointer-events: none; font-family: var(--font-main); }
-                .label-active { font-weight: 600; font-size: 11px; color: #0f172a; text-shadow: 0px 0px 3px rgba(255,255,255,0.9), 0px 0px 5px rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.5px; }
-                .label-shadowed { font-weight: 500; font-size: 9px; color: #475569; opacity: 0.6; text-transform: uppercase; text-shadow: 0px 0px 2px rgba(255,255,255,0.5); }
+                /* PROFESSIONAL LABEL TYPOGRAPHY (Multi-line, Auto-centering) */
+                .map-label { 
+                    background: transparent !important; border: none !important; box-shadow: none !important; 
+                    display: flex; justify-content: center; align-items: center; text-align: center; pointer-events: none;
+                }
+                .label-text { 
+                    font-family: var(--font-main);
+                    font-weight: 600; 
+                    font-size: 11px; 
+                    color: #1e293b; 
+                    line-height: 1.1; /* Tightly packs 2-3 rows */
+                    max-width: 75px;  /* Forces text to wrap dynamically */
+                    white-space: normal; /* Allows wrapping */
+                    text-shadow: 0px 0px 3px rgba(255,255,255,1), 0px 0px 5px rgba(255,255,255,0.8); 
+                }
+                
+                /* GHOSTED NEIGHBOR LABELS */
+                .label-shadowed .label-text {
+                    color: #475569;
+                    font-size: 9px;
+                    font-weight: 500;
+                    opacity: 0.6;
+                    text-shadow: 0px 0px 2px rgba(255,255,255,0.5);
+                }
                 
                 #regions-module ::-webkit-scrollbar { width: 6px; }
                 #regions-module ::-webkit-scrollbar-thumb { background-color: var(--border); border-radius: 4px; }
@@ -124,7 +141,6 @@ export async function initRegionsEngine(containerId) {
                     </section>
                 </div>
 
-                <!-- Config Hub -->
                 <div id="viewConfigHub" class="hidden flex-col lg:flex-row flex-1 min-h-0 min-w-0 gap-2 p-1">
                     <aside class="flex-1 lg:max-w-[40%] panel-card p-3 flex flex-col min-h-0">
                         <div class="flex justify-between items-center pb-2 border-b border-[color:var(--border)] mb-2 shrink-0">
@@ -152,7 +168,6 @@ export async function initRegionsEngine(containerId) {
             </div>
         `;
 
-        // UI Toggles
         const tabMapMatrix = container.querySelector('#tabMapMatrix');
         const tabConfigHub = container.querySelector('#tabConfigHub');
         const viewMapMatrix = container.querySelector('#viewMapMatrix');
@@ -177,20 +192,7 @@ export async function initRegionsEngine(containerId) {
         let map = null, polygonLayerGroup = null;
         let treeNodes = [];
 
-        // Exact Centroid Overrides for Perfect Label Placement
-        const centroidOverrides = {
-            'AS': [34.0, 90.0], 'AF': [2.0, 20.0], 'EU': [51.0, 15.0], 
-            'NO': [45.0, -100.0], 'SO': [-15.0, -60.0], 'OC': [-25.0, 135.0],
-            'AS-SAS': [22.0, 79.0], 'AS-EAS': [35.0, 105.0], 'AS-WAS': [25.0, 45.0], 'AS-SOU': [5.0, 115.0], 'AS-CAS': [45.0, 65.0],
-            'EU-WEU': [48.0, 5.0], 'EU-EEU': [55.0, 40.0], 'EU-NEU': [62.0, 15.0], 'EU-SEU': [40.0, 15.0],
-            'AF-NAF': [25.0, 15.0], 'AF-SAF': [-25.0, 25.0], 'AF-WAF': [10.0, 0.0], 'AF-EAF': [0.0, 35.0], 'AF-MAF': [0.0, 20.0],
-            'NO-NAM': [45.0, -100.0], 'NO-CAM': [15.0, -90.0], 'NO-CAR': [18.0, -75.0],
-            'OC-ANZ': [-25.0, 135.0], 'OC-MEL': [-5.0, 145.0], 'OC-POL': [-15.0, -160.0], 'OC-MIC': [5.0, 150.0],
-            'IND': [22.0, 79.0], 'USA': [39.8, -98.5], 'FRA': [46.2, 2.2], 
-            'GBR': [53.0, -1.5], 'CAN': [56.1, -106.3], 'RUS': [61.5, 105.3], 
-            'AUS': [-25.2, 133.7], 'NZL': [-40.9, 174.8], 'ZAF': [-28.5, 24.9]
-        };
-
+        // STRICT TITLE CASE (First Letter Caps Only)
         function toTitleCase(str) { 
             if (!str) return '';
             return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '); 
@@ -209,8 +211,13 @@ export async function initRegionsEngine(containerId) {
         if (mapEl) mapEl._leaflet_id = null;
 
         map = window.L.map('map', { 
-            preferCanvas: true, zoomControl: true, attributionControl: false,
-            zoomSnap: 0.1, worldCopyJump: true, minZoom: 0, maxBounds: null
+            preferCanvas: true, 
+            zoomControl: true, 
+            attributionControl: false,
+            zoomSnap: 0.1, 
+            worldCopyJump: true, 
+            minZoom: 0, 
+            maxBounds: null
         }).setView([20.0, 0.0], 1.5);
         
         window.nanbiMapInstance = map;
@@ -361,33 +368,38 @@ export async function initRegionsEngine(containerId) {
 
                     // STRICT HIGHLIGHT VS GHOSTING RULES
                     let styleOptions = isActiveRegion 
-                        ? { color: '#334155', weight: 0.6, fillColor: effectiveColor, fillOpacity: 0.95 }  // Active Highlight
-                        : { color: '#cbd5e1', weight: 0.4, fillColor: effectiveColor, fillOpacity: 0.15 }; // Faded Neighbor Shadow
+                        ? { color: '#1e293b', weight: 0.6, fillColor: effectiveColor, fillOpacity: 0.95 }  // Active Highlight
+                        : { color: '#94a3b8', weight: 0.3, fillColor: effectiveColor, fillOpacity: 0.15 }; // Ghosted Neighbor
 
                     let l = window.L.geoJSON(geom, { style: styleOptions });
                     polygonLayerGroup.addLayer(l);
                     if (isActiveRegion) activeBoundsLayer.addLayer(l);
                     
-                    // LABEL EXTRACTION & ASSIGNMENT
-                    let labelEntityNode = null;
+                    // PURE MATHEMATICAL LABEL EXTRACTION
+                    let labelLevel = 'country';
                     if (activeNode.node_level === 'root') {
-                        labelEntityNode = getAncestorAtLevel(n.node_id, 'continent');
+                        labelLevel = 'continent';
                     } else if (activeNode.node_level === 'continent') {
-                        labelEntityNode = getAncestorAtLevel(n.node_id, 'sub_continent');
+                        labelLevel = isActiveRegion ? 'sub_continent' : 'continent';
+                    } else if (activeNode.node_level === 'sub_continent') {
+                        let sameContinent = getAncestorAtLevel(n.node_id, 'continent')?.node_id === getAncestorAtLevel(activeNode.node_id, 'continent')?.node_id;
+                        labelLevel = isActiveRegion ? 'country' : (sameContinent ? 'sub_continent' : 'continent');
                     } else {
-                        labelEntityNode = n;
+                        labelLevel = isActiveRegion ? 'country' : 'sub_continent';
                     }
 
-                    if (labelEntityNode) {
-                        if (!labelData.has(labelEntityNode.node_id)) {
-                            labelData.set(labelEntityNode.node_id, { 
-                                name: labelEntityNode.node_name, 
+                    let labelEntity = getAncestorAtLevel(n.node_id, labelLevel) || n;
+
+                    if (labelEntity) {
+                        if (!labelData.has(labelEntity.node_id)) {
+                            labelData.set(labelEntity.node_id, { 
+                                name: labelEntity.node_name, 
                                 bounds: window.L.latLngBounds(), 
-                                isActive: false 
+                                isActive: isActiveRegion 
                             });
                         }
-                        labelData.get(labelEntityNode.node_id).bounds.extend(l.getBounds());
-                        if (isActiveRegion) labelData.get(labelEntityNode.node_id).isActive = true;
+                        labelData.get(labelEntity.node_id).bounds.extend(l.getBounds());
+                        if (isActiveRegion) labelData.get(labelEntity.node_id).isActive = true;
                     }
 
                     l.on('click', () => {
@@ -404,39 +416,37 @@ export async function initRegionsEngine(containerId) {
                 } catch(e) {}
             });
 
-            // INJECT LABELS (Active vs Shadowed)
+            // INJECT DYNAMIC MULTILINE LABELS (Mathematically Centered)
             labelData.forEach((data, id) => {
-                let center = centroidOverrides[id] ? centroidOverrides[id] : data.bounds.getCenter();
+                let center = data.bounds.getCenter();
                 let cssClass = data.isActive ? 'label-active' : 'label-shadowed';
+                let formattedName = toTitleCase(data.name || '');
                 
                 let marker = window.L.marker(center, {
                     icon: window.L.divIcon({ 
-                        className: 'map-label', 
-                        html: `<div class="${cssClass}">${data.name}</div>`,
-                        iconSize: [200,30], 
-                        iconAnchor: [100,15] 
+                        className: `map-label ${cssClass}`, 
+                        html: `<div class="label-text">${formattedName}</div>`,
+                        iconSize: [80, 40], // Provides exact sizing to force CSS multiline wrap
+                        iconAnchor: [40, 20] 
                     }),
                     interactive: false
                 });
                 polygonLayerGroup.addLayer(marker);
             });
 
-            // 4. PRECISE VIEWPORT CENTERING
+            // 4. PRECISE MATHEMATICAL VIEWPORT CENTERING
             setTimeout(() => {
                 map.invalidateSize(true);
-                if (polygonLayerGroup.getLayers().length > 0) {
-                    polygonLayerGroup.addTo(map); 
-                    
-                    if (nodeId === 'GLOBAL') {
-                        // Tightly frames the landmasses cutting out empty polar oceans entirely
-                        let optimizedWorldBounds = window.L.latLngBounds([[-50, -125], [65, 160]]);
-                        map.fitBounds(optimizedWorldBounds, { padding: [10, 10], animate: true, duration: 1.0 });
-                    } else {
-                        let targetBounds = activeBoundsLayer.getBounds();
-                        if (targetBounds.isValid()) {
-                            // Automatically zooms in to strictly fit the selected active region
-                            map.fitBounds(targetBounds, { padding: [25, 25], maxZoom: 10, animate: true, duration: 1.0 });
-                        }
+                if (activeBoundsLayer.getLayers().length > 0) {
+                    let targetBounds = activeBoundsLayer.getBounds();
+                    if (targetBounds.isValid()) {
+                        // Natively bounds the exact active landmasses, cropping out empty space.
+                        // Safe 20px padding prevents edge clipping on any resolution.
+                        map.fitBounds(targetBounds, { 
+                            padding: [20, 20], 
+                            animate: true, 
+                            duration: 1.0 
+                        });
                     }
                 }
             }, 150);
