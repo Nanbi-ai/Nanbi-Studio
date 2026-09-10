@@ -441,17 +441,20 @@ export async function initRegionsEngine(containerId) {
                 if (polygonLayerGroup.getLayers().length > 0) {
                     polygonLayerGroup.addTo(map); 
                     
-                    // NATIVE LEAFLET SIZING: Ask Leaflet for its exact rendered pixel dimensions at this very millisecond
-                    const currentSize = map.getSize(); 
-                    
-                    // Dynamic 10% padding on X and Y creates a perfect 80% center frame automatically on any device
-                    const padX = Math.max(10, Math.floor(currentSize.x * 0.10));
-                    const padY = Math.max(10, Math.floor(currentSize.y * 0.10));
-                    
                     if (nodeId === 'GLOBAL') {
-                        // Safe global bounds that prevent Antarctica/Oceans from ruining the aspect ratio
-                        map.fitBounds([[-60, -180], [80, 180]], { padding: [padX, padY], animate: true, duration: 1.0 });
+                        // 1. Establish the perfect visual center coordinate for the World Map.
+                        // We use [20.0, 0.0] to visually balance the landmasses within the container.
+                        const worldCenter = [20.0, 0.0];
+                        
+                        // 2. Set the view to the center with a low zoom level.
+                        // Leaflet will naturally center this coordinate within whatever dimensions the map-wrapper currently holds.
+                        map.setView(worldCenter, 1.5, { animate: true, duration: 1.0 });
                     } else {
+                        // Calculate specific padding only when zooming into a targeted region (Continent/Country etc.)
+                        const currentSize = map.getSize(); 
+                        const padX = Math.max(10, Math.floor(currentSize.x * 0.10));
+                        const padY = Math.max(10, Math.floor(currentSize.y * 0.10));
+                        
                         let targetBounds = activeBoundsLayer.getBounds();
                         if (targetBounds.isValid()) {
                             map.fitBounds(targetBounds, { padding: [padX, padY], animate: true, duration: 1.0 });
@@ -459,8 +462,7 @@ export async function initRegionsEngine(containerId) {
                     }
                 }
             }, 100);
-        }
-
+            
         function setupDropdownListeners() {
             ['selContinent', 'selSubContinent', 'selCountry', 'selState', 'selDistrict', 'selTaluk'].forEach(id => {
                 container.querySelector(`#${id}`).addEventListener('change', (e) => {
