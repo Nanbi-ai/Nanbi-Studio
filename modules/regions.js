@@ -290,9 +290,6 @@ export async function initRegionsEngine(containerId) {
             });
         }
 
-        // =========================================================================================
-        // MASTER 3-WAY SYNCHRONIZATION ENGINE
-        // =========================================================================================
         function applyGlobalSelection(nodeId) {
             const activeNode = treeNodes.find(n => n.node_id === nodeId) || { node_id: 'GLOBAL', node_name: 'World', node_level: 'root' };
 
@@ -444,25 +441,19 @@ export async function initRegionsEngine(containerId) {
                 if (polygonLayerGroup.getLayers().length > 0) {
                     polygonLayerGroup.addTo(map); 
                     
-                    if (nodeId === 'GLOBAL') {
-                        // Tighter bounding box crops out the extreme empty Pacific Ocean.
-                        // This natively forces Leaflet to zoom in closer, utilizing the wasted space.
-                        let optimizedWorldBounds = window.L.latLngBounds([[-55, -135], [75, 175]]);
-                        map.fitBounds(optimizedWorldBounds, { 
-                            padding: [0, 0], 
+                    let targetBounds = activeBoundsLayer.getBounds();
+                    if (targetBounds.isValid()) {
+                        // Dynamically measures the actual landmasses. 
+                        // Tighter 15px padding for the World to utilize wasted space without cropping.
+                        // Standard 30px padding for drilled-down regions.
+                        let pad = nodeId === 'GLOBAL' ? [15, 15] : [30, 30];
+                        
+                        map.fitBounds(targetBounds, { 
+                            padding: pad, 
+                            maxZoom: nodeId === 'GLOBAL' ? 3 : 11, 
                             animate: true, 
                             duration: 1.0 
                         });
-                    } else {
-                        let targetBounds = activeBoundsLayer.getBounds();
-                        if (targetBounds.isValid()) {
-                            map.fitBounds(targetBounds, { 
-                                padding: [25, 25], 
-                                maxZoom: 11, 
-                                animate: true, 
-                                duration: 1.0 
-                            });
-                        }
                     }
                 }
             }, 150);
