@@ -438,34 +438,26 @@ export async function initRegionsEngine(containerId) {
                 polygonLayerGroup.addLayer(marker);
             });
 
-            // 4. TRUE 80% VIEWPORT CALCULATION
-            // Using requestAnimationFrame ensures the browser has finished rendering the layout before calculating dimensions
-            requestAnimationFrame(() => {
+            // 4. AGNOSTIC VIEWPORT CENTERING
+            setTimeout(() => {
                 map.invalidateSize(true);
                 if (polygonLayerGroup.getLayers().length > 0) {
                     polygonLayerGroup.addTo(map); 
                     
-                    const mapDom = container.querySelector('#map-wrapper');
-                    const width = mapDom.clientWidth;
-                    const height = mapDom.clientHeight;
-                    
-                    // Exact 10% padding on all sides guarantees the map object occupies exactly 80% of the canvas
-                    const padX = Math.max(10, Math.floor(width * 0.10));
-                    const padY = Math.max(10, Math.floor(height * 0.10));
-                    
                     if (nodeId === 'GLOBAL') {
-                        // Safe anchor bounds for the whole earth
-                        map.fitBounds([[-55, -130], [75, 130]], { padding: [padX, padY], animate: true, duration: 1.0 });
+                        // Let Leaflet natively fit the globe
+                        map.fitWorld({ animate: true, duration: 1.0 });
                     } else {
                         let targetBounds = activeBoundsLayer.getBounds();
                         if (targetBounds.isValid()) {
-                            map.fitBounds(targetBounds, { padding: [padX, padY], animate: true, duration: 1.0 });
+                            // paddingFraction: 0.1 natively forces a 10% margin on all sides (an 80% viewport frame)
+                            // regardless of what device, orientation, or container size is currently active.
+                            map.fitBounds(targetBounds, { paddingFraction: 0.1, animate: true, duration: 1.0 });
                         }
                     }
                 }
-            });
-        }
-
+            }, 100);
+            
         function setupDropdownListeners() {
             ['selContinent', 'selSubContinent', 'selCountry', 'selState', 'selDistrict', 'selTaluk'].forEach(id => {
                 container.querySelector(`#${id}`).addEventListener('change', (e) => {
