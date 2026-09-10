@@ -35,30 +35,34 @@ export async function initRegionsEngine(containerId) {
                 #regions-module path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s, stroke 0.2s; outline: none; }
                 #regions-module path.leaflet-interactive:hover { stroke: #0f172a !important; stroke-width: 1.5px !important; fill-opacity: 0.9 !important; cursor: pointer; }
                 
-                /* PROFESSIONAL LABEL TYPOGRAPHY (Multi-line, Auto-centering) */
+                /* PROFESSIONAL TYPOGRAPHY (Capitalized 1st Letter, Multi-row, Centered) */
                 .map-label { 
                     background: transparent !important; border: none !important; box-shadow: none !important; 
                     display: flex; justify-content: center; align-items: center; text-align: center; pointer-events: none;
                 }
                 .label-text { 
                     font-family: var(--font-main);
-                    font-weight: 600; 
-                    font-size: 11px; 
-                    color: #1e293b; 
-                    line-height: 1.1; 
-                    max-width: 75px; /* Forces text to wrap dynamically */
+                    display: inline-block;
+                    max-width: 65px; /* Forces text to elegantly wrap into 2-3 rows */
                     white-space: normal; 
                     word-wrap: break-word;
-                    text-shadow: 0px 0px 3px rgba(255,255,255,1), 0px 0px 5px rgba(255,255,255,0.8); 
+                    text-transform: capitalize; /* Forces only 1st alphabet in Caps natively */
+                    line-height: 1.1; 
                 }
                 
-                /* GHOSTED NEIGHBOR LABELS */
+                /* HIERARCHICAL LABEL STYLING */
+                .label-active .label-text {
+                    font-weight: 600; 
+                    font-size: 11px; 
+                    color: #0f172a; 
+                    text-shadow: 0px 0px 3px #ffffff, 0px 0px 5px rgba(255,255,255,0.9); 
+                }
                 .label-shadowed .label-text {
-                    color: #475569;
-                    font-size: 9px;
-                    font-weight: 500;
-                    opacity: 0.7;
-                    text-shadow: 0px 0px 2px rgba(255,255,255,0.5);
+                    font-weight: 600;
+                    font-size: 9.5px;
+                    color: #64748b;
+                    opacity: 0.6; /* Faded ghost label for neighbors */
+                    text-shadow: 0px 0px 2px rgba(255,255,255,0.6);
                 }
                 
                 #regions-module ::-webkit-scrollbar { width: 6px; }
@@ -193,12 +197,6 @@ export async function initRegionsEngine(containerId) {
         let map = null, polygonLayerGroup = null;
         let treeNodes = [];
 
-        // ENFORCED TITLE CASE (e.g., "South America")
-        function toTitleCase(str) { 
-            if (!str) return '';
-            return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '); 
-        }
-
         if (!window.L) {
             await new Promise((resolve) => {
                 const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(link);
@@ -210,15 +208,19 @@ export async function initRegionsEngine(containerId) {
         const mapEl = window.L.DomUtil.get('map');
         if (mapEl) mapEl._leaflet_id = null;
 
+        // FIXED VIEWPORT LOGIC: 
+        // noWrap: true stops the earth from repeating horizontally.
+        // maxBounds mathematically locks the camera inside the window.
         map = window.L.map('map', { 
             preferCanvas: true, 
             zoomControl: true, 
             attributionControl: false,
             zoomSnap: 0.1, 
-            worldCopyJump: true, 
-            minZoom: 0, 
-            maxBounds: null
-        }).setView([20.0, 0.0], 1.5);
+            worldCopyJump: false, 
+            minZoom: 1.0, 
+            maxBounds: [[-90, -180], [90, 180]],
+            maxBoundsViscosity: 1.0
+        }).setView([20.0, 0.0], 2);
         
         window.nanbiMapInstance = map;
 
@@ -290,6 +292,7 @@ export async function initRegionsEngine(containerId) {
         function applyGlobalSelection(nodeId) {
             const activeNode = treeNodes.find(n => n.node_id === nodeId) || { node_id: 'GLOBAL', node_name: 'World', node_level: 'root' };
 
+            // 1. SYNC DROPDOWNS
             const lineage = getLineage(nodeId);
             if (nodeId === 'GLOBAL') {
                 container.querySelector('#selContinent').value = 'All';
@@ -303,6 +306,7 @@ export async function initRegionsEngine(containerId) {
                 if (lineage.taluk) { container.querySelector('#selTaluk').value = lineage.taluk; }
             }
 
+            // 2. SYNC TABLE LIST
             let tableNodes = [];
             if (nodeId === 'GLOBAL') {
                 tableNodes = treeNodes.filter(n => n.node_level === 'continent');
@@ -333,7 +337,14 @@ export async function initRegionsEngine(containerId) {
             container.querySelector('#geoHierarchyBreadcrumb').innerText = activeNode.node_name;
             container.querySelector('#deepDiveTitle').innerText = `${activeNode.node_id} — ${activeNode.node_name}`;
             container.querySelector('#deepDiveSubtitle').innerText = `Level: ${activeNode.node_level.replace('_', ' ')}`;
+            container.querySelector('#deepDiveContent').innerHTML = `
+                <div class="flex justify-between items-center bg-transparent border border-[color:var(--border)] rounded p-2 text-[color:var(--text)]">
+                    <span class="font-bold">Gov/ISO Code:</span> 
+                    <span class="font-mono font-bold">${activeNode.official_gov_code || 'N/A'}</span>
+                </div>
+            `;
 
+            // 3. PURE MATHEMATICAL MAP BOUNDARIES, GHOSTING & NEIGHBOR ROLLUP
             if (polygonLayerGroup) map.removeLayer(polygonLayerGroup);
             polygonLayerGroup = window.L.featureGroup();
             let activeBoundsLayer = window.L.featureGroup(); 
@@ -357,40 +368,48 @@ export async function initRegionsEngine(containerId) {
                         if (sub && sub.dynamic_config_payload && sub.dynamic_config_payload.fill_color) effectiveColor = sub.dynamic_config_payload.fill_color;
                     }
 
-                    // HIGHLIGHT AND GHOSTING RULES
+                    // Strict highlighting vs Faint ghosting for disturbing neighbors
                     let styleOptions = isActiveRegion 
                         ? { color: '#1e293b', weight: 0.6, fillColor: effectiveColor, fillOpacity: 0.95 } 
-                        : { color: '#cbd5e1', weight: 0.4, fillColor: effectiveColor, fillOpacity: 0.15 }; 
+                        : { color: '#94a3b8', weight: 0.3, fillColor: effectiveColor, fillOpacity: 0.1 }; 
 
                     let l = window.L.geoJSON(geom, { style: styleOptions });
                     polygonLayerGroup.addLayer(l);
                     if (isActiveRegion) activeBoundsLayer.addLayer(l);
                     
-                    // LABEL EXTRACTION LOGIC
-                    let labelLevel = 'country';
-                    if (activeNode.node_level === 'root') {
-                        labelLevel = 'continent';
+                    // MATHEMATICAL LABEL HIERARCHY ROLLUP
+                    // Groups neighbor countries into their continent/sub-continent names automatically
+                    let targetLabelNode = null;
+
+                    if (nodeId === 'GLOBAL') {
+                        targetLabelNode = getAncestorAtLevel(n.node_id, 'continent');
                     } else if (activeNode.node_level === 'continent') {
-                        labelLevel = isActiveRegion ? 'sub_continent' : 'continent';
+                        if (isActiveRegion) targetLabelNode = getAncestorAtLevel(n.node_id, 'sub_continent');
+                        else targetLabelNode = getAncestorAtLevel(n.node_id, 'continent');
                     } else if (activeNode.node_level === 'sub_continent') {
-                        let sameContinent = getAncestorAtLevel(n.node_id, 'continent')?.node_id === getAncestorAtLevel(activeNode.node_id, 'continent')?.node_id;
-                        labelLevel = isActiveRegion ? 'country' : (sameContinent ? 'sub_continent' : 'continent');
+                        if (isActiveRegion) targetLabelNode = n; 
+                        else {
+                            let sameCont = getAncestorAtLevel(n.node_id, 'continent')?.node_id === getAncestorAtLevel(activeNode.node_id, 'continent')?.node_id;
+                            targetLabelNode = sameCont ? getAncestorAtLevel(n.node_id, 'sub_continent') : getAncestorAtLevel(n.node_id, 'continent');
+                        }
                     } else {
-                        labelLevel = isActiveRegion ? 'country' : 'sub_continent';
+                        if (isActiveRegion) targetLabelNode = n;
+                        else {
+                            let sameSub = getAncestorAtLevel(n.node_id, 'sub_continent')?.node_id === getAncestorAtLevel(activeNode.node_id, 'sub_continent')?.node_id;
+                            targetLabelNode = sameSub ? n : getAncestorAtLevel(n.node_id, 'sub_continent') || getAncestorAtLevel(n.node_id, 'continent');
+                        }
                     }
 
-                    let labelEntity = getAncestorAtLevel(n.node_id, labelLevel) || n;
-
-                    if (labelEntity) {
-                        if (!labelData.has(labelEntity.node_id)) {
-                            labelData.set(labelEntity.node_id, { 
-                                name: labelEntity.node_name, 
+                    if (targetLabelNode) {
+                        if (!labelData.has(targetLabelNode.node_id)) {
+                            labelData.set(targetLabelNode.node_id, { 
+                                name: targetLabelNode.node_name, 
                                 bounds: window.L.latLngBounds(), 
-                                isActive: isActiveRegion 
+                                isActive: false 
                             });
                         }
-                        labelData.get(labelEntity.node_id).bounds.extend(l.getBounds());
-                        if (isActiveRegion) labelData.get(labelEntity.node_id).isActive = true;
+                        labelData.get(targetLabelNode.node_id).bounds.extend(l.getBounds());
+                        if (isActiveRegion) labelData.get(targetLabelNode.node_id).isActive = true;
                     }
 
                     l.on('click', () => {
@@ -407,16 +426,15 @@ export async function initRegionsEngine(containerId) {
                 } catch(e) {}
             });
 
-            // INJECT MULTI-LINE CENTERED LABELS
+            // INJECT PURE MATHEMATICALLY CENTERED LABELS
             labelData.forEach((data, id) => {
-                let center = data.bounds.getCenter();
+                let center = data.bounds.getCenter(); // No hardcoded overrides. Calculates exact center of the landmass cluster
                 let cssClass = data.isActive ? 'label-active' : 'label-shadowed';
-                let formattedName = toTitleCase(data.name || '');
                 
                 let marker = window.L.marker(center, {
                     icon: window.L.divIcon({ 
                         className: `map-label ${cssClass}`, 
-                        html: `<div class="label-text">${formattedName}</div>`,
+                        html: `<div class="label-text">${data.name || ''}</div>`, // CSS Handles Title Case natively
                         iconSize: [80, 40], 
                         iconAnchor: [40, 20] 
                     }),
@@ -425,7 +443,7 @@ export async function initRegionsEngine(containerId) {
                 polygonLayerGroup.addLayer(marker);
             });
 
-            // CRITICAL FIX: Add Layer Group to Map, THEN calculate Bounds
+            // 4. MATHEMATICAL VIEWPORT CENTERING
             setTimeout(() => {
                 map.invalidateSize(true);
                 if (polygonLayerGroup.getLayers().length > 0) {
@@ -433,15 +451,15 @@ export async function initRegionsEngine(containerId) {
                     
                     let targetBounds = activeBoundsLayer.getBounds();
                     if (targetBounds.isValid()) {
-                        // Dynamically fits strictly the active boundaries
                         map.fitBounds(targetBounds, { 
                             padding: [20, 20], 
+                            maxZoom: nodeId === 'GLOBAL' ? 3 : 11, 
                             animate: true, 
                             duration: 1.0 
                         });
                     }
                 }
-            }, 150);
+            }, 200);
         }
 
         function setupDropdownListeners() {
