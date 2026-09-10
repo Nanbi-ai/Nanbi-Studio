@@ -354,7 +354,6 @@ export async function initRegionsEngine(containerId) {
                     let geom = n.dynamic_config_payload.geojson;
                     
                     // PURE METADATA-DRIVEN HIERARCHICAL COLOR LOGIC
-                    // Fetches exclusively from dynamic_config_payload with zero hardcoding
                     let effectiveColor = '#e2e8f0'; // Default fallback
                     if (n.dynamic_config_payload && n.dynamic_config_payload.fill_color) {
                         effectiveColor = n.dynamic_config_payload.fill_color;
@@ -435,34 +434,21 @@ export async function initRegionsEngine(containerId) {
                 polygonLayerGroup.addLayer(marker);
             });
 
-            // 4. TRUE AGNOSTIC 80% VIEWPORT CENTERING
+            // 4. TRUE AGNOSTIC CENTERING (NATIVE LEAFLET FITBOUNDS)
             setTimeout(() => {
                 map.invalidateSize(true);
                 if (polygonLayerGroup.getLayers().length > 0) {
                     polygonLayerGroup.addTo(map); 
                     
-                    if (nodeId === 'GLOBAL') {
-                        // 1. Establish the perfect visual center coordinate for the World Map.
-                        // We use [20.0, 0.0] to visually balance the landmasses within the container.
-                        const worldCenter = [20.0, 0.0];
-                        
-                        // 2. Set the view to the center with a low zoom level.
-                        // Leaflet will naturally center this coordinate within whatever dimensions the map-wrapper currently holds.
-                        map.setView(worldCenter, 1.5, { animate: true, duration: 1.0 });
-                    } else {
-                        // Calculate specific padding only when zooming into a targeted region (Continent/Country etc.)
-                        const currentSize = map.getSize(); 
-                        const padX = Math.max(10, Math.floor(currentSize.x * 0.10));
-                        const padY = Math.max(10, Math.floor(currentSize.y * 0.10));
-                        
-                        let targetBounds = activeBoundsLayer.getBounds();
-                        if (targetBounds.isValid()) {
-                            map.fitBounds(targetBounds, { padding: [padX, padY], animate: true, duration: 1.0 });
-                        }
+                    let targetBounds = activeBoundsLayer.getBounds();
+                    if (targetBounds.isValid()) {
+                        // Natively asks Leaflet to perfectly center the generated boundaries, safely buffered 30px away from the edge of your screen. 
+                        map.fitBounds(targetBounds, { padding: [30, 30], maxZoom: 11, animate: true, duration: 1.0 });
                     }
                 }
-            }, 100);
-            
+            }, 150);
+        }
+
         function setupDropdownListeners() {
             ['selContinent', 'selSubContinent', 'selCountry', 'selState', 'selDistrict', 'selTaluk'].forEach(id => {
                 container.querySelector(`#${id}`).addEventListener('change', (e) => {
