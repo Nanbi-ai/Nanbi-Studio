@@ -210,10 +210,18 @@ export async function initRegionsEngine(containerId) {
         const mapEl = window.L.DomUtil.get('map');
         if (mapEl) mapEl._leaflet_id = null;
 
+        // =========================================================================================
+        // FIX: Re-applied the critical minZoom: 0 unlocking rule from your historical patch
+        // =========================================================================================
         map = window.L.map('map', { 
-            preferCanvas: true, zoomControl: true, attributionControl: false,
-            zoomSnap: 0.1, worldCopyJump: true, minZoom: 1, maxBounds: null
-        }).setView([20.0, 0.0], 2);
+            preferCanvas: true, 
+            zoomControl: true, 
+            attributionControl: false,
+            zoomSnap: 0.1, 
+            worldCopyJump: true, 
+            minZoom: 0, // Unlocks the map so it can shrink to fit any panel naturally
+            maxBounds: null
+        }).setView([20.0, 0.0], 1);
         
         window.nanbiMapInstance = map;
 
@@ -282,9 +290,6 @@ export async function initRegionsEngine(containerId) {
             });
         }
 
-        // =========================================================================================
-        // MASTER 3-WAY SYNCHRONIZATION ENGINE
-        // =========================================================================================
         function applyGlobalSelection(nodeId) {
             const activeNode = treeNodes.find(n => n.node_id === nodeId) || { node_id: 'GLOBAL', node_name: 'World', node_level: 'root' };
 
@@ -354,7 +359,7 @@ export async function initRegionsEngine(containerId) {
                     let geom = n.dynamic_config_payload.geojson;
                     
                     // PURE METADATA-DRIVEN HIERARCHICAL COLOR LOGIC
-                    let effectiveColor = '#e2e8f0'; // Default fallback
+                    let effectiveColor = '#e2e8f0'; 
                     if (n.dynamic_config_payload && n.dynamic_config_payload.fill_color) {
                         effectiveColor = n.dynamic_config_payload.fill_color;
                     }
@@ -371,7 +376,6 @@ export async function initRegionsEngine(containerId) {
                         }
                     }
 
-                    // Strict border visibility: weight 0.5px, color #1e293b
                     let styleOptions = { 
                         color: '#1e293b', 
                         weight: 0.5, 
@@ -383,7 +387,6 @@ export async function initRegionsEngine(containerId) {
                     polygonLayerGroup.addLayer(l);
                     if (isActiveRegion) activeBoundsLayer.addLayer(l);
                     
-                    // Collect Label Data based exclusively on the current active tier
                     if (isActiveRegion) {
                         let b = l.getBounds();
                         if (activeNode.node_level === 'root') {
@@ -434,19 +437,27 @@ export async function initRegionsEngine(containerId) {
                 polygonLayerGroup.addLayer(marker);
             });
 
-            // 4. TRUE AGNOSTIC CENTERING (NATIVE LEAFLET FITBOUNDS)
+            // 4. FLUID VIEWPORT CENTERING (With the minZoom: 0 unlock)
             setTimeout(() => {
                 map.invalidateSize(true);
                 if (polygonLayerGroup.getLayers().length > 0) {
                     polygonLayerGroup.addTo(map); 
                     
-                    let targetBounds = activeBoundsLayer.getBounds();
-                    if (targetBounds.isValid()) {
-                        // Natively asks Leaflet to perfectly center the generated boundaries, safely buffered 30px away from the edge of your screen. 
-                        map.fitBounds(targetBounds, { padding: [30, 30], maxZoom: 11, animate: true, duration: 1.0 });
+                    if (nodeId === 'GLOBAL') {
+                        // Resets to center [20,0] perfectly without breaking container bounds
+                        map.setView([20.0, 0.0], 1, { animate: true, duration: 1.0 });
+                    } else {
+                        const currentSize = map.getSize(); 
+                        const padX = Math.max(10, Math.floor(currentSize.x * 0.10));
+                        const padY = Math.max(10, Math.floor(currentSize.y * 0.10));
+                        
+                        let targetBounds = activeBoundsLayer.getBounds();
+                        if (targetBounds.isValid()) {
+                            map.fitBounds(targetBounds, { padding: [padX, padY], animate: true, duration: 1.0 });
+                        }
                     }
                 }
-            }, 150);
+            }, 100);
         }
 
         function setupDropdownListeners() {
