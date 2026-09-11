@@ -150,15 +150,15 @@ export async function initRegionsEngine(containerId) {
         const mapEl = window.L.DomUtil.get('map');
         if (mapEl) mapEl._leaflet_id = null;
 
-        // PERFECT 360 DEGREE GLOBE INITIALIZATION
+        // THE ULTIMATE 360-DEGREE ENGINE FIX
         map = window.L.map('map', { 
             preferCanvas: true, 
             zoomControl: true, 
             attributionControl: false,
             zoomSnap: 0.1, 
-            worldCopyJump: true, // Enables seamless 360-degree panning
+            worldCopyJump: true, // Native invisible teleportation
             minZoom: 1.5,
-            maxBounds: [[-90, -360], [90, 360]] // Protects vertical drift, allows wide horizontal scrolling
+            maxBounds: [[-90, -Infinity], [90, Infinity]] // Locks Antarctica/Arctic, allows infinite horizontal pan
         }).setView([20.0, 0.0], 1.5);
         
         window.nanbiMapInstance = map;
@@ -213,7 +213,7 @@ export async function initRegionsEngine(containerId) {
         function cascadeClear(ids) { ids.forEach(id => { const el = container.querySelector(`#${id}`); if (el) { el.innerHTML = '<option value="All">All</option>'; el.disabled = true; } }); }
 
         function applyGlobalSelection(nodeId) {
-            const fallbackGlobalNode = { node_id: 'GLOBAL', node_name: 'World', node_level: 'root', dynamic_config_payload: { viewport_bounds: [[-55.0, -140.0], [80.0, 160.0]] } };
+            const fallbackGlobalNode = { node_id: 'GLOBAL', node_name: 'World', node_level: 'root', dynamic_config_payload: { viewport_bounds: [[-55.0, -170.0], [85.0, 170.0]] } };
             const activeNode = treeNodes.find(n => n.node_id === nodeId) || fallbackGlobalNode;
 
             const lineage = getLineage(nodeId);
@@ -255,6 +255,9 @@ export async function initRegionsEngine(containerId) {
 
             if (polygonLayerGroup) map.removeLayer(polygonLayerGroup);
             polygonLayerGroup = window.L.featureGroup();
+            
+            // CRITICAL: This bounds layer ONLY holds the primary center polygons. 
+            // It completely prevents Leaflet from zooming out to show 3 Earths.
             let activeBoundsLayer = window.L.featureGroup(); 
             let labelData = new Map();
 
@@ -278,12 +281,12 @@ export async function initRegionsEngine(containerId) {
 
                     let styleOptions = isActiveRegion ? { color: '#1e293b', weight: 0.6, fillColor: effectiveColor, fillOpacity: 0.95 } : { color: '#94a3b8', weight: 0.3, fillColor: effectiveColor, fillOpacity: 0.15 }; 
 
-                    // 1. PRIMARY POLYGON: This is the ONLY polygon the camera tracking system will look at.
-                    let lPrimary = window.L.geoJSON(geom, { style: styleOptions });
-                    polygonLayerGroup.addLayer(lPrimary);
-                    if (isActiveRegion) activeBoundsLayer.addLayer(lPrimary);
+                    // 1. PRIMARY POLYGON: The only layer mathematically tracked for centering
+                    let lCenter = window.L.geoJSON(geom, { style: styleOptions });
+                    polygonLayerGroup.addLayer(lCenter);
+                    if (isActiveRegion) activeBoundsLayer.addLayer(lCenter);
                     
-                    // 2. THE VISUAL CLONES: Fixes the cut-offs, but totally hidden from the math engine.
+                    // 2. VISUAL CLONES: Fixes the cut-offs, but totally hidden from the math engine.
                     let lRight = window.L.geoJSON(geom, { style: styleOptions, coordsToLatLng: function(c) { return new window.L.LatLng(c[1], c[0] + 360); }});
                     polygonLayerGroup.addLayer(lRight);
                     
@@ -305,7 +308,7 @@ export async function initRegionsEngine(containerId) {
                         if (!labelData.has(targetLabelNode.node_id)) {
                             labelData.set(targetLabelNode.node_id, { name: targetLabelNode.node_name, bounds: window.L.latLngBounds(), isActive: isActiveRegion, payload: targetLabelNode.dynamic_config_payload });
                         }
-                        labelData.get(targetLabelNode.node_id).bounds.extend(lPrimary.getBounds());
+                        labelData.get(targetLabelNode.node_id).bounds.extend(lCenter.getBounds());
                         if (isActiveRegion) labelData.get(targetLabelNode.node_id).isActive = true;
                     }
 
@@ -315,7 +318,7 @@ export async function initRegionsEngine(containerId) {
                         else applyGlobalSelection(n.node_id);
                     };
                     
-                    lPrimary.on('click', clickHandler);
+                    lCenter.on('click', clickHandler);
                     lRight.on('click', clickHandler);
                     lLeft.on('click', clickHandler);
 
@@ -333,12 +336,17 @@ export async function initRegionsEngine(containerId) {
                 let inlineStyle = `transform: rotate(${rotation}); max-width: ${maxWidth};`;
                 if (textColor) inlineStyle += ` color: ${textColor}; text-shadow: none;`;
 
-                // Render single label
-                let marker = window.L.marker(anchor, {
-                    icon: window.L.divIcon({ className: `map-label ${cssClass}`, html: `<div class="label-text" style="${inlineStyle}">${formattedName}</div>`, iconSize: [120, 40], iconAnchor: [60, 20] }),
-                    interactive: false
-                });
-                polygonLayerGroup.addLayer(marker);
+                const createLabel = (latLng) => {
+                    return window.L.marker(latLng, {
+                        icon: window.L.divIcon({ className: `map-label ${cssClass}`, html: `<div class="label-text" style="${inlineStyle}">${formattedName}</div>`, iconSize: [120, 40], iconAnchor: [60, 20] }),
+                        interactive: false
+                    });
+                };
+
+                // Add labels to the clones too so they don't vanish during a jump
+                polygonLayerGroup.addLayer(createLabel(anchor));
+                polygonLayerGroup.addLayer(createLabel([anchor[0], anchor[1] + 360]));
+                polygonLayerGroup.addLayer(createLabel([anchor[0], anchor[1] - 360]));
             });
 
             setTimeout(() => {
@@ -346,11 +354,10 @@ export async function initRegionsEngine(containerId) {
                 
                 if (polygonLayerGroup.getLayers().length > 0) { polygonLayerGroup.addTo(map); }
 
-                // The Unrestricted 5% Dynamic Bounding Calculation
                 if (activeBoundsLayer.getLayers().length > 0) {
                     let targetBounds = activeBoundsLayer.getBounds();
                     
-                    // Priority absolute framing via database payload
+                    // Hardware-Agnostic Priority Centering
                     if (activeNode.dynamic_config_payload && activeNode.dynamic_config_payload.viewport_bounds) {
                         const vb = activeNode.dynamic_config_payload.viewport_bounds;
                         targetBounds = window.L.latLngBounds(vb[0], vb[1]);
