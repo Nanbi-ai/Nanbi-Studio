@@ -390,7 +390,7 @@ export async function initRegionsEngine(containerId) {
                                 name: targetLabelNode.node_name, 
                                 bounds: window.L.latLngBounds(), 
                                 isActive: isActiveRegion,
-                                payload: targetLabelNode.dynamic_config_payload // Fetch the payload for Step 2
+                                payload: targetLabelNode.dynamic_config_payload 
                             });
                         }
                         labelData.get(targetLabelNode.node_id).bounds.extend(l.getBounds());
@@ -413,19 +413,22 @@ export async function initRegionsEngine(containerId) {
 
             // HOLLOW LABEL GENERATOR: Reads properties dynamically from payload or falls back safely
             labelData.forEach((data, id) => {
-                // Future-proofed to read the anchor coordinate directly from Config Hub
                 let anchor = (data.payload && data.payload.label_anchor) ? data.payload.label_anchor : data.bounds.getCenter();
-                let textColor = (data.payload && data.payload.label_color) ? data.payload.label_color : (data.isActive ? '#0f172a' : '#475569');
+                let textColor = (data.payload && data.payload.label_color) ? data.payload.label_color : '';
                 let rotation = (data.payload && data.payload.label_rotation) ? data.payload.label_rotation : '0deg';
                 let maxWidth = (data.payload && data.payload.label_max_width) ? data.payload.label_max_width : '65px';
                 
                 let cssClass = data.isActive ? 'label-active' : 'label-shadowed';
                 let formattedName = toTitleCase(data.name || '');
                 
+                // If a specific text color is enforced from the payload, apply it inline.
+                let inlineStyle = `transform: rotate(${rotation}); max-width: ${maxWidth};`;
+                if (textColor) inlineStyle += ` color: ${textColor}; text-shadow: none;`;
+
                 let marker = window.L.marker(anchor, {
                     icon: window.L.divIcon({ 
                         className: `map-label ${cssClass}`, 
-                        html: `<div class="label-text" style="color: ${textColor}; transform: rotate(${rotation}); max-width: ${maxWidth};">${formattedName}</div>`,
+                        html: `<div class="label-text" style="${inlineStyle}">${formattedName}</div>`,
                         iconSize: [120, 40], 
                         iconAnchor: [60, 20] 
                     }),
@@ -437,6 +440,12 @@ export async function initRegionsEngine(containerId) {
             // 4. THE 90% WINDOW / 5% DYNAMIC MARGIN LOGIC
             setTimeout(() => {
                 map.invalidateSize(true);
+                
+                // ADD THE POLYGONS TO THE SCREEN
+                if (polygonLayerGroup.getLayers().length > 0) {
+                    polygonLayerGroup.addTo(map); 
+                }
+
                 if (activeBoundsLayer.getLayers().length > 0) {
                     let targetBounds = activeBoundsLayer.getBounds();
                     if (targetBounds.isValid()) {
@@ -444,9 +453,9 @@ export async function initRegionsEngine(containerId) {
                         // Dynamically asks the browser exactly how many pixels exist right now
                         const currentSize = map.getSize(); 
                         
-                        // Calculates exactly 5% padding for perfect 90% utilization
-                        const padX = Math.floor(currentSize.x * 0.05); 
-                        const padY = Math.floor(currentSize.y * 0.05); 
+                        // Calculates exactly 5% padding for perfect 90% utilization (minimum 10px safety)
+                        const padX = Math.max(10, Math.floor(currentSize.x * 0.05)); 
+                        const padY = Math.max(10, Math.floor(currentSize.y * 0.05)); 
                         
                         map.fitBounds(targetBounds, { 
                             padding: [padX, padY], 
