@@ -35,30 +35,17 @@ export async function initRegionsEngine(containerId) {
                 #regions-module path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s, stroke 0.2s; outline: none; }
                 #regions-module path.leaflet-interactive:hover { stroke: #0f172a !important; stroke-width: 1.5px !important; fill-opacity: 0.9 !important; cursor: pointer; }
                 
-                /* HOLLOW PRESENTATION TYPOGRAPHY (Driven by Database) */
+                /* HOLLOW PRESENTATION TYPOGRAPHY */
                 .map-label { 
                     background: transparent !important; border: none !important; box-shadow: none !important; 
                     display: flex; justify-content: center; align-items: center; text-align: center; pointer-events: none;
                 }
                 .label-text { 
-                    font-family: var(--font-main);
-                    display: inline-block;
-                    white-space: normal; 
-                    word-wrap: break-word;
-                    line-height: 1.1; 
+                    font-family: var(--font-main); display: inline-block; white-space: normal; 
+                    word-wrap: break-word; line-height: 1.1; 
                 }
-                
-                .label-active .label-text {
-                    font-weight: 600; 
-                    font-size: 11px; 
-                    text-shadow: 0px 0px 3px #ffffff, 0px 0px 5px rgba(255,255,255,0.9); 
-                }
-                .label-shadowed .label-text {
-                    font-weight: 600;
-                    font-size: 9.5px;
-                    opacity: 0.6;
-                    text-shadow: 0px 0px 2px rgba(255,255,255,0.6);
-                }
+                .label-active .label-text { font-weight: 600; font-size: 11px; text-shadow: 0px 0px 3px #ffffff, 0px 0px 5px rgba(255,255,255,0.9); }
+                .label-shadowed .label-text { font-weight: 600; font-size: 9.5px; opacity: 0.6; text-shadow: 0px 0px 2px rgba(255,255,255,0.6); }
                 
                 #regions-module ::-webkit-scrollbar { width: 6px; }
                 #regions-module ::-webkit-scrollbar-thumb { background-color: var(--border); border-radius: 4px; }
@@ -66,22 +53,13 @@ export async function initRegionsEngine(containerId) {
 
             <div id="regions-module" class="gap-1.5 p-1">
                 <div class="shrink-0 flex gap-2 border-b border-[color:var(--border)] pb-1.5 px-1 z-20 relative">
-                    <button id="tabMapMatrix" class="px-4 py-1 rounded text-[11px] font-bold bg-[color:var(--brand-orange-dark)] text-white shadow-sm transition">
-                        <i class="fas fa-map-marked-alt mr-1.5"></i> Global Map & N-Layer Matrix
-                    </button>
-                    <button id="tabConfigHub" class="px-4 py-1 rounded text-[11px] font-bold bg-[color:var(--card)] text-[color:var(--muted)] border border-[color:var(--border)] hover:bg-[color:var(--hover-bg)] transition">
-                        <i class="fas fa-sitemap mr-1.5"></i> Jurisdictional Tree & Config Hub
-                    </button>
+                    <button id="tabMapMatrix" class="px-4 py-1 rounded text-[11px] font-bold bg-[color:var(--brand-orange-dark)] text-white shadow-sm transition"><i class="fas fa-map-marked-alt mr-1.5"></i> Global Map & N-Layer Matrix</button>
+                    <button id="tabConfigHub" class="px-4 py-1 rounded text-[11px] font-bold bg-[color:var(--card)] text-[color:var(--muted)] border border-[color:var(--border)] hover:bg-[color:var(--hover-bg)] transition"><i class="fas fa-sitemap mr-1.5"></i> Jurisdictional Tree & Config Hub</button>
                 </div>
 
                 <div id="viewMapMatrix" class="flex flex-col lg:flex-row flex-1 min-h-0 min-w-0 gap-2">
                     <aside class="flex-1 lg:max-w-[45%] flex flex-col h-full min-h-0 min-w-0 gap-2 z-10">
-                        <div class="flex-1 panel-card flex flex-col h-full w-full relative min-h-0">
-                            <div id="map-wrapper" class="flex-1 min-h-0">
-                                <div id="map"></div>
-                            </div>
-                        </div>
-                        
+                        <div class="flex-1 panel-card flex flex-col h-full w-full relative min-h-0"><div id="map-wrapper" class="flex-1 min-h-0"><div id="map"></div></div></div>
                         <div class="shrink-0 panel-card p-3 shadow-sm z-20">
                             <div class="flex justify-between items-center pb-1.5 border-b border-[color:var(--border)] mb-2">
                                 <span id="geoHierarchyBreadcrumb" class="text-[11px] font-bold text-[color:var(--text)] uppercase tracking-wide">Global Root (World)</span>
@@ -100,69 +78,38 @@ export async function initRegionsEngine(containerId) {
 
                     <section class="flex-1 lg:max-w-[55%] flex flex-col h-full min-h-0 min-w-0 gap-2 relative">
                         <div class="shrink-0 panel-card flex justify-around items-center py-2">
-                            <div class="text-center w-1/2">
-                                <p class="text-[9px] font-bold text-[color:var(--muted)] uppercase tracking-widest">Filtered Nodes</p>
-                                <p class="text-xl font-black text-[color:var(--text)] mt-0.5" id="metricCount">0</p>
-                            </div>
+                            <div class="text-center w-1/2"><p class="text-[9px] font-bold text-[color:var(--muted)] uppercase tracking-widest">Filtered Nodes</p><p class="text-xl font-black text-[color:var(--text)] mt-0.5" id="metricCount">0</p></div>
                             <div class="w-px h-8 bg-[color:var(--border)]"></div>
-                            <div class="text-center w-1/2">
-                                <p class="text-[9px] font-bold text-[color:var(--muted)] uppercase tracking-widest">Global Capacity</p>
-                                <p class="text-xl font-black mt-0.5 text-[color:var(--brand-orange-dark)]" id="metricMPS">₹0</p>
-                            </div>
+                            <div class="text-center w-1/2"><p class="text-[9px] font-bold text-[color:var(--muted)] uppercase tracking-widest">Global Capacity</p><p class="text-xl font-black mt-0.5 text-[color:var(--brand-orange-dark)]" id="metricMPS">₹0</p></div>
                         </div>
 
                         <div class="flex-1 panel-card flex flex-col overflow-hidden min-h-0">
                             <div class="flex-1 overflow-y-auto">
                                 <table class="w-full border-collapse">
-                                    <thead>
-                                        <tr>
-                                            <th class="pl-4">Node ID</th>
-                                            <th>Jurisdiction Name</th>
-                                            <th>Level</th>
-                                            <th class="text-right pr-4">Gov Code</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="territoryTbody" class="cursor-pointer">
-                                        <tr><td colspan="4" class="py-16 text-center text-[color:var(--muted)] font-medium">Loading universal matrix...</td></tr>
-                                    </tbody>
+                                    <thead><tr><th class="pl-4">Node ID</th><th>Jurisdiction Name</th><th>Level</th><th class="text-right pr-4">Gov Code</th></tr></thead>
+                                    <tbody id="territoryTbody" class="cursor-pointer"><tr><td colspan="4" class="py-16 text-center text-[color:var(--muted)] font-medium">Loading universal matrix...</td></tr></tbody>
                                 </table>
                             </div>
                         </div>
 
                         <div class="shrink-0 h-32 panel-card p-3 overflow-y-auto z-20">
-                            <div class="flex justify-between items-center border-b border-[color:var(--border)] pb-1 mb-1.5">
-                                <h3 class="text-[11px] font-bold uppercase tracking-widest text-[color:var(--text)]" id="deepDiveTitle">Entity Inspector</h3>
-                                <span class="text-[9px] text-[color:var(--muted)] font-mono font-bold uppercase" id="deepDiveSubtitle">Select a node</span>
-                            </div>
-                            <div id="deepDiveContent" class="flex flex-col gap-1.5 text-xs text-[color:var(--muted)] font-medium">
-                                <div class="text-center mt-4">Awaiting 3-way synchronization...</div>
-                            </div>
+                            <div class="flex justify-between items-center border-b border-[color:var(--border)] pb-1 mb-1.5"><h3 class="text-[11px] font-bold uppercase tracking-widest text-[color:var(--text)]" id="deepDiveTitle">Entity Inspector</h3><span class="text-[9px] text-[color:var(--muted)] font-mono font-bold uppercase" id="deepDiveSubtitle">Select a node</span></div>
+                            <div id="deepDiveContent" class="flex flex-col gap-1.5 text-xs text-[color:var(--muted)] font-medium"><div class="text-center mt-4">Awaiting 3-way synchronization...</div></div>
                         </div>
                     </section>
                 </div>
 
                 <div id="viewConfigHub" class="hidden flex-col lg:flex-row flex-1 min-h-0 min-w-0 gap-2 p-1">
                     <aside class="flex-1 lg:max-w-[40%] panel-card p-3 flex flex-col min-h-0">
-                        <div class="flex justify-between items-center pb-2 border-b border-[color:var(--border)] mb-2 shrink-0">
-                            <h3 class="text-xs font-bold uppercase tracking-widest text-[color:var(--text)]">Universal Jurisdictional Tree</h3>
-                            <span id="treeNodeCountBadge" class="text-[10px] font-mono px-2 py-0.5 rounded border border-[color:var(--brand-orange-dark)] text-[color:var(--brand-orange-dark)] font-bold">0 Nodes</span>
-                        </div>
+                        <div class="flex justify-between items-center pb-2 border-b border-[color:var(--border)] mb-2 shrink-0"><h3 class="text-xs font-bold uppercase tracking-widest text-[color:var(--text)]">Universal Jurisdictional Tree</h3><span id="treeNodeCountBadge" class="text-[10px] font-mono px-2 py-0.5 rounded border border-[color:var(--brand-orange-dark)] text-[color:var(--brand-orange-dark)] font-bold">0 Nodes</span></div>
                         <div id="treeListContainer" class="flex-1 overflow-y-auto space-y-1 font-sans pr-1"></div>
                     </aside>
                     <section class="flex-1 lg:max-w-[60%] panel-card p-4 flex flex-col min-h-0">
                         <div class="flex justify-between items-center pb-2 border-b border-[color:var(--border)] mb-3 shrink-0">
-                            <div>
-                                <h3 class="text-sm font-bold text-[color:var(--text)]" id="configNodeTitle">Select a Regional Node</h3>
-                                <p class="text-[11px] text-[color:var(--muted)] font-mono font-bold uppercase" id="configNodeMeta">Level: N/A | ID: --</p>
-                            </div>
-                            <button id="btnSaveConfigPayload" class="px-4 py-1.5 rounded text-xs font-bold bg-[color:var(--brand-orange-dark)] text-white shadow transition flex items-center gap-1.5" style="display:none;">
-                                <i class="fas fa-lock"></i> Save Payload
-                            </button>
+                            <div><h3 class="text-sm font-bold text-[color:var(--text)]" id="configNodeTitle">Select a Regional Node</h3><p class="text-[11px] text-[color:var(--muted)] font-mono font-bold uppercase" id="configNodeMeta">Level: N/A | ID: --</p></div>
+                            <button id="btnSaveConfigPayload" class="px-4 py-1.5 rounded text-xs font-bold bg-[color:var(--brand-orange-dark)] text-white shadow transition flex items-center gap-1.5" style="display:none;"><i class="fas fa-lock"></i> Save Payload</button>
                         </div>
-                        <div class="flex-1 flex flex-col gap-1 mb-3 min-h-0">
-                            <label class="text-[10px] font-bold text-[color:var(--muted)] uppercase tracking-widest">JSONB Config Ledger</label>
-                            <textarea id="jsonConfigTextarea" class="w-full flex-1 p-3 font-mono text-xs rounded border border-[color:var(--border)] bg-transparent text-[color:var(--text)] outline-none resize-none shadow-inner" disabled></textarea>
-                        </div>
+                        <div class="flex-1 flex flex-col gap-1 mb-3 min-h-0"><label class="text-[10px] font-bold text-[color:var(--muted)] uppercase tracking-widest">JSONB Config Ledger</label><textarea id="jsonConfigTextarea" class="w-full flex-1 p-3 font-mono text-xs rounded border border-[color:var(--border)] bg-transparent text-[color:var(--text)] outline-none resize-none shadow-inner" disabled></textarea></div>
                     </section>
                 </div>
             </div>
@@ -176,26 +123,21 @@ export async function initRegionsEngine(containerId) {
         tabMapMatrix.onclick = () => {
             tabMapMatrix.className = "px-4 py-1 rounded text-[11px] font-bold bg-[color:var(--brand-orange-dark)] text-white shadow-sm transition";
             tabConfigHub.className = "px-4 py-1 rounded text-[11px] font-bold bg-[color:var(--card)] text-[color:var(--muted)] border border-[color:var(--border)] hover:bg-[color:var(--hover-bg)] transition";
-            viewMapMatrix.style.display = "flex";
-            viewConfigHub.style.display = "none";
+            viewMapMatrix.style.display = "flex"; viewConfigHub.style.display = "none";
             if (window.nanbiMapInstance) { setTimeout(() => window.nanbiMapInstance.invalidateSize(true), 100); }
         };
 
         tabConfigHub.onclick = () => {
             tabConfigHub.className = "px-4 py-1 rounded text-[11px] font-bold bg-[color:var(--brand-orange-dark)] text-white shadow-sm transition";
             tabMapMatrix.className = "px-4 py-1 rounded text-[11px] font-bold bg-[color:var(--card)] text-[color:var(--muted)] border border-[color:var(--border)] hover:bg-[color:var(--hover-bg)] transition";
-            viewConfigHub.style.display = "flex";
-            viewMapMatrix.style.display = "none";
+            viewConfigHub.style.display = "flex"; viewMapMatrix.style.display = "none";
             loadJurisdictionalTree();
         };
 
         let map = null, polygonLayerGroup = null;
         let treeNodes = [];
 
-        function toTitleCase(str) { 
-            if (!str) return '';
-            return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '); 
-        }
+        function toTitleCase(str) { return (!str) ? '' : str.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '); }
 
         if (!window.L) {
             await new Promise((resolve) => {
@@ -208,15 +150,15 @@ export async function initRegionsEngine(containerId) {
         const mapEl = window.L.DomUtil.get('map');
         if (mapEl) mapEl._leaflet_id = null;
 
-        // THE PHYSICS ENGINE FIX: Tear down the walls and enable the continuous 360-degree globe
+        // TRUE 360-DEGREE GLOBE ENGINE
         map = window.L.map('map', { 
             preferCanvas: true, 
             zoomControl: true, 
             attributionControl: false,
             zoomSnap: 0.1, 
-            worldCopyJump: true, // Enables seamless panning across the International Date Line
-            minZoom: 1, 
-            maxBounds: [[-90, -Infinity], [90, Infinity]] // Allows infinite horizontal scrolling, locks Antarctica/Arctic
+            worldCopyJump: true, // Seamless panning
+            minZoom: 1.5, // Absolutely prevents zooming out into the infinite void (NR-100 fix)
+            maxBounds: [[-90, -540], [90, 540]] // Allows 3 full continuous globe spins without getting lost
         }).setView([20.0, 0.0], 1.5);
         
         window.nanbiMapInstance = map;
@@ -250,53 +192,33 @@ export async function initRegionsEngine(containerId) {
         }
 
         function getLineage(nodeId) {
-            let lineage = {};
-            let curr = treeNodes.find(n => n.node_id === nodeId);
-            while (curr && curr.node_id !== 'GLOBAL') {
-                lineage[curr.node_level] = curr.node_id;
-                curr = treeNodes.find(n => n.node_id === curr.parent_id);
-            }
+            let lineage = {}; let curr = treeNodes.find(n => n.node_id === nodeId);
+            while (curr && curr.node_id !== 'GLOBAL') { lineage[curr.node_level] = curr.node_id; curr = treeNodes.find(n => n.node_id === curr.parent_id); }
             return lineage;
         }
 
         function isDescendant(node, parentId) {
-            let curr = treeNodes.find(n => n.node_id === node.parent_id);
-            let depth = 0;
-            while (curr && depth < 20) {
-                if (curr.node_id === parentId) return true;
-                curr = treeNodes.find(n => n.node_id === curr.parent_id);
-                depth++;
-            }
+            let curr = treeNodes.find(n => n.node_id === node.parent_id); let depth = 0;
+            while (curr && depth < 20) { if (curr.node_id === parentId) return true; curr = treeNodes.find(n => n.node_id === curr.parent_id); depth++; }
             return false;
         }
 
         function populateDropdown(targetId, level, parentId) {
-            const sel = container.querySelector('#' + targetId);
-            sel.innerHTML = '<option value="All">All</option>';
+            const sel = container.querySelector('#' + targetId); sel.innerHTML = '<option value="All">All</option>';
             const list = treeNodes.filter(n => n.node_level === level && n.parent_id === parentId);
             list.forEach(item => { sel.innerHTML += `<option value="${item.node_id}">${item.node_name}</option>`; });
-            sel.disabled = list.length === 0;
-            return list.length > 0;
+            sel.disabled = list.length === 0; return list.length > 0;
         }
 
-        function cascadeClear(ids) {
-            ids.forEach(id => {
-                const el = container.querySelector(`#${id}`);
-                if (el) { el.innerHTML = '<option value="All">All</option>'; el.disabled = true; }
-            });
-        }
+        function cascadeClear(ids) { ids.forEach(id => { const el = container.querySelector(`#${id}`); if (el) { el.innerHTML = '<option value="All">All</option>'; el.disabled = true; } }); }
 
         function applyGlobalSelection(nodeId) {
-            const fallbackGlobalNode = { 
-                node_id: 'GLOBAL', node_name: 'World', node_level: 'root', 
-                dynamic_config_payload: { viewport_bounds: [[-55.0, -180.0], [90.0, 180.0]] } 
-            };
+            const fallbackGlobalNode = { node_id: 'GLOBAL', node_name: 'World', node_level: 'root', dynamic_config_payload: { viewport_bounds: [[-55.0, -180.0], [90.0, 180.0]] } };
             const activeNode = treeNodes.find(n => n.node_id === nodeId) || fallbackGlobalNode;
 
             const lineage = getLineage(nodeId);
             if (nodeId === 'GLOBAL') {
-                container.querySelector('#selContinent').value = 'All';
-                cascadeClear(['selSubContinent', 'selCountry', 'selState', 'selDistrict', 'selTaluk']);
+                container.querySelector('#selContinent').value = 'All'; cascadeClear(['selSubContinent', 'selCountry', 'selState', 'selDistrict', 'selTaluk']);
             } else {
                 if (lineage.continent) { container.querySelector('#selContinent').value = lineage.continent; populateDropdown('selSubContinent', 'sub_continent', lineage.continent); }
                 if (lineage.sub_continent) { container.querySelector('#selSubContinent').value = lineage.sub_continent; populateDropdown('selCountry', 'country', lineage.sub_continent); } else cascadeClear(['selCountry', 'selState', 'selDistrict', 'selTaluk']);
@@ -307,21 +229,15 @@ export async function initRegionsEngine(containerId) {
             }
 
             let tableNodes = [];
-            if (nodeId === 'GLOBAL') {
-                tableNodes = treeNodes.filter(n => n.node_level === 'continent');
-            } else {
-                tableNodes = treeNodes.filter(n => n.node_id === nodeId || n.parent_id === nodeId);
-                tableNodes.sort((a, b) => (a.node_id === nodeId ? -1 : (b.node_id === nodeId ? 1 : 0)));
-            }
+            if (nodeId === 'GLOBAL') tableNodes = treeNodes.filter(n => n.node_level === 'continent');
+            else { tableNodes = treeNodes.filter(n => n.node_id === nodeId || n.parent_id === nodeId); tableNodes.sort((a, b) => (a.node_id === nodeId ? -1 : (b.node_id === nodeId ? 1 : 0))); }
 
             container.querySelector('#metricCount').innerText = tableNodes.length;
             container.querySelector('#metricMPS').innerText = "₹" + (tableNodes.length * 35000).toLocaleString('en-IN');
             
-            const tbody = container.querySelector('#territoryTbody');
-            tbody.innerHTML = '';
+            const tbody = container.querySelector('#territoryTbody'); tbody.innerHTML = '';
             tableNodes.forEach(node => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-[color:var(--hover-bg)] transition cursor-pointer text-[color:var(--text)]";
+                const tr = document.createElement('tr'); tr.className = "hover:bg-[color:var(--hover-bg)] transition cursor-pointer text-[color:var(--text)]";
                 if (node.node_id === nodeId && nodeId !== 'GLOBAL') tr.classList.add('row-active');
                 tr.onclick = () => applyGlobalSelection(node.node_id);
                 tr.innerHTML = `
@@ -360,59 +276,53 @@ export async function initRegionsEngine(containerId) {
                         if (sub && sub.dynamic_config_payload && sub.dynamic_config_payload.fill_color) effectiveColor = sub.dynamic_config_payload.fill_color;
                     }
 
-                    let styleOptions = isActiveRegion 
-                        ? { color: '#1e293b', weight: 0.6, fillColor: effectiveColor, fillOpacity: 0.95 } 
-                        : { color: '#94a3b8', weight: 0.3, fillColor: effectiveColor, fillOpacity: 0.15 }; 
+                    let styleOptions = isActiveRegion ? { color: '#1e293b', weight: 0.6, fillColor: effectiveColor, fillOpacity: 0.95 } : { color: '#94a3b8', weight: 0.3, fillColor: effectiveColor, fillOpacity: 0.15 }; 
 
+                    // 1. RENDER PRIMARY WORLD POLYGON
                     let l = window.L.geoJSON(geom, { style: styleOptions });
                     polygonLayerGroup.addLayer(l);
+                    
+                    // Only use the primary world to calculate mathematical bounds to prevent stretching
                     if (isActiveRegion) activeBoundsLayer.addLayer(l);
                     
+                    // 2. THE SVG WRAPPING ALGORITHM (Solves Dateline Cut-off)
+                    // Mathematically duplicates polygons exactly 360 degrees Left and Right.
+                    let lRight = window.L.geoJSON(geom, { style: styleOptions, coordsToLatLng: function(c) { return new window.L.LatLng(c[1], c[0] + 360); }});
+                    polygonLayerGroup.addLayer(lRight);
+                    
+                    let lLeft = window.L.geoJSON(geom, { style: styleOptions, coordsToLatLng: function(c) { return new window.L.LatLng(c[1], c[0] - 360); }});
+                    polygonLayerGroup.addLayer(lLeft);
+                    
                     let targetLabelNode = null;
-
-                    if (nodeId === 'GLOBAL') {
-                        targetLabelNode = getAncestorAtLevel(n.node_id, 'continent');
-                    } else if (activeNode.node_level === 'continent') {
-                        if (isActiveRegion) targetLabelNode = getAncestorAtLevel(n.node_id, 'sub_continent');
-                        else targetLabelNode = getAncestorAtLevel(n.node_id, 'continent');
-                    } else if (activeNode.node_level === 'sub_continent') {
+                    if (nodeId === 'GLOBAL') targetLabelNode = getAncestorAtLevel(n.node_id, 'continent');
+                    else if (activeNode.node_level === 'continent') targetLabelNode = isActiveRegion ? getAncestorAtLevel(n.node_id, 'sub_continent') : getAncestorAtLevel(n.node_id, 'continent');
+                    else if (activeNode.node_level === 'sub_continent') {
                         if (isActiveRegion) targetLabelNode = n; 
-                        else {
-                            let sameCont = getAncestorAtLevel(n.node_id, 'continent')?.node_id === getAncestorAtLevel(activeNode.node_id, 'continent')?.node_id;
-                            targetLabelNode = sameCont ? getAncestorAtLevel(n.node_id, 'sub_continent') : getAncestorAtLevel(n.node_id, 'continent');
-                        }
+                        else { let sameCont = getAncestorAtLevel(n.node_id, 'continent')?.node_id === getAncestorAtLevel(activeNode.node_id, 'continent')?.node_id; targetLabelNode = sameCont ? getAncestorAtLevel(n.node_id, 'sub_continent') : getAncestorAtLevel(n.node_id, 'continent'); }
                     } else {
                         if (isActiveRegion) targetLabelNode = n;
-                        else {
-                            let sameSub = getAncestorAtLevel(n.node_id, 'sub_continent')?.node_id === getAncestorAtLevel(activeNode.node_id, 'sub_continent')?.node_id;
-                            targetLabelNode = sameSub ? n : getAncestorAtLevel(n.node_id, 'sub_continent') || getAncestorAtLevel(n.node_id, 'continent');
-                        }
+                        else { let sameSub = getAncestorAtLevel(n.node_id, 'sub_continent')?.node_id === getAncestorAtLevel(activeNode.node_id, 'sub_continent')?.node_id; targetLabelNode = sameSub ? n : getAncestorAtLevel(n.node_id, 'sub_continent') || getAncestorAtLevel(n.node_id, 'continent'); }
                     }
 
                     if (targetLabelNode) {
                         if (!labelData.has(targetLabelNode.node_id)) {
-                            labelData.set(targetLabelNode.node_id, { 
-                                name: targetLabelNode.node_name, 
-                                bounds: window.L.latLngBounds(), 
-                                isActive: isActiveRegion,
-                                payload: targetLabelNode.dynamic_config_payload 
-                            });
+                            labelData.set(targetLabelNode.node_id, { name: targetLabelNode.node_name, bounds: window.L.latLngBounds(), isActive: isActiveRegion, payload: targetLabelNode.dynamic_config_payload });
                         }
                         labelData.get(targetLabelNode.node_id).bounds.extend(l.getBounds());
                         if (isActiveRegion) labelData.get(targetLabelNode.node_id).isActive = true;
                     }
 
-                    l.on('click', () => {
-                        if (activeNode.node_level === 'root') {
-                            let cont = getAncestorAtLevel(n.node_id, 'continent');
-                            if (cont) applyGlobalSelection(cont.node_id);
-                        } else if (activeNode.node_level === 'continent') {
-                            let sub = getAncestorAtLevel(n.node_id, 'sub_continent');
-                            if (sub) applyGlobalSelection(sub.node_id);
-                        } else {
-                            applyGlobalSelection(n.node_id);
-                        }
-                    });
+                    const clickHandler = () => {
+                        if (activeNode.node_level === 'root') { let cont = getAncestorAtLevel(n.node_id, 'continent'); if (cont) applyGlobalSelection(cont.node_id); }
+                        else if (activeNode.node_level === 'continent') { let sub = getAncestorAtLevel(n.node_id, 'sub_continent'); if (sub) applyGlobalSelection(sub.node_id); }
+                        else applyGlobalSelection(n.node_id);
+                    };
+                    
+                    // Attach click events to all duplicated polygons
+                    l.on('click', clickHandler);
+                    lRight.on('click', clickHandler);
+                    lLeft.on('click', clickHandler);
+
                 } catch(e) {}
             });
 
@@ -424,32 +334,31 @@ export async function initRegionsEngine(containerId) {
                 
                 let cssClass = data.isActive ? 'label-active' : 'label-shadowed';
                 let formattedName = toTitleCase(data.name || '');
-                
                 let inlineStyle = `transform: rotate(${rotation}); max-width: ${maxWidth};`;
                 if (textColor) inlineStyle += ` color: ${textColor}; text-shadow: none;`;
 
-                let marker = window.L.marker(anchor, {
-                    icon: window.L.divIcon({ 
-                        className: `map-label ${cssClass}`, 
-                        html: `<div class="label-text" style="${inlineStyle}">${formattedName}</div>`,
-                        iconSize: [120, 40], 
-                        iconAnchor: [60, 20] 
-                    }),
-                    interactive: false
-                });
-                polygonLayerGroup.addLayer(marker);
+                const createLabel = (latLng) => {
+                    return window.L.marker(latLng, {
+                        icon: window.L.divIcon({ className: `map-label ${cssClass}`, html: `<div class="label-text" style="${inlineStyle}">${formattedName}</div>`, iconSize: [120, 40], iconAnchor: [60, 20] }),
+                        interactive: false
+                    });
+                };
+
+                // Add 3 copies of the label for the 360 degree rotation
+                polygonLayerGroup.addLayer(createLabel(anchor));
+                polygonLayerGroup.addLayer(createLabel([anchor[0], anchor[1] + 360]));
+                polygonLayerGroup.addLayer(createLabel([anchor[0], anchor[1] - 360]));
             });
 
             setTimeout(() => {
                 map.invalidateSize(true);
                 
-                if (polygonLayerGroup.getLayers().length > 0) {
-                    polygonLayerGroup.addTo(map); 
-                }
+                if (polygonLayerGroup.getLayers().length > 0) { polygonLayerGroup.addTo(map); }
 
                 if (activeBoundsLayer.getLayers().length > 0) {
                     let targetBounds = activeBoundsLayer.getBounds();
                     
+                    // Priority absolute framing via database payload
                     if (activeNode.dynamic_config_payload && activeNode.dynamic_config_payload.viewport_bounds) {
                         const vb = activeNode.dynamic_config_payload.viewport_bounds;
                         targetBounds = window.L.latLngBounds(vb[0], vb[1]);
@@ -460,11 +369,7 @@ export async function initRegionsEngine(containerId) {
                         const padX = Math.max(10, Math.floor(currentSize.x * 0.05)); 
                         const padY = Math.max(10, Math.floor(currentSize.y * 0.05)); 
                         
-                        map.fitBounds(targetBounds, { 
-                            padding: [padX, padY], 
-                            animate: true, 
-                            duration: 1.0 
-                        });
+                        map.fitBounds(targetBounds, { padding: [padX, padY], animate: true, duration: 1.0 });
                     }
                 }
             }, 150);
@@ -475,12 +380,12 @@ export async function initRegionsEngine(containerId) {
                 container.querySelector(`#${id}`).addEventListener('change', (e) => {
                     if (e.target.value !== 'All') applyGlobalSelection(e.target.value);
                     else {
-                        const currentSelect = e.target.id;
-                        if (currentSelect === 'selTaluk') applyGlobalSelection(container.querySelector('#selDistrict').value);
-                        else if (currentSelect === 'selDistrict') applyGlobalSelection(container.querySelector('#selState').value);
-                        else if (currentSelect === 'selState') applyGlobalSelection(container.querySelector('#selCountry').value);
-                        else if (currentSelect === 'selCountry') applyGlobalSelection(container.querySelector('#selSubContinent').value);
-                        else if (currentSelect === 'selSubContinent') applyGlobalSelection(container.querySelector('#selContinent').value);
+                        const cs = e.target.id;
+                        if (cs === 'selTaluk') applyGlobalSelection(container.querySelector('#selDistrict').value);
+                        else if (cs === 'selDistrict') applyGlobalSelection(container.querySelector('#selState').value);
+                        else if (cs === 'selState') applyGlobalSelection(container.querySelector('#selCountry').value);
+                        else if (cs === 'selCountry') applyGlobalSelection(container.querySelector('#selSubContinent').value);
+                        else if (cs === 'selSubContinent') applyGlobalSelection(container.querySelector('#selContinent').value);
                         else applyGlobalSelection('GLOBAL');
                     }
                 });
@@ -507,8 +412,7 @@ export async function initRegionsEngine(containerId) {
                             container.querySelector('#configNodeTitle').innerText = node.node_name;
                             container.querySelector('#configNodeMeta').innerText = `Level: ${node.node_level.toUpperCase()} | ID: ${node.node_id}`;
                             const ta = container.querySelector('#jsonConfigTextarea');
-                            ta.value = JSON.stringify(node.dynamic_config_payload, null, 4);
-                            ta.disabled = false;
+                            ta.value = JSON.stringify(node.dynamic_config_payload, null, 4); ta.disabled = false;
                             
                             const btn = container.querySelector('#btnSaveConfigPayload');
                             btn.style.display = 'flex';
