@@ -150,15 +150,15 @@ export async function initRegionsEngine(containerId) {
         const mapEl = window.L.DomUtil.get('map');
         if (mapEl) mapEl._leaflet_id = null;
 
-        // TRUE CONTINUOUS SPHERICAL GLOBE CONFIGURATION
+        // PERFECT 360 DEGREE GLOBE INITIALIZATION
         map = window.L.map('map', { 
             preferCanvas: true, 
             zoomControl: true, 
             attributionControl: false,
             zoomSnap: 0.1, 
-            worldCopyJump: true, // Seamless panning mechanism
+            worldCopyJump: true, // Enables seamless 360-degree panning
             minZoom: 1.5,
-            maxBounds: [[-90, -360], [90, 360]] // Protects vertical void, allows a seamless horizontal wrap without repeating infinitely
+            maxBounds: [[-90, -360], [90, 360]] // Protects vertical drift, allows wide horizontal scrolling
         }).setView([20.0, 0.0], 1.5);
         
         window.nanbiMapInstance = map;
@@ -213,7 +213,7 @@ export async function initRegionsEngine(containerId) {
         function cascadeClear(ids) { ids.forEach(id => { const el = container.querySelector(`#${id}`); if (el) { el.innerHTML = '<option value="All">All</option>'; el.disabled = true; } }); }
 
         function applyGlobalSelection(nodeId) {
-            const fallbackGlobalNode = { node_id: 'GLOBAL', node_name: 'World', node_level: 'root', dynamic_config_payload: {} };
+            const fallbackGlobalNode = { node_id: 'GLOBAL', node_name: 'World', node_level: 'root', dynamic_config_payload: { viewport_bounds: [[-55.0, -140.0], [80.0, 160.0]] } };
             const activeNode = treeNodes.find(n => n.node_id === nodeId) || fallbackGlobalNode;
 
             const lineage = getLineage(nodeId);
@@ -278,12 +278,12 @@ export async function initRegionsEngine(containerId) {
 
                     let styleOptions = isActiveRegion ? { color: '#1e293b', weight: 0.6, fillColor: effectiveColor, fillOpacity: 0.95 } : { color: '#94a3b8', weight: 0.3, fillColor: effectiveColor, fillOpacity: 0.15 }; 
 
-                    // 1. PRIMARY POLYGON: The only layer mathematically tracked for zooming
+                    // 1. PRIMARY POLYGON: This is the ONLY polygon the camera tracking system will look at.
                     let lPrimary = window.L.geoJSON(geom, { style: styleOptions });
                     polygonLayerGroup.addLayer(lPrimary);
                     if (isActiveRegion) activeBoundsLayer.addLayer(lPrimary);
                     
-                    // 2. THE DATELINE BRIDGE (Visual clones strictly excluded from the framing math)
+                    // 2. THE VISUAL CLONES: Fixes the cut-offs, but totally hidden from the math engine.
                     let lRight = window.L.geoJSON(geom, { style: styleOptions, coordsToLatLng: function(c) { return new window.L.LatLng(c[1], c[0] + 360); }});
                     polygonLayerGroup.addLayer(lRight);
                     
@@ -305,7 +305,6 @@ export async function initRegionsEngine(containerId) {
                         if (!labelData.has(targetLabelNode.node_id)) {
                             labelData.set(targetLabelNode.node_id, { name: targetLabelNode.node_name, bounds: window.L.latLngBounds(), isActive: isActiveRegion, payload: targetLabelNode.dynamic_config_payload });
                         }
-                        // Track bounds ONLY on the primary polygon
                         labelData.get(targetLabelNode.node_id).bounds.extend(lPrimary.getBounds());
                         if (isActiveRegion) labelData.get(targetLabelNode.node_id).isActive = true;
                     }
@@ -334,7 +333,7 @@ export async function initRegionsEngine(containerId) {
                 let inlineStyle = `transform: rotate(${rotation}); max-width: ${maxWidth};`;
                 if (textColor) inlineStyle += ` color: ${textColor}; text-shadow: none;`;
 
-                // Render the label ONLY on the primary world to stop clutter
+                // Render single label
                 let marker = window.L.marker(anchor, {
                     icon: window.L.divIcon({ className: `map-label ${cssClass}`, html: `<div class="label-text" style="${inlineStyle}">${formattedName}</div>`, iconSize: [120, 40], iconAnchor: [60, 20] }),
                     interactive: false
@@ -347,10 +346,11 @@ export async function initRegionsEngine(containerId) {
                 
                 if (polygonLayerGroup.getLayers().length > 0) { polygonLayerGroup.addTo(map); }
 
+                // The Unrestricted 5% Dynamic Bounding Calculation
                 if (activeBoundsLayer.getLayers().length > 0) {
                     let targetBounds = activeBoundsLayer.getBounds();
                     
-                    // Hardware-Agnostic Geographic Bounding
+                    // Priority absolute framing via database payload
                     if (activeNode.dynamic_config_payload && activeNode.dynamic_config_payload.viewport_bounds) {
                         const vb = activeNode.dynamic_config_payload.viewport_bounds;
                         targetBounds = window.L.latLngBounds(vb[0], vb[1]);
@@ -358,7 +358,6 @@ export async function initRegionsEngine(containerId) {
 
                     if (targetBounds.isValid()) {
                         const currentSize = map.getSize(); 
-                        // DYNAMIC 5% MARGIN: Applies mathematically to whatever local container width/height exists
                         const padX = Math.max(10, Math.floor(currentSize.x * 0.05)); 
                         const padY = Math.max(10, Math.floor(currentSize.y * 0.05)); 
                         
