@@ -208,14 +208,15 @@ export async function initRegionsEngine(containerId) {
         const mapEl = window.L.DomUtil.get('map');
         if (mapEl) mapEl._leaflet_id = null;
 
+        // THE PHYSICS ENGINE FIX: Tear down the walls and enable the continuous 360-degree globe
         map = window.L.map('map', { 
             preferCanvas: true, 
             zoomControl: true, 
             attributionControl: false,
             zoomSnap: 0.1, 
-            worldCopyJump: false, 
-            minZoom: 0, 
-            maxBounds: [[-90, -180], [90, 180]]
+            worldCopyJump: true, // Enables seamless panning across the International Date Line
+            minZoom: 1, 
+            maxBounds: [[-90, -Infinity], [90, Infinity]] // Allows infinite horizontal scrolling, locks Antarctica/Arctic
         }).setView([20.0, 0.0], 1.5);
         
         window.nanbiMapInstance = map;
@@ -286,10 +287,9 @@ export async function initRegionsEngine(containerId) {
         }
 
         function applyGlobalSelection(nodeId) {
-            // SAFETY FALLBACK: Ensures GLOBAL always has the Antarctica cropped bounds even if not fetched
             const fallbackGlobalNode = { 
                 node_id: 'GLOBAL', node_name: 'World', node_level: 'root', 
-                dynamic_config_payload: { viewport_bounds: [[-55.0, -170.0], [75.0, 170.0]] } 
+                dynamic_config_payload: { viewport_bounds: [[-55.0, -180.0], [90.0, 180.0]] } 
             };
             const activeNode = treeNodes.find(n => n.node_id === nodeId) || fallbackGlobalNode;
 
@@ -416,7 +416,6 @@ export async function initRegionsEngine(containerId) {
                 } catch(e) {}
             });
 
-            // HOLLOW LABEL GENERATOR: Reads properties dynamically from SQL payload
             labelData.forEach((data, id) => {
                 let anchor = (data.payload && data.payload.label_anchor) ? data.payload.label_anchor : data.bounds.getCenter();
                 let textColor = (data.payload && data.payload.label_color) ? data.payload.label_color : '';
@@ -441,11 +440,9 @@ export async function initRegionsEngine(containerId) {
                 polygonLayerGroup.addLayer(marker);
             });
 
-            // 4. THE 90% WINDOW / 5% DYNAMIC MARGIN LOGIC (Now linked to SQL Viewport Bounds)
             setTimeout(() => {
                 map.invalidateSize(true);
                 
-                // ADD THE POLYGONS TO THE SCREEN
                 if (polygonLayerGroup.getLayers().length > 0) {
                     polygonLayerGroup.addTo(map); 
                 }
@@ -453,19 +450,13 @@ export async function initRegionsEngine(containerId) {
                 if (activeBoundsLayer.getLayers().length > 0) {
                     let targetBounds = activeBoundsLayer.getBounds();
                     
-                    // --- THE FINAL ARCHITECTURAL LINK ---
-                    // Read the database! If Config Hub specifies exact bounds (e.g. cropping Antarctica or Colonies), obey it.
                     if (activeNode.dynamic_config_payload && activeNode.dynamic_config_payload.viewport_bounds) {
                         const vb = activeNode.dynamic_config_payload.viewport_bounds;
                         targetBounds = window.L.latLngBounds(vb[0], vb[1]);
                     }
 
                     if (targetBounds.isValid()) {
-                        
-                        // Dynamically asks the browser exactly how many pixels exist right now
                         const currentSize = map.getSize(); 
-                        
-                        // Calculates exactly 5% padding for perfect 90% utilization (minimum 10px safety)
                         const padX = Math.max(10, Math.floor(currentSize.x * 0.05)); 
                         const padY = Math.max(10, Math.floor(currentSize.y * 0.05)); 
                         
