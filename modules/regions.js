@@ -150,15 +150,14 @@ export async function initRegionsEngine(containerId) {
         const mapEl = window.L.DomUtil.get('map');
         if (mapEl) mapEl._leaflet_id = null;
 
-        // TRUE 360-DEGREE GLOBE ENGINE
+        // THE UNRESTRICTED ENGINE FIX: Free zooming, absolute single map.
         map = window.L.map('map', { 
             preferCanvas: true, 
             zoomControl: true, 
             attributionControl: false,
             zoomSnap: 0.1, 
-            worldCopyJump: true, // Seamless panning
-            minZoom: 1.5, // Absolutely prevents zooming out into the infinite void (NR-100 fix)
-            maxBounds: [[-90, -540], [90, 540]] // Allows 3 full continuous globe spins without getting lost
+            worldCopyJump: false, // Prevents the raw edge clipping and repeating
+            minZoom: 0 // Removes ALL zoom/unzoom restrictions
         }).setView([20.0, 0.0], 1.5);
         
         window.nanbiMapInstance = map;
@@ -278,20 +277,9 @@ export async function initRegionsEngine(containerId) {
 
                     let styleOptions = isActiveRegion ? { color: '#1e293b', weight: 0.6, fillColor: effectiveColor, fillOpacity: 0.95 } : { color: '#94a3b8', weight: 0.3, fillColor: effectiveColor, fillOpacity: 0.15 }; 
 
-                    // 1. RENDER PRIMARY WORLD POLYGON
                     let l = window.L.geoJSON(geom, { style: styleOptions });
                     polygonLayerGroup.addLayer(l);
-                    
-                    // Only use the primary world to calculate mathematical bounds to prevent stretching
                     if (isActiveRegion) activeBoundsLayer.addLayer(l);
-                    
-                    // 2. THE SVG WRAPPING ALGORITHM (Solves Dateline Cut-off)
-                    // Mathematically duplicates polygons exactly 360 degrees Left and Right.
-                    let lRight = window.L.geoJSON(geom, { style: styleOptions, coordsToLatLng: function(c) { return new window.L.LatLng(c[1], c[0] + 360); }});
-                    polygonLayerGroup.addLayer(lRight);
-                    
-                    let lLeft = window.L.geoJSON(geom, { style: styleOptions, coordsToLatLng: function(c) { return new window.L.LatLng(c[1], c[0] - 360); }});
-                    polygonLayerGroup.addLayer(lLeft);
                     
                     let targetLabelNode = null;
                     if (nodeId === 'GLOBAL') targetLabelNode = getAncestorAtLevel(n.node_id, 'continent');
@@ -312,16 +300,11 @@ export async function initRegionsEngine(containerId) {
                         if (isActiveRegion) labelData.get(targetLabelNode.node_id).isActive = true;
                     }
 
-                    const clickHandler = () => {
+                    l.on('click', () => {
                         if (activeNode.node_level === 'root') { let cont = getAncestorAtLevel(n.node_id, 'continent'); if (cont) applyGlobalSelection(cont.node_id); }
                         else if (activeNode.node_level === 'continent') { let sub = getAncestorAtLevel(n.node_id, 'sub_continent'); if (sub) applyGlobalSelection(sub.node_id); }
                         else applyGlobalSelection(n.node_id);
-                    };
-                    
-                    // Attach click events to all duplicated polygons
-                    l.on('click', clickHandler);
-                    lRight.on('click', clickHandler);
-                    lLeft.on('click', clickHandler);
+                    });
 
                 } catch(e) {}
             });
@@ -337,17 +320,11 @@ export async function initRegionsEngine(containerId) {
                 let inlineStyle = `transform: rotate(${rotation}); max-width: ${maxWidth};`;
                 if (textColor) inlineStyle += ` color: ${textColor}; text-shadow: none;`;
 
-                const createLabel = (latLng) => {
-                    return window.L.marker(latLng, {
-                        icon: window.L.divIcon({ className: `map-label ${cssClass}`, html: `<div class="label-text" style="${inlineStyle}">${formattedName}</div>`, iconSize: [120, 40], iconAnchor: [60, 20] }),
-                        interactive: false
-                    });
-                };
-
-                // Add 3 copies of the label for the 360 degree rotation
-                polygonLayerGroup.addLayer(createLabel(anchor));
-                polygonLayerGroup.addLayer(createLabel([anchor[0], anchor[1] + 360]));
-                polygonLayerGroup.addLayer(createLabel([anchor[0], anchor[1] - 360]));
+                let marker = window.L.marker(anchor, {
+                    icon: window.L.divIcon({ className: `map-label ${cssClass}`, html: `<div class="label-text" style="${inlineStyle}">${formattedName}</div>`, iconSize: [120, 40], iconAnchor: [60, 20] }),
+                    interactive: false
+                });
+                polygonLayerGroup.addLayer(marker);
             });
 
             setTimeout(() => {
@@ -358,7 +335,6 @@ export async function initRegionsEngine(containerId) {
                 if (activeBoundsLayer.getLayers().length > 0) {
                     let targetBounds = activeBoundsLayer.getBounds();
                     
-                    // Priority absolute framing via database payload
                     if (activeNode.dynamic_config_payload && activeNode.dynamic_config_payload.viewport_bounds) {
                         const vb = activeNode.dynamic_config_payload.viewport_bounds;
                         targetBounds = window.L.latLngBounds(vb[0], vb[1]);
