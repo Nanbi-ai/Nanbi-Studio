@@ -150,15 +150,15 @@ export async function initRegionsEngine(containerId) {
         const mapEl = window.L.DomUtil.get('map');
         if (mapEl) mapEl._leaflet_id = null;
 
-        // CLEAN NATIVE ENGINE
+        // PERFECT UNRESTRICTED GLOBE
         map = window.L.map('map', { 
             preferCanvas: true, 
             zoomControl: true, 
             attributionControl: false,
             zoomSnap: 0.1, 
-            worldCopyJump: true,
-            minZoom: 1.5,
-            maxBounds: [[-90, -200], [90, 200]] // Prevents extreme zoom-outs while allowing dateline panning
+            worldCopyJump: true, 
+            minZoom: 1.0, // Allows proper zoom out
+            maxBounds: [[-90, -Infinity], [90, Infinity]] // Allows infinite horizontal pan
         }).setView([20.0, 0.0], 1.5);
         
         window.nanbiMapInstance = map;
@@ -213,7 +213,7 @@ export async function initRegionsEngine(containerId) {
         function cascadeClear(ids) { ids.forEach(id => { const el = container.querySelector(`#${id}`); if (el) { el.innerHTML = '<option value="All">All</option>'; el.disabled = true; } }); }
 
         function applyGlobalSelection(nodeId) {
-            const fallbackGlobalNode = { node_id: 'GLOBAL', node_name: 'World', node_level: 'root', dynamic_config_payload: { viewport_bounds: [[-55.0, -130.0], [80.0, 160.0]] } };
+            const fallbackGlobalNode = { node_id: 'GLOBAL', node_name: 'World', node_level: 'root', dynamic_config_payload: { viewport_bounds: [[-55.0, -180.0], [85.0, 180.0]] } };
             const activeNode = treeNodes.find(n => n.node_id === nodeId) || fallbackGlobalNode;
 
             const lineage = getLineage(nodeId);
@@ -278,10 +278,17 @@ export async function initRegionsEngine(containerId) {
 
                     let styleOptions = isActiveRegion ? { color: '#1e293b', weight: 0.6, fillColor: effectiveColor, fillOpacity: 0.95 } : { color: '#94a3b8', weight: 0.3, fillColor: effectiveColor, fillOpacity: 0.15 }; 
 
-                    // Standard Polygon Render
-                    let l = window.L.geoJSON(geom, { style: styleOptions });
-                    polygonLayerGroup.addLayer(l);
-                    if (isActiveRegion) activeBoundsLayer.addLayer(l);
+                    // 1. PRIMARY POLYGON: Added to active bounds ONLY for fallback if config payload is missing
+                    let lPrimary = window.L.geoJSON(geom, { style: styleOptions });
+                    polygonLayerGroup.addLayer(lPrimary);
+                    if (isActiveRegion) activeBoundsLayer.addLayer(lPrimary);
+                    
+                    // 2. VISUAL CLONES: Fixes the cutoffs, NEVER added to bounds calculation
+                    let lRight = window.L.geoJSON(geom, { style: styleOptions, coordsToLatLng: function(c) { return new window.L.LatLng(c[1], c[0] + 360); }});
+                    polygonLayerGroup.addLayer(lRight);
+                    
+                    let lLeft = window.L.geoJSON(geom, { style: styleOptions, coordsToLatLng: function(c) { return new window.L.LatLng(c[1], c[0] - 360); }});
+                    polygonLayerGroup.addLayer(lLeft);
                     
                     let targetLabelNode = null;
                     if (nodeId === 'GLOBAL') targetLabelNode = getAncestorAtLevel(n.node_id, 'continent');
@@ -298,15 +305,19 @@ export async function initRegionsEngine(containerId) {
                         if (!labelData.has(targetLabelNode.node_id)) {
                             labelData.set(targetLabelNode.node_id, { name: targetLabelNode.node_name, bounds: window.L.latLngBounds(), isActive: isActiveRegion, payload: targetLabelNode.dynamic_config_payload });
                         }
-                        labelData.get(targetLabelNode.node_id).bounds.extend(l.getBounds());
+                        labelData.get(targetLabelNode.node_id).bounds.extend(lPrimary.getBounds());
                         if (isActiveRegion) labelData.get(targetLabelNode.node_id).isActive = true;
                     }
 
-                    l.on('click', () => {
+                    const clickHandler = () => {
                         if (activeNode.node_level === 'root') { let cont = getAncestorAtLevel(n.node_id, 'continent'); if (cont) applyGlobalSelection(cont.node_id); }
                         else if (activeNode.node_level === 'continent') { let sub = getAncestorAtLevel(n.node_id, 'sub_continent'); if (sub) applyGlobalSelection(sub.node_id); }
                         else applyGlobalSelection(n.node_id);
-                    });
+                    };
+                    
+                    lPrimary.on('click', clickHandler);
+                    lRight.on('click', clickHandler);
+                    lLeft.on('click', clickHandler);
 
                 } catch(e) {}
             });
@@ -322,11 +333,16 @@ export async function initRegionsEngine(containerId) {
                 let inlineStyle = `transform: rotate(${rotation}); max-width: ${maxWidth};`;
                 if (textColor) inlineStyle += ` color: ${textColor}; text-shadow: none;`;
 
-                let marker = window.L.marker(anchor, {
-                    icon: window.L.divIcon({ className: `map-label ${cssClass}`, html: `<div class="label-text" style="${inlineStyle}">${formattedName}</div>`, iconSize: [120, 40], iconAnchor: [60, 20] }),
-                    interactive: false
-                });
-                polygonLayerGroup.addLayer(marker);
+                const createLabel = (latLng) => {
+                    return window.L.marker(latLng, {
+                        icon: window.L.divIcon({ className: `map-label ${cssClass}`, html: `<div class="label-text" style="${inlineStyle}">${formattedName}</div>`, iconSize: [120, 40], iconAnchor: [60, 20] }),
+                        interactive: false
+                    });
+                };
+
+                polygonLayerGroup.addLayer(createLabel(anchor));
+                polygonLayerGroup.addLayer(createLabel([anchor[0], anchor[1] + 360]));
+                polygonLayerGroup.addLayer(createLabel([anchor[0], anchor[1] - 360]));
             });
 
             setTimeout(() => {
@@ -337,7 +353,7 @@ export async function initRegionsEngine(containerId) {
                 if (activeBoundsLayer.getLayers().length > 0) {
                     let targetBounds = activeBoundsLayer.getBounds();
                     
-                    // YOUR PAYLOAD ARCHITECTURE
+                    // 3. THE PAYLOAD CENTERING LOGIC
                     if (activeNode.dynamic_config_payload && activeNode.dynamic_config_payload.viewport_bounds) {
                         const vb = activeNode.dynamic_config_payload.viewport_bounds;
                         targetBounds = window.L.latLngBounds(vb[0], vb[1]);
@@ -345,8 +361,6 @@ export async function initRegionsEngine(containerId) {
 
                     if (targetBounds.isValid()) {
                         const currentSize = map.getSize(); 
-                        
-                        // THE EXACT 5% SETBACK MATH
                         const padX = Math.max(10, Math.floor(currentSize.x * 0.05)); 
                         const padY = Math.max(10, Math.floor(currentSize.y * 0.05)); 
                         
