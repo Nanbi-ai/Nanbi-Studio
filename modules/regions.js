@@ -1,5 +1,5 @@
 // =======================================================================
-// NANBI V5.0 - DUAL-ENGINE AGENTIC REGIONS (O(1) RENDER, NO FREEZING)
+// NANBI V5.0 - DUAL-ENGINE AGENTIC REGIONS (ACTIVE-NODE RENDERING ONLY)
 // =======================================================================
 
 export async function initRegionsEngine(containerId) {
@@ -75,7 +75,7 @@ export async function initRegionsEngine(containerId) {
                         </div>
                         <div class="shrink-0 panel-card p-3 shadow-sm z-20">
                             <div class="flex justify-between items-center pb-1.5 border-b border-[color:var(--border)] mb-2">
-                                <span id="geoHierarchyBreadcrumb" class="text-[11px] font-bold text-[color:var(--brand-orange-dark)] uppercase tracking-wide">Initializing Safe Engine...</span>
+                                <span id="geoHierarchyBreadcrumb" class="text-[11px] font-bold text-[color:var(--brand-orange-dark)] uppercase tracking-wide">Acquiring Edge Context...</span>
                                 <button id="btnResetView" class="text-[10px] font-bold text-[color:var(--muted)] hover:text-[color:var(--brand-orange-dark)] transition"><i class="fas fa-undo mr-1"></i> Reset Matrix</button>
                             </div>
                             <div class="grid grid-cols-2 gap-x-3 gap-y-2">
@@ -100,7 +100,7 @@ export async function initRegionsEngine(containerId) {
                             <div class="flex-1 overflow-y-auto">
                                 <table class="w-full border-collapse">
                                     <thead><tr><th class="pl-4">Node ID</th><th>Jurisdiction Name</th><th>Level</th><th class="text-right pr-4">Gov Code</th></tr></thead>
-                                    <tbody id="territoryTbody" class="cursor-pointer"><tr><td colspan="4" class="py-16 text-center text-[color:var(--brand-orange-dark)] font-medium">Booting Spatial Ledger...</td></tr></tbody>
+                                    <tbody id="territoryTbody" class="cursor-pointer"><tr><td colspan="4" class="py-16 text-center text-[color:var(--brand-orange-dark)] font-medium">Synchronizing Ledger...</td></tr></tbody>
                                 </table>
                             </div>
                         </div>
@@ -201,7 +201,11 @@ export async function initRegionsEngine(containerId) {
             .showAtmosphere(true)
             .atmosphereColor('#3a228a')
             .atmosphereAltitude(0.15)
-            .polygonStrokeColor(() => '#111');
+            .polygonStrokeColor(() => '#111')
+            .polygonAltitude(0.015);
+            
+        // Explicitly block auto-rotation
+        map3D.controls().autoRotate = false;
 
         window.addEventListener('resize', () => {
             if(map2D) map2D.invalidateSize();
@@ -226,10 +230,11 @@ export async function initRegionsEngine(containerId) {
                     let geom = countries[i].dynamic_config_payload.geojson;
                     let cleanGeom = (geom.type === 'FeatureCollection') ? geom.features[0].geometry : (geom.type === 'Feature' ? geom.geometry : geom);
                     if (window.turf.booleanPointInPolygon(pt, cleanGeom)) { 
-                        return countries[i].node_id; // Stop at country to prevent deep freezing
+                        return countries[i].node_id; 
                     }
                 } catch(e) {}
-                if (i % 15 === 0) await yieldThread(); // Allow browser to breathe
+                // Crucial yield to strictly prevent the main thread from locking
+                await yieldThread(); 
             }
             return null;
         }
@@ -275,7 +280,7 @@ export async function initRegionsEngine(containerId) {
                 }
             } catch (err) { 
                 const tbody = container.querySelector('#territoryTbody');
-                if(tbody) tbody.innerHTML = `<tr><td colspan="4" class="py-16 text-center text-red-500 font-bold">Ledger sync failed.</td></tr>`;
+                if(tbody) tbody.innerHTML = `<tr><td colspan="4" class="py-16 text-center text-red-500 font-bold">Ledger sync failed. Check Console.</td></tr>`;
             }
         }
 
@@ -300,7 +305,7 @@ export async function initRegionsEngine(containerId) {
         function cascadeClear(ids) { ids.forEach(id => { const el = container.querySelector(`#${id}`); if (el) { el.innerHTML = '<option value="All">All</option>'; el.disabled = true; } }); }
 
         // ==========================================
-        // INSTANT O(1) RENDERING ENGINE
+        // O(1) TARGETED RENDERING ENGINE
         // ==========================================
         async function applyGlobalSelection(nodeId) {
             const bc = container.querySelector('#geoHierarchyBreadcrumb');
@@ -354,67 +359,71 @@ export async function initRegionsEngine(containerId) {
             let globePolygons = [];
             let globeLabels = [];
 
-            // O(1) PROCESSING: We only extract the active node to completely prevent freezing
-            if (nodeId !== 'GLOBAL' && activeNode.dynamic_config_payload && activeNode.dynamic_config_payload.geojson) {
-                let rawGeom = activeNode.dynamic_config_payload.geojson;
-                let cleanGeom = (rawGeom.type === 'FeatureCollection') ? rawGeom.features[0].geometry : (rawGeom.type === 'Feature' ? rawGeom.geometry : rawGeom);
-                
-                if (cleanGeom && (cleanGeom.type === 'Polygon' || cleanGeom.type === 'MultiPolygon')) {
-                    let effectiveColor = activeNode.dynamic_config_payload.fill_color || '#e2e8f0';
-                    
-                    let feature = {
-                        type: "Feature",
-                        geometry: cleanGeom,
-                        properties: { color: effectiveColor, altitude: 0.015 }
-                    };
-                    globePolygons.push(feature);
-                    activeGeoJSONFeatures.push(feature);
+            // ONLY process geometries for the nodes explicitly in the matrix list.
+            // This drops the processing from 195+ complex objects down to a handful.
+            for (let i = 0; i < tableNodes.length; i++) {
+                let n = tableNodes[i];
+                if (n.dynamic_config_payload && n.dynamic_config_payload.geojson) {
+                    try {
+                        let rawGeom = n.dynamic_config_payload.geojson;
+                        let cleanGeom = (rawGeom.type === 'FeatureCollection') ? rawGeom.features[0].geometry : (rawGeom.type === 'Feature' ? rawGeom.geometry : rawGeom);
+                        
+                        if (cleanGeom && (cleanGeom.type === 'Polygon' || cleanGeom.type === 'MultiPolygon')) {
+                            let effectiveColor = n.dynamic_config_payload.fill_color || '#e2e8f0';
+                            
+                            let feature = {
+                                type: "Feature",
+                                geometry: cleanGeom,
+                                properties: { 
+                                    color: effectiveColor, 
+                                    node_id: n.node_id 
+                                }
+                            };
+                            
+                            globePolygons.push(feature);
+                            activeGeoJSONFeatures.push(feature);
 
-                    let lPrimary = window.L.geoJSON(cleanGeom, { style: { color: '#0f172a', weight: 1.0, fillColor: effectiveColor, fillOpacity: 0.8 } });
-                    polygonLayerGroup.addLayer(lPrimary);
+                            let styleOptions = { 
+                                color: (n.node_id === nodeId) ? '#0f172a' : '#64748b', 
+                                weight: (n.node_id === nodeId) ? 1.0 : 0.5, 
+                                fillColor: effectiveColor, 
+                                fillOpacity: (n.node_id === nodeId) ? 0.8 : 0.3 
+                            };
+                            let lPrimary = window.L.geoJSON(cleanGeom, { style: styleOptions });
+                            lPrimary.on('click', () => { applyGlobalSelection(n.node_id); });
+                            polygonLayerGroup.addLayer(lPrimary);
+                        }
+                    } catch(e) {}
+                }
+                
+                // Labels processing
+                if (n.dynamic_config_payload && n.dynamic_config_payload.label_anchor) {
+                    let anchor = n.dynamic_config_payload.label_anchor;
+                    let textColor = n.dynamic_config_payload.label_color || '';
+                    let rotation = n.dynamic_config_payload.label_rotation || '0deg';
+                    let maxWidth = n.dynamic_config_payload.label_max_width || '65px';
+                    let cssClass = (n.node_id === nodeId) ? 'label-active' : 'label-shadowed';
+                    let formattedName = toTitleCase(n.node_name || '');
+                    let inlineStyle = `transform: rotate(${rotation}); max-width: ${maxWidth};`;
+                    if (textColor) inlineStyle += ` color: ${textColor}; text-shadow: none;`;
+
+                    let marker = window.L.marker(anchor, {
+                        icon: window.L.divIcon({ className: `map-label ${cssClass}`, html: `<div class="label-text" style="${inlineStyle}">${formattedName}</div>`, iconSize: [120, 40], iconAnchor: [60, 20] }),
+                        interactive: false
+                    });
+                    polygonLayerGroup.addLayer(marker);
+                    globeLabels.push({ lat: anchor[0], lng: anchor[1], name: formattedName, style: inlineStyle, cssClass: cssClass });
                 }
             }
-
-            // EXTRACT LABELS ONLY
-            treeNodes.filter(n => n.dynamic_config_payload && n.dynamic_config_payload.label_anchor).forEach(n => {
-                let isActiveRegion = (nodeId === 'GLOBAL' && n.node_level === 'continent') || (n.node_id === nodeId);
-                if (!isActiveRegion) return;
-
-                let anchor = n.dynamic_config_payload.label_anchor;
-                let textColor = n.dynamic_config_payload.label_color || '';
-                let rotation = n.dynamic_config_payload.label_rotation || '0deg';
-                let maxWidth = n.dynamic_config_payload.label_max_width || '65px';
-                let cssClass = (n.node_id === nodeId) ? 'label-active' : 'label-shadowed';
-                let formattedName = toTitleCase(n.node_name || '');
-                let inlineStyle = `transform: rotate(${rotation}); max-width: ${maxWidth};`;
-                if (textColor) inlineStyle += ` color: ${textColor}; text-shadow: none;`;
-
-                // 2D Label
-                let marker = window.L.marker(anchor, {
-                    icon: window.L.divIcon({ className: `map-label ${cssClass}`, html: `<div class="label-text" style="${inlineStyle}">${formattedName}</div>`, iconSize: [120, 40], iconAnchor: [60, 20] }),
-                    interactive: false
-                });
-                polygonLayerGroup.addLayer(marker);
-                
-                // 3D Label
-                globeLabels.push({ lat: anchor[0], lng: anchor[1], name: formattedName, style: inlineStyle, cssClass: cssClass });
-            });
 
             if (polygonLayerGroup.getLayers().length > 0) polygonLayerGroup.addTo(map2D);
 
             // INSTANT GLOBE UPDATES
             if (map3D) {
-                if (nodeId === 'GLOBAL') {
-                    map3D.controls().autoRotate = true;
-                    map3D.controls().autoRotateSpeed = 0.5;
-                } else {
-                    map3D.controls().autoRotate = false;
-                }
-
                 map3D.polygonsData(globePolygons)
                     .polygonCapColor(d => d.properties.color)
-                    .polygonSideColor(() => 'rgba(0,0,0,0.3)')
-                    .polygonAltitude(d => d.properties.altitude);
+                    .polygonSideColor(() => 'rgba(0,0,0,0.4)')
+                    .onPolygonClick(d => applyGlobalSelection(d.properties.node_id));
 
                 map3D.htmlElementsData(globeLabels)
                     .htmlLat(d => d.lat)
