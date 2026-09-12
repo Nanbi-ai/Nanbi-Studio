@@ -150,15 +150,16 @@ export async function initRegionsEngine(containerId) {
         const mapEl = window.L.DomUtil.get('map');
         if (mapEl) mapEl._leaflet_id = null;
 
-        // PERFECT UNRESTRICTED GLOBE
+        // AGENTIC PHYSICS ENGINE
         map = window.L.map('map', { 
             preferCanvas: true, 
             zoomControl: true, 
             attributionControl: false,
-            zoomSnap: 0.1, 
+            zoomSnap: 0, // CRITICAL FIX: Allows absolute fractional zooming for perfect browser parity
+            zoomDelta: 0.5, // Maintains smooth mouse-wheel zooming
             worldCopyJump: true, 
-            minZoom: 1.0, // Allows proper zoom out
-            maxBounds: [[-90, -Infinity], [90, Infinity]] // Allows infinite horizontal pan
+            minZoom: 1.0, 
+            maxBounds: [[-90, -Infinity], [90, Infinity]] 
         }).setView([20.0, 0.0], 1.5);
         
         window.nanbiMapInstance = map;
@@ -278,12 +279,12 @@ export async function initRegionsEngine(containerId) {
 
                     let styleOptions = isActiveRegion ? { color: '#1e293b', weight: 0.6, fillColor: effectiveColor, fillOpacity: 0.95 } : { color: '#94a3b8', weight: 0.3, fillColor: effectiveColor, fillOpacity: 0.15 }; 
 
-                    // 1. PRIMARY POLYGON: Added to active bounds ONLY for fallback if config payload is missing
+                    // 1. PRIMARY POLYGON: The only layer mathematically tracked for centering
                     let lPrimary = window.L.geoJSON(geom, { style: styleOptions });
                     polygonLayerGroup.addLayer(lPrimary);
                     if (isActiveRegion) activeBoundsLayer.addLayer(lPrimary);
                     
-                    // 2. VISUAL CLONES: Fixes the cutoffs, NEVER added to bounds calculation
+                    // 2. THE VISUAL CLONES: Fixes the dateline cutoffs visually
                     let lRight = window.L.geoJSON(geom, { style: styleOptions, coordsToLatLng: function(c) { return new window.L.LatLng(c[1], c[0] + 360); }});
                     polygonLayerGroup.addLayer(lRight);
                     
@@ -345,7 +346,8 @@ export async function initRegionsEngine(containerId) {
                 polygonLayerGroup.addLayer(createLabel([anchor[0], anchor[1] - 360]));
             });
 
-            setTimeout(() => {
+            // Ensure the container is fully painted by the browser before calculating mathematical bounds
+            requestAnimationFrame(() => {
                 map.invalidateSize(true);
                 
                 if (polygonLayerGroup.getLayers().length > 0) { polygonLayerGroup.addTo(map); }
@@ -353,7 +355,7 @@ export async function initRegionsEngine(containerId) {
                 if (activeBoundsLayer.getLayers().length > 0) {
                     let targetBounds = activeBoundsLayer.getBounds();
                     
-                    // 3. THE PAYLOAD CENTERING LOGIC
+                    // Priority absolute framing via database payload
                     if (activeNode.dynamic_config_payload && activeNode.dynamic_config_payload.viewport_bounds) {
                         const vb = activeNode.dynamic_config_payload.viewport_bounds;
                         targetBounds = window.L.latLngBounds(vb[0], vb[1]);
@@ -367,7 +369,7 @@ export async function initRegionsEngine(containerId) {
                         map.fitBounds(targetBounds, { padding: [padX, padY], animate: true, duration: 1.0 });
                     }
                 }
-            }, 150);
+            });
         }
 
         function setupDropdownListeners() {
