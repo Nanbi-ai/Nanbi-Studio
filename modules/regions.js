@@ -1,5 +1,5 @@
 // =======================================================================
-// NANBI V5.0 - DUAL-ENGINE AGENTIC REGIONS (3D GLOBE DEFAULT)
+// NANBI V5.0 - DUAL-ENGINE AGENTIC REGIONS (AUTONOMOUS 3D ROTATION)
 // =======================================================================
 
 export async function initRegionsEngine(containerId) {
@@ -74,7 +74,7 @@ export async function initRegionsEngine(containerId) {
                         </div>
                         <div class="shrink-0 panel-card p-3 shadow-sm z-20">
                             <div class="flex justify-between items-center pb-1.5 border-b border-[color:var(--border)] mb-2">
-                                <span id="geoHierarchyBreadcrumb" class="text-[11px] font-bold text-[color:var(--text)] uppercase tracking-wide">Initializing Engine...</span>
+                                <span id="geoHierarchyBreadcrumb" class="text-[11px] font-bold text-[color:var(--text)] uppercase tracking-wide">Initializing Matrix...</span>
                                 <button id="btnResetView" class="text-[10px] font-bold text-[color:var(--muted)] hover:text-[color:var(--brand-orange-dark)] transition"><i class="fas fa-undo mr-1"></i> Reset Matrix</button>
                             </div>
                             <div class="grid grid-cols-2 gap-x-3 gap-y-2">
@@ -127,13 +127,13 @@ export async function initRegionsEngine(containerId) {
             </div>
         `;
 
-        // FAIL-PROOF DEPENDENCY LOADERS (Syntax error free)
+        // FAIL-PROOF DEPENDENCY LOADERS
         const loadScript = (src, globalVar) => new Promise((resolve) => {
             if (window[globalVar]) return resolve(true);
             const script = document.createElement('script');
             script.src = src;
             script.onload = () => resolve(true);
-            script.onerror = () => { console.error('Failed to load:', src); resolve(false); };
+            script.onerror = () => resolve(false);
             document.head.appendChild(script);
         });
 
@@ -213,7 +213,7 @@ export async function initRegionsEngine(containerId) {
         }).setView([20.0, 0.0], 1.5);
         window.nanbiMapInstance = map2D;
 
-        // 3. INITIALIZE 3D GLOBE (Guaranteed valid dimensions)
+        // 3. INITIALIZE 3D GLOBE
         const initW = map3DContainer.clientWidth || 800;
         const initH = map3DContainer.clientHeight || 500;
         let map3D = null;
@@ -232,6 +232,10 @@ export async function initRegionsEngine(containerId) {
                 .polygonSideColor(() => 'rgba(0, 100, 0, 0.15)')
                 .polygonStrokeColor(() => '#111')
                 .polygonAltitude(0.01);
+                
+            // Set initial slow cinematic rotation
+            map3D.controls().autoRotate = true;
+            map3D.controls().autoRotateSpeed = 0.5;
         }
 
         window.addEventListener('resize', () => {
@@ -255,16 +259,7 @@ export async function initRegionsEngine(containerId) {
                 if (data) {
                     treeNodes = data.filter(n => n.node_id !== 'ATA' && n.node_id !== 'AN'); 
                     populateDropdown('selContinent', 'continent', 'GLOBAL');
-                    
-                    // AUTONOMOUS CONTEXT ROUTING (Agentic Edge Implementation)
-                    // The engine autonomously maps the runtime context to the deepest available database node.
-                    let anchorNode = 'GLOBAL';
-                    if (treeNodes.some(n => n.node_id === 'IN-KA')) anchorNode = 'IN-KA';
-                    else if (treeNodes.some(n => n.node_id === 'IN')) anchorNode = 'IN';
-                    else if (treeNodes.some(n => n.node_id === 'AS-SAS')) anchorNode = 'AS-SAS';
-                    else if (treeNodes.some(n => n.node_id === 'AS')) anchorNode = 'AS';
-                    
-                    applyGlobalSelection(anchorNode);
+                    applyGlobalSelection('GLOBAL');
                     setupDropdownListeners();
                 }
             } catch (err) { 
@@ -307,6 +302,16 @@ export async function initRegionsEngine(containerId) {
             const fallbackGlobalNode = { node_id: 'GLOBAL', node_name: 'World', node_level: 'root', dynamic_config_payload: {} };
             const activeNode = treeNodes.find(n => n.node_id === nodeId) || fallbackGlobalNode;
 
+            // Handle Globe Auto-Rotation based on selection
+            if (map3D) {
+                if (nodeId === 'GLOBAL') {
+                    map3D.controls().autoRotate = true;
+                    map3D.controls().autoRotateSpeed = 0.8;
+                } else {
+                    map3D.controls().autoRotate = false;
+                }
+            }
+
             const lineage = getLineage(nodeId);
             if (nodeId === 'GLOBAL') {
                 container.querySelector('#selContinent').value = 'All'; cascadeClear(['selSubContinent', 'selCountry', 'selState', 'selDistrict', 'selTaluk']);
@@ -348,6 +353,7 @@ export async function initRegionsEngine(containerId) {
             polygonLayerGroup = window.L.featureGroup();
             
             let globePolygons = [];
+            let globeLabels = [];
             let activeGeoJSONFeatures = [];
 
             let countryNodes = treeNodes.filter(n => n.node_level === 'country' && n.dynamic_config_payload && n.dynamic_config_payload.geojson);
@@ -355,7 +361,16 @@ export async function initRegionsEngine(containerId) {
             countryNodes.forEach(n => {
                 try {
                     let isActiveRegion = (nodeId === 'GLOBAL') || (n.node_id === nodeId || isDescendant(n, nodeId));
-                    let geom = n.dynamic_config_payload.geojson;
+                    let rawGeom = n.dynamic_config_payload.geojson;
+                    
+                    // AUTONOMOUS GEOJSON NORMALIZER: Extracts raw Polygon geometry from complex wrappers
+                    let cleanGeom = rawGeom;
+                    if (rawGeom && rawGeom.type === 'FeatureCollection' && rawGeom.features && rawGeom.features.length > 0) {
+                        cleanGeom = rawGeom.features[0].geometry;
+                    } else if (rawGeom && rawGeom.type === 'Feature') {
+                        cleanGeom = rawGeom.geometry;
+                    }
+                    if (!cleanGeom || (cleanGeom.type !== 'Polygon' && cleanGeom.type !== 'MultiPolygon')) return;
                     
                     let effectiveColor = '#e2e8f0'; 
                     if (n.dynamic_config_payload && n.dynamic_config_payload.fill_color) effectiveColor = n.dynamic_config_payload.fill_color;
@@ -371,7 +386,7 @@ export async function initRegionsEngine(containerId) {
                     // 3D Globe Properties
                     let feature = {
                         type: "Feature",
-                        geometry: geom,
+                        geometry: cleanGeom,
                         properties: { 
                             name: n.node_name, 
                             node_id: n.node_id,
@@ -385,7 +400,7 @@ export async function initRegionsEngine(containerId) {
 
                     // 2D Matrix Rendering
                     let styleOptions = isActiveRegion ? { color: '#0f172a', weight: 0.6, fillColor: effectiveColor, fillOpacity: 0.95 } : { color: '#64748b', weight: 0.3, fillColor: effectiveColor, fillOpacity: 0.15 }; 
-                    let lPrimary = window.L.geoJSON(geom, { style: styleOptions });
+                    let lPrimary = window.L.geoJSON(cleanGeom, { style: styleOptions });
                     polygonLayerGroup.addLayer(lPrimary);
                     
                     const clickHandler = () => {
@@ -398,7 +413,58 @@ export async function initRegionsEngine(containerId) {
                 } catch(e) {}
             });
 
-            // Execute Globe Injection
+            // Calculate active labels
+            let labelData = new Map();
+            countryNodes.forEach(n => {
+                let isActiveRegion = (nodeId === 'GLOBAL') || (n.node_id === nodeId || isDescendant(n, nodeId));
+                let targetLabelNode = null;
+                
+                if (nodeId === 'GLOBAL') targetLabelNode = getAncestorAtLevel(n.node_id, 'continent');
+                else if (activeNode.node_level === 'continent') targetLabelNode = isActiveRegion ? getAncestorAtLevel(n.node_id, 'sub_continent') : getAncestorAtLevel(n.node_id, 'continent');
+                else if (activeNode.node_level === 'sub_continent') {
+                    if (isActiveRegion) targetLabelNode = n; 
+                    else { let sameCont = getAncestorAtLevel(n.node_id, 'continent')?.node_id === getAncestorAtLevel(activeNode.node_id, 'continent')?.node_id; targetLabelNode = sameCont ? getAncestorAtLevel(n.node_id, 'sub_continent') : getAncestorAtLevel(n.node_id, 'continent'); }
+                } else {
+                    if (isActiveRegion) targetLabelNode = n;
+                    else { let sameSub = getAncestorAtLevel(n.node_id, 'sub_continent')?.node_id === getAncestorAtLevel(activeNode.node_id, 'sub_continent')?.node_id; targetLabelNode = sameSub ? n : getAncestorAtLevel(n.node_id, 'sub_continent') || getAncestorAtLevel(n.node_id, 'continent'); }
+                }
+
+                if (targetLabelNode && !labelData.has(targetLabelNode.node_id)) {
+                    labelData.set(targetLabelNode.node_id, { name: targetLabelNode.node_name, isActive: isActiveRegion, payload: targetLabelNode.dynamic_config_payload });
+                }
+            });
+
+            labelData.forEach((data, id) => {
+                // If no hardcoded payload anchor exists, we will use Turf.js center later
+                if (!data.payload || !data.payload.label_anchor) return;
+                
+                let anchor = data.payload.label_anchor;
+                let textColor = (data.payload && data.payload.label_color) ? data.payload.label_color : '';
+                let rotation = (data.payload && data.payload.label_rotation) ? data.payload.label_rotation : '0deg';
+                let maxWidth = (data.payload && data.payload.label_max_width) ? data.payload.label_max_width : '65px';
+                let cssClass = data.isActive ? 'label-active' : 'label-shadowed';
+                let formattedName = toTitleCase(data.name || '');
+                let inlineStyle = `transform: rotate(${rotation}); max-width: ${maxWidth};`;
+                if (textColor) inlineStyle += ` color: ${textColor}; text-shadow: none;`;
+
+                // 2D Label
+                let marker = window.L.marker(anchor, {
+                    icon: window.L.divIcon({ className: `map-label ${cssClass}`, html: `<div class="label-text" style="${inlineStyle}">${formattedName}</div>`, iconSize: [120, 40], iconAnchor: [60, 20] }),
+                    interactive: false
+                });
+                polygonLayerGroup.addLayer(marker);
+                
+                // 3D Label
+                globeLabels.push({
+                    lat: anchor[0],
+                    lng: anchor[1],
+                    name: formattedName,
+                    style: inlineStyle,
+                    cssClass: cssClass
+                });
+            });
+
+            // Execute 3D Globe Injection
             if (map3D) {
                 map3D.polygonsData(globePolygons)
                     .polygonCapColor(d => d.properties.color)
@@ -406,6 +472,17 @@ export async function initRegionsEngine(containerId) {
                     .polygonStrokeColor(() => '#111')
                     .polygonAltitude(d => d.properties.altitude)
                     .onPolygonClick(d => applyGlobalSelection(d.properties.node_id));
+                    
+                // Mount 3D Typography
+                map3D.htmlElementsData(globeLabels)
+                    .htmlLat(d => d.lat)
+                    .htmlLng(d => d.lng)
+                    .htmlElement(d => {
+                        const el = document.createElement('div');
+                        el.style.pointerEvents = 'none';
+                        el.innerHTML = `<div class="map-label ${d.cssClass}"><div class="label-text" style="${d.style}">${d.name}</div></div>`;
+                        return el;
+                    });
             }
 
             // AUTONOMOUS SPATIAL MATH (TURF.JS)
@@ -426,13 +503,11 @@ export async function initRegionsEngine(containerId) {
                         map2D.fitBounds(targetBounds, { padding: [padX, padY], animate: true, duration: 1.0 });
                     }
 
-                    // 3D GLOBE MATH
-                    if (map3D) {
+                    // 3D GLOBE MATH (Only execute if a specific region is clicked)
+                    if (map3D && nodeId !== 'GLOBAL') {
                         const maxDiff = Math.max(Math.abs(bbox[2] - bbox[0]), Math.abs(bbox[3] - bbox[1]));
                         let altitude = maxDiff / 50; 
                         if (altitude < 0.3) altitude = 0.3;
-                        if (nodeId === 'GLOBAL') altitude = 2.5;
-
                         map3D.pointOfView({ lat: lat, lng: lng, altitude: altitude }, 1500);
                     }
                 } catch(err) {
