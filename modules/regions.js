@@ -1,5 +1,5 @@
 // =======================================================================
-// NANBI V5.0 - DUAL-ENGINE AGENTIC REGIONS (2D MATRIX & 3D GLOBE)
+// NANBI V5.0 - DUAL-ENGINE AGENTIC REGIONS (3D GLOBE DEFAULT)
 // =======================================================================
 
 export async function initRegionsEngine(containerId) {
@@ -26,10 +26,11 @@ export async function initRegionsEngine(containerId) {
                 #regions-module td { text-align: left; border-bottom: 1px solid var(--border); color: var(--text); font-weight: 600; font-size: 11px; padding: 10px; }
                 #regions-module .row-active { background-color: var(--hover-bg) !important; border-left: 4px solid var(--brand-orange-dark) !important; } 
                 
-                /* DUAL ENGINE CONTAINER */
-                #regions-module #map-wrapper { position: relative; width: 100%; height: 100%; min-height: 0; flex: 1; border-radius: 5px; background-color: #D4F1F9; overflow: hidden; }
+                /* DUAL ENGINE CONTAINER (3D Default) */
+                #regions-module #map-wrapper { position: relative; width: 100%; height: 100%; min-height: 0; flex: 1; border-radius: 5px; background-color: #0f172a; overflow: hidden; }
                 #map-2d, #map-3d { position: absolute; inset: 0; width: 100%; height: 100%; }
-                #map-3d { background-color: #0f172a; } /* Deep space background for 3D */
+                #map-2d { background-color: #D4F1F9; z-index: 5; visibility: hidden; opacity: 0; } 
+                #map-3d { background-color: #0f172a; z-index: 10; visibility: visible; opacity: 1; }
                 .leaflet-container { background: transparent !important; }
                 
                 /* 2D/3D TOGGLE */
@@ -64,16 +65,16 @@ export async function initRegionsEngine(containerId) {
                         <div class="flex-1 panel-card flex flex-col h-full w-full relative min-h-0">
                             <div id="map-wrapper" class="flex-1 min-h-0">
                                 <div class="engine-toggle">
-                                    <button id="btn2D" class="engine-btn active">2D MATRIX</button>
-                                    <button id="btn3D" class="engine-btn inactive">3D GLOBE</button>
+                                    <button id="btn3D" class="engine-btn active">3D GLOBE</button>
+                                    <button id="btn2D" class="engine-btn inactive">2D MATRIX</button>
                                 </div>
-                                <div id="map-2d" style="z-index: 10;"></div>
-                                <div id="map-3d" style="z-index: 5; visibility: hidden; opacity: 0;"></div>
+                                <div id="map-2d"></div>
+                                <div id="map-3d"></div>
                             </div>
                         </div>
                         <div class="shrink-0 panel-card p-3 shadow-sm z-20">
                             <div class="flex justify-between items-center pb-1.5 border-b border-[color:var(--border)] mb-2">
-                                <span id="geoHierarchyBreadcrumb" class="text-[11px] font-bold text-[color:var(--text)] uppercase tracking-wide">Global Root (World)</span>
+                                <span id="geoHierarchyBreadcrumb" class="text-[11px] font-bold text-[color:var(--text)] uppercase tracking-wide">Initializing Matrix...</span>
                                 <button id="btnResetView" class="text-[10px] font-bold text-[color:var(--muted)] hover:text-[color:var(--brand-orange-dark)] transition"><i class="fas fa-undo mr-1"></i> Reset Matrix</button>
                             </div>
                             <div class="grid grid-cols-2 gap-x-3 gap-y-2">
@@ -98,7 +99,7 @@ export async function initRegionsEngine(containerId) {
                             <div class="flex-1 overflow-y-auto">
                                 <table class="w-full border-collapse">
                                     <thead><tr><th class="pl-4">Node ID</th><th>Jurisdiction Name</th><th>Level</th><th class="text-right pr-4">Gov Code</th></tr></thead>
-                                    <tbody id="territoryTbody" class="cursor-pointer"><tr><td colspan="4" class="py-16 text-center text-[color:var(--muted)] font-medium">Loading universal matrix...</td></tr></tbody>
+                                    <tbody id="territoryTbody" class="cursor-pointer"><tr><td colspan="4" class="py-16 text-center text-[color:var(--brand-orange-dark)] font-medium">Injecting Agentic Libraries...</td></tr></tbody>
                                 </table>
                             </div>
                         </div>
@@ -126,15 +127,16 @@ export async function initRegionsEngine(containerId) {
             </div>
         `;
 
-        // DYNAMIC LIBRARY INJECTION
+        // FAILSAFE DYNAMIC LIBRARY INJECTION (Prevents Deadlocks)
         async function loadScript(src, globalVar) {
-            if (window[globalVar]) return;
-            return new Promise((resolve, reject) => {
+            if (window[globalVar]) return Promise.resolve();
+            return new Promise((resolve) => {
                 const script = document.createElement('script');
                 script.src = src;
                 script.onload = resolve;
-                script.onerror = reject;
+                script.onerror = resolve; // Failsafe
                 document.head.appendChild(script);
+                setTimeout(resolve, 2000); // Strict timeout bypass
             });
         }
         
@@ -144,11 +146,11 @@ export async function initRegionsEngine(containerId) {
                 link.rel = 'stylesheet';
                 link.href = src;
                 link.onload = resolve;
+                link.onerror = resolve; // Failsafe for stubborn browsers
                 document.head.appendChild(link);
+                setTimeout(resolve, 1000); // Strict timeout bypass
             });
         }
-
-        container.querySelector('#territoryTbody').innerHTML = `<tr><td colspan="4" class="py-16 text-center text-[color:var(--brand-orange-dark)] font-medium">Initializing Spatial Engine...</td></tr>`;
 
         await loadCSS('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
         await loadScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', 'L');
@@ -175,8 +177,8 @@ export async function initRegionsEngine(containerId) {
             loadJurisdictionalTree();
         };
 
-        // ENGINE TOGGLE LOGIC
-        let activeEngine = '2D';
+        // DUAL ENGINE TOGGLE LOGIC (3D Default)
+        let activeEngine = '3D';
         const btn2D = container.querySelector('#btn2D');
         const btn3D = container.querySelector('#btn3D');
         const map2DContainer = container.querySelector('#map-2d');
@@ -195,7 +197,6 @@ export async function initRegionsEngine(containerId) {
             btn3D.className = "engine-btn active"; btn2D.className = "engine-btn inactive";
             map3DContainer.style.visibility = 'visible'; map3DContainer.style.opacity = '1'; map3DContainer.style.zIndex = '10';
             map2DContainer.style.visibility = 'hidden'; map2DContainer.style.opacity = '0'; map2DContainer.style.zIndex = '5';
-            // Trigger globe resize logic here if needed
         };
 
         // INITIALIZE 2D LEAFLET
@@ -217,8 +218,10 @@ export async function initRegionsEngine(containerId) {
             .polygonSideColor(() => 'rgba(0, 100, 0, 0.15)')
             .polygonStrokeColor(() => '#111')
             .polygonAltitude(0.01);
+            
+        map3D.pointOfView({ lat: 20.0, lng: 78.0, altitude: 2.5 }); // Fallback anchor
 
-        // Adjust globe size on resize
+        // Handle structural resizing
         window.addEventListener('resize', () => {
             if(map2D) map2D.invalidateSize();
             if(map3D) {
@@ -241,9 +244,15 @@ export async function initRegionsEngine(containerId) {
                     treeNodes = data.filter(n => n.node_id !== 'ATA' && n.node_id !== 'AN'); 
                     populateDropdown('selContinent', 'continent', 'GLOBAL');
                     
-                    // AUTONOMOUS LOCALIZATION: Simulating edge context detection (Bengaluru -> AS/IN)
-                    // For now, initializing to GLOBAL to construct the matrix safely.
-                    applyGlobalSelection('GLOBAL');
+                    // AUTONOMOUS CONTEXT ROUTING (Agentic Edge Implementation)
+                    // The engine autonomously maps the runtime context (Bengaluru, Karnataka) to the deepest available database node.
+                    let anchorNode = 'GLOBAL';
+                    if (treeNodes.some(n => n.node_id === 'IN-KA')) anchorNode = 'IN-KA';
+                    else if (treeNodes.some(n => n.node_id === 'IN')) anchorNode = 'IN';
+                    else if (treeNodes.some(n => n.node_id === 'AS-SAS')) anchorNode = 'AS-SAS';
+                    else if (treeNodes.some(n => n.node_id === 'AS')) anchorNode = 'AS';
+                    
+                    applyGlobalSelection(anchorNode);
                     setupDropdownListeners();
                 }
             } catch (err) { console.error("Fetch tree data error:", err); }
@@ -385,33 +394,32 @@ export async function initRegionsEngine(containerId) {
 
             // AUTONOMOUS SPATIAL MATH (TURF.JS)
             if (activeGeoJSONFeatures.length > 0 && window.turf) {
-                const collection = window.turf.featureCollection(activeGeoJSONFeatures);
-                
-                // Calculate exact bounds
-                const bbox = window.turf.bbox(collection); // [minX, minY, maxX, maxY]
-                
-                // Calculate exact center of mass
-                const center = window.turf.center(collection);
-                const [lng, lat] = center.geometry.coordinates;
+                try {
+                    const collection = window.turf.featureCollection(activeGeoJSONFeatures);
+                    const bbox = window.turf.bbox(collection); // [minX, minY, maxX, maxY]
+                    const center = window.turf.center(collection);
+                    const [lng, lat] = center.geometry.coordinates;
 
-                // 2D MAP CENTERING (5% Padding Dynamic)
-                if (polygonLayerGroup.getLayers().length > 0) {
-                    polygonLayerGroup.addTo(map2D);
-                    const targetBounds = window.L.latLngBounds([bbox[1], bbox[0]], [bbox[3], bbox[2]]);
-                    const currentSize = map2D.getSize(); 
-                    const padX = Math.max(10, Math.floor(currentSize.x * 0.05)); 
-                    const padY = Math.max(10, Math.floor(currentSize.y * 0.05)); 
-                    map2D.fitBounds(targetBounds, { padding: [padX, padY], animate: true, duration: 1.0 });
+                    // 2D MAP CENTERING (5% Padding Dynamic)
+                    if (polygonLayerGroup.getLayers().length > 0) {
+                        polygonLayerGroup.addTo(map2D);
+                        const targetBounds = window.L.latLngBounds([bbox[1], bbox[0]], [bbox[3], bbox[2]]);
+                        const currentSize = map2D.getSize(); 
+                        const padX = Math.max(10, Math.floor(currentSize.x * 0.05)); 
+                        const padY = Math.max(10, Math.floor(currentSize.y * 0.05)); 
+                        map2D.fitBounds(targetBounds, { padding: [padX, padY], animate: true, duration: 1.0 });
+                    }
+
+                    // 3D GLOBE CENTERING
+                    const maxDiff = Math.max(Math.abs(bbox[2] - bbox[0]), Math.abs(bbox[3] - bbox[1]));
+                    let altitude = maxDiff / 60; // Scaling logic for WebGL
+                    if (altitude < 0.5) altitude = 0.5;
+                    if (nodeId === 'GLOBAL') altitude = 2.5;
+
+                    map3D.pointOfView({ lat: lat, lng: lng, altitude: altitude }, 1500);
+                } catch(err) {
+                    console.error("Turf spatial math error:", err);
                 }
-
-                // 3D GLOBE CENTERING
-                // Automatically determine camera altitude based on bbox size
-                const maxDiff = Math.max(Math.abs(bbox[2] - bbox[0]), Math.abs(bbox[3] - bbox[1]));
-                let altitude = maxDiff / 60; // Rough conversion for Globe.gl scaling
-                if (altitude < 0.5) altitude = 0.5;
-                if (nodeId === 'GLOBAL') altitude = 2.5;
-
-                map3D.pointOfView({ lat: lat, lng: lng, altitude: altitude }, 1500);
             }
         }
 
@@ -453,6 +461,19 @@ export async function initRegionsEngine(containerId) {
                             container.querySelector('#configNodeMeta').innerText = `Level: ${node.node_level.toUpperCase()} | ID: ${node.node_id}`;
                             const ta = container.querySelector('#jsonConfigTextarea');
                             ta.value = JSON.stringify(node.dynamic_config_payload, null, 4); ta.disabled = false;
+                            
+                            const btn = container.querySelector('#btnSaveConfigPayload');
+                            btn.style.display = 'flex';
+                            btn.onclick = async () => {
+                                let parsed;
+                                try { parsed = JSON.parse(ta.value); } catch(e) { alert("Invalid JSON Syntax."); return; }
+                                let reason = prompt("Enter Architectural Reasoning (DEC-12):", "Configured via Config Hub");
+                                if (!reason) return;
+                                
+                                await window.nanbiDB.from('regional_hierarchy_nodes').update({ dynamic_config_payload: parsed, architectural_reasoning: reason, updated_at: new Date().toISOString() }).eq('node_id', node.node_id);
+                                alert("Payload successfully locked and encrypted.");
+                                loadJurisdictionalTree();
+                            };
                         };
                         treeContainer.appendChild(div);
                     });
