@@ -74,7 +74,7 @@ export async function initRegionsEngine(containerId) {
                         </div>
                         <div class="shrink-0 panel-card p-3 shadow-sm z-20">
                             <div class="flex justify-between items-center pb-1.5 border-b border-[color:var(--border)] mb-2">
-                                <span id="geoHierarchyBreadcrumb" class="text-[11px] font-bold text-[color:var(--text)] uppercase tracking-wide">Initializing Matrix...</span>
+                                <span id="geoHierarchyBreadcrumb" class="text-[11px] font-bold text-[color:var(--text)] uppercase tracking-wide">Initializing Engine...</span>
                                 <button id="btnResetView" class="text-[10px] font-bold text-[color:var(--muted)] hover:text-[color:var(--brand-orange-dark)] transition"><i class="fas fa-undo mr-1"></i> Reset Matrix</button>
                             </div>
                             <div class="grid grid-cols-2 gap-x-3 gap-y-2">
@@ -127,7 +127,7 @@ export async function initRegionsEngine(containerId) {
             </div>
         `;
 
-        // FAIL-PROOF DEPENDENCY LOADERS (Using stable CDNs)
+        // FAIL-PROOF DEPENDENCY LOADERS (Syntax error free)
         const loadScript = (src, globalVar) => new Promise((resolve) => {
             if (window[globalVar]) return resolve(true);
             const script = document.createElement('script');
@@ -138,7 +138,7 @@ export async function initRegionsEngine(containerId) {
         });
 
         const loadCSS = (src) => new Promise((resolve) => {
-            if (document.querySelector(\`link[href="\${src}"]\`)) return resolve(true);
+            if (document.querySelector('link[href="' + src + '"]')) return resolve(true);
             const link = document.createElement('link');
             link.rel = 'stylesheet'; link.href = src;
             link.onload = () => resolve(true);
@@ -146,7 +146,7 @@ export async function initRegionsEngine(containerId) {
             document.head.appendChild(link);
         });
 
-        // 1. Await structural paint before injection to guarantee valid dimensions
+        // 1. Await structural paint to guarantee valid dimensions
         await new Promise(r => requestAnimationFrame(r));
 
         await loadCSS('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css');
@@ -155,7 +155,7 @@ export async function initRegionsEngine(containerId) {
         await loadScript('https://unpkg.com/globe.gl', 'Globe');
 
         if (!window.L || !window.Globe || !window.turf) {
-            container.querySelector('#territoryTbody').innerHTML = \`<tr><td colspan="4" class="py-16 text-center text-red-500 font-bold">FATAL: Security policies blocked the spatial libraries. Please refresh.</td></tr>\`;
+            container.querySelector('#territoryTbody').innerHTML = '<tr><td colspan="4" class="py-16 text-center text-red-500 font-bold">FATAL: Libraries blocked. Please refresh.</td></tr>';
             return;
         }
 
@@ -216,19 +216,23 @@ export async function initRegionsEngine(containerId) {
         // 3. INITIALIZE 3D GLOBE (Guaranteed valid dimensions)
         const initW = map3DContainer.clientWidth || 800;
         const initH = map3DContainer.clientHeight || 500;
-        let map3D = window.Globe()(map3DContainer)
-            .width(initW)
-            .height(initH)
-            .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
-            .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
-            .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
-            .showAtmosphere(true)
-            .atmosphereColor('#3a228a')
-            .atmosphereAltitude(0.15)
-            .polygonCapColor(() => 'rgba(200, 0, 0, 0.6)')
-            .polygonSideColor(() => 'rgba(0, 100, 0, 0.15)')
-            .polygonStrokeColor(() => '#111')
-            .polygonAltitude(0.01);
+        let map3D = null;
+        
+        if (window.Globe) {
+            map3D = window.Globe()(map3DContainer)
+                .width(initW)
+                .height(initH)
+                .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+                .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
+                .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
+                .showAtmosphere(true)
+                .atmosphereColor('#3a228a')
+                .atmosphereAltitude(0.15)
+                .polygonCapColor(() => 'rgba(200, 0, 0, 0.6)')
+                .polygonSideColor(() => 'rgba(0, 100, 0, 0.15)')
+                .polygonStrokeColor(() => '#111')
+                .polygonAltitude(0.01);
+        }
 
         window.addEventListener('resize', () => {
             if(map2D) map2D.invalidateSize();
@@ -252,7 +256,8 @@ export async function initRegionsEngine(containerId) {
                     treeNodes = data.filter(n => n.node_id !== 'ATA' && n.node_id !== 'AN'); 
                     populateDropdown('selContinent', 'continent', 'GLOBAL');
                     
-                    // AUTONOMOUS CONTEXT ROUTING
+                    // AUTONOMOUS CONTEXT ROUTING (Agentic Edge Implementation)
+                    // The engine autonomously maps the runtime context to the deepest available database node.
                     let anchorNode = 'GLOBAL';
                     if (treeNodes.some(n => n.node_id === 'IN-KA')) anchorNode = 'IN-KA';
                     else if (treeNodes.some(n => n.node_id === 'IN')) anchorNode = 'IN';
@@ -263,7 +268,7 @@ export async function initRegionsEngine(containerId) {
                     setupDropdownListeners();
                 }
             } catch (err) { 
-                container.querySelector('#territoryTbody').innerHTML = \`<tr><td colspan="4" class="py-16 text-center text-red-500 font-bold">Ledger sync failed. See console.</td></tr>\`;
+                container.querySelector('#territoryTbody').innerHTML = '<tr><td colspan="4" class="py-16 text-center text-red-500 font-bold">Ledger sync failed. See console.</td></tr>';
                 console.error(err); 
             }
         }
@@ -292,11 +297,11 @@ export async function initRegionsEngine(containerId) {
         function populateDropdown(targetId, level, parentId) {
             const sel = container.querySelector('#' + targetId); sel.innerHTML = '<option value="All">All</option>';
             const list = treeNodes.filter(n => n.node_level === level && n.parent_id === parentId);
-            list.forEach(item => { sel.innerHTML += \`<option value="\${item.node_id}">\${item.node_name}</option>\`; });
+            list.forEach(item => { sel.innerHTML += `<option value="${item.node_id}">${item.node_name}</option>`; });
             sel.disabled = list.length === 0; return list.length > 0;
         }
 
-        function cascadeClear(ids) { ids.forEach(id => { const el = container.querySelector(\`#\${id}\`); if (el) { el.innerHTML = '<option value="All">All</option>'; el.disabled = true; } }); }
+        function cascadeClear(ids) { ids.forEach(id => { const el = container.querySelector(`#${id}`); if (el) { el.innerHTML = '<option value="All">All</option>'; el.disabled = true; } }); }
 
         function applyGlobalSelection(nodeId) {
             const fallbackGlobalNode = { node_id: 'GLOBAL', node_name: 'World', node_level: 'root', dynamic_config_payload: {} };
@@ -326,18 +331,18 @@ export async function initRegionsEngine(containerId) {
                 const tr = document.createElement('tr'); tr.className = "hover:bg-[color:var(--hover-bg)] transition cursor-pointer text-[color:var(--text)]";
                 if (node.node_id === nodeId && nodeId !== 'GLOBAL') tr.classList.add('row-active');
                 tr.onclick = () => applyGlobalSelection(node.node_id);
-                tr.innerHTML = \`
-                    <td class="col-left border-r pl-4"><span class="bg-transparent border border-[color:var(--brand-orange-dark)] px-1.5 py-0.5 rounded font-mono text-[color:var(--brand-orange-dark)] font-bold">\${node.node_id}</span></td>
-                    <td class="font-bold col-left border-r">\${node.node_name}</td>
-                    <td class="font-bold col-left border-r text-[color:var(--muted)] uppercase text-[9px] tracking-wider">\${node.node_level.replace('_', ' ')}</td>
-                    <td class="text-right pr-4 font-mono font-bold">\${node.official_gov_code || '--'}</td>
-                \`;
+                tr.innerHTML = `
+                    <td class="col-left border-r pl-4"><span class="bg-transparent border border-[color:var(--brand-orange-dark)] px-1.5 py-0.5 rounded font-mono text-[color:var(--brand-orange-dark)] font-bold">${node.node_id}</span></td>
+                    <td class="font-bold col-left border-r">${node.node_name}</td>
+                    <td class="font-bold col-left border-r text-[color:var(--muted)] uppercase text-[9px] tracking-wider">${node.node_level.replace('_', ' ')}</td>
+                    <td class="text-right pr-4 font-mono font-bold">${node.official_gov_code || '--'}</td>
+                `;
                 tbody.appendChild(tr);
             });
 
             container.querySelector('#geoHierarchyBreadcrumb').innerText = activeNode.node_name;
-            container.querySelector('#deepDiveTitle').innerText = \`\${activeNode.node_id} — \${activeNode.node_name}\`;
-            container.querySelector('#deepDiveSubtitle').innerText = \`Level: \${activeNode.node_level.replace('_', ' ')}\`;
+            container.querySelector('#deepDiveTitle').innerText = `${activeNode.node_id} — ${activeNode.node_name}`;
+            container.querySelector('#deepDiveSubtitle').innerText = `Level: ${activeNode.node_level.replace('_', ' ')}`;
 
             if (polygonLayerGroup) map2D.removeLayer(polygonLayerGroup);
             polygonLayerGroup = window.L.featureGroup();
@@ -394,12 +399,14 @@ export async function initRegionsEngine(containerId) {
             });
 
             // Execute Globe Injection
-            map3D.polygonsData(globePolygons)
-                .polygonCapColor(d => d.properties.color)
-                .polygonSideColor(d => d.properties.isActive ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.1)')
-                .polygonStrokeColor(() => '#111')
-                .polygonAltitude(d => d.properties.altitude)
-                .onPolygonClick(d => applyGlobalSelection(d.properties.node_id));
+            if (map3D) {
+                map3D.polygonsData(globePolygons)
+                    .polygonCapColor(d => d.properties.color)
+                    .polygonSideColor(d => d.properties.isActive ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.1)')
+                    .polygonStrokeColor(() => '#111')
+                    .polygonAltitude(d => d.properties.altitude)
+                    .onPolygonClick(d => applyGlobalSelection(d.properties.node_id));
+            }
 
             // AUTONOMOUS SPATIAL MATH (TURF.JS)
             if (activeGeoJSONFeatures.length > 0 && window.turf) {
@@ -420,12 +427,14 @@ export async function initRegionsEngine(containerId) {
                     }
 
                     // 3D GLOBE MATH
-                    const maxDiff = Math.max(Math.abs(bbox[2] - bbox[0]), Math.abs(bbox[3] - bbox[1]));
-                    let altitude = maxDiff / 50; 
-                    if (altitude < 0.3) altitude = 0.3;
-                    if (nodeId === 'GLOBAL') altitude = 2.5;
+                    if (map3D) {
+                        const maxDiff = Math.max(Math.abs(bbox[2] - bbox[0]), Math.abs(bbox[3] - bbox[1]));
+                        let altitude = maxDiff / 50; 
+                        if (altitude < 0.3) altitude = 0.3;
+                        if (nodeId === 'GLOBAL') altitude = 2.5;
 
-                    map3D.pointOfView({ lat: lat, lng: lng, altitude: altitude }, 1500);
+                        map3D.pointOfView({ lat: lat, lng: lng, altitude: altitude }, 1500);
+                    }
                 } catch(err) {
                     console.error("Spatial Calculation Error:", err);
                 }
@@ -434,7 +443,7 @@ export async function initRegionsEngine(containerId) {
 
         function setupDropdownListeners() {
             ['selContinent', 'selSubContinent', 'selCountry', 'selState', 'selDistrict', 'selTaluk'].forEach(id => {
-                container.querySelector(\`#\${id}\`).addEventListener('change', (e) => {
+                container.querySelector(`#${id}`).addEventListener('change', (e) => {
                     if (e.target.value !== 'All') applyGlobalSelection(e.target.value);
                     else {
                         const cs = e.target.id;
@@ -453,7 +462,7 @@ export async function initRegionsEngine(containerId) {
         async function loadJurisdictionalTree() {
             try {
                 const treeContainer = container.querySelector('#treeListContainer');
-                treeContainer.innerHTML = \`<p class="text-[color:var(--muted)] italic text-center py-10">Synchronizing with Edge Ledger...</p>\`;
+                treeContainer.innerHTML = '<p class="text-[color:var(--muted)] italic text-center py-10">Synchronizing with Edge Ledger...</p>';
                 
                 const { data } = await window.nanbiDB.from('regional_hierarchy_nodes').select('*').order('node_level');
                 if (data) {
@@ -464,10 +473,10 @@ export async function initRegionsEngine(containerId) {
                     treeNodes.forEach(node => {
                         const div = document.createElement('div');
                         div.className = "p-2.5 rounded border border-[color:var(--border)] hover:bg-[color:var(--hover-bg)] cursor-pointer transition flex justify-between items-center";
-                        div.innerHTML = \`<div><div class="font-bold text-[color:var(--text)] text-xs">\${node.node_name}</div><div class="text-[9px] text-[color:var(--muted)] uppercase font-mono font-bold">\${node.node_level.replace('_', ' ')} | ID: \${node.node_id}</div></div><i class="fas fa-edit text-xs text-[color:var(--muted)]"></i>\`;
+                        div.innerHTML = `<div><div class="font-bold text-[color:var(--text)] text-xs">${node.node_name}</div><div class="text-[9px] text-[color:var(--muted)] uppercase font-mono font-bold">${node.node_level.replace('_', ' ')} | ID: ${node.node_id}</div></div><i class="fas fa-edit text-xs text-[color:var(--muted)]"></i>`;
                         div.onclick = () => {
                             container.querySelector('#configNodeTitle').innerText = node.node_name;
-                            container.querySelector('#configNodeMeta').innerText = \`Level: \${node.node_level.toUpperCase()} | ID: \${node.node_id}\`;
+                            container.querySelector('#configNodeMeta').innerText = `Level: ${node.node_level.toUpperCase()} | ID: ${node.node_id}`;
                             const ta = container.querySelector('#jsonConfigTextarea');
                             ta.value = JSON.stringify(node.dynamic_config_payload, null, 4); ta.disabled = false;
                             
@@ -493,6 +502,6 @@ export async function initRegionsEngine(containerId) {
         await fetchTreeData();
 
     } catch (err) {
-        container.innerHTML = \`<div style="padding: 20px; color: red; font-family: monospace;"><b>Critical Engine Fault:</b> \${err.message}</div>\`;
+        container.innerHTML = `<div style="padding: 20px; color: red; font-family: monospace;"><b>Critical Engine Fault:</b> ${err.message}</div>`;
     }
 }
