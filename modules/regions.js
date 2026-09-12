@@ -80,7 +80,7 @@ export async function initRegionsEngine(containerId) {
                         </div>
                         <div class="shrink-0 panel-card p-3 shadow-sm z-20">
                             <div class="flex justify-between items-center pb-1.5 border-b border-[color:var(--border)] mb-2">
-                                <span id="geoHierarchyBreadcrumb" class="text-[11px] font-bold text-[color:var(--brand-orange-dark)] uppercase tracking-wide">Initializing Context...</span>
+                                <span id="geoHierarchyBreadcrumb" class="text-[11px] font-bold text-[color:var(--text)] uppercase tracking-wide">Acquiring GPS Signal...</span>
                                 <button id="btnResetView" class="text-[10px] font-bold text-[color:var(--muted)] hover:text-[color:var(--brand-orange-dark)] transition"><i class="fas fa-undo mr-1"></i> Reset Matrix</button>
                             </div>
                             <div class="grid grid-cols-2 gap-x-3 gap-y-2">
@@ -223,12 +223,12 @@ export async function initRegionsEngine(containerId) {
         function toTitleCase(str) { return (!str) ? '' : str.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '); }
 
         // ==========================================
-        // AGENTIC HIERARCHY SAFEGUARDS (Fixes Infinite Loops)
+        // AGENTIC HIERARCHY SAFEGUARDS (Depth-limited to block infinite loops)
         // ==========================================
         function getAncestorAtLevel(nodeId, level) {
             let curr = treeNodes.find(n => n.node_id === nodeId);
             let depth = 0;
-            while (curr && curr.node_id !== 'GLOBAL' && depth < 20) {
+            while (curr && curr.node_id !== 'GLOBAL' && depth < 50) {
                 if (curr.node_level === level) return curr;
                 curr = treeNodes.find(n => n.node_id === curr.parent_id);
                 depth++;
@@ -239,7 +239,7 @@ export async function initRegionsEngine(containerId) {
         function getLineage(nodeId) {
             let lineage = {}; let curr = treeNodes.find(n => n.node_id === nodeId);
             let depth = 0;
-            while (curr && curr.node_id !== 'GLOBAL' && depth < 20) {
+            while (curr && curr.node_id !== 'GLOBAL' && depth < 50) { 
                 lineage[curr.node_level] = curr.node_id; 
                 curr = treeNodes.find(n => n.node_id === curr.parent_id); 
                 depth++;
@@ -250,7 +250,7 @@ export async function initRegionsEngine(containerId) {
         function isDescendant(node, parentId) {
             let curr = treeNodes.find(n => n.node_id === node.parent_id); 
             let depth = 0;
-            while (curr && depth < 20) { 
+            while (curr && depth < 50) { 
                 if (curr.node_id === parentId) return true; 
                 curr = treeNodes.find(n => n.node_id === curr.parent_id); 
                 depth++; 
@@ -265,7 +265,6 @@ export async function initRegionsEngine(containerId) {
             const pt = window.turf.point([lng, lat]);
             let foundCountry = null;
             
-            // Tier 1: Scan Countries
             for (let n of treeNodes.filter(x => x.node_level === 'country' && x.dynamic_config_payload?.geojson)) {
                 try {
                     let geom = n.dynamic_config_payload.geojson;
@@ -276,7 +275,6 @@ export async function initRegionsEngine(containerId) {
             }
             if (!foundCountry) return null;
 
-            // Tier 2: Scan States within the located Country
             let foundState = null;
             for (let n of treeNodes.filter(x => x.node_level === 'state' && x.parent_id === foundCountry.node_id && x.dynamic_config_payload?.geojson)) {
                 try {
@@ -298,20 +296,22 @@ export async function initRegionsEngine(containerId) {
                     return resolve(profileFallback);
                 }
 
-                container.querySelector('#geoHierarchyBreadcrumb').innerText = "Acquiring GPS Signal...";
+                const bc = container.querySelector('#geoHierarchyBreadcrumb');
+                if(bc) bc.innerText = "Acquiring GPS Signal...";
 
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
+                        // setTimeout detaches heavy calculation from UI thread to prevent freezing
                         setTimeout(() => {
                             const nodeId = locateNodeByGPS(position.coords.longitude, position.coords.latitude) || profileFallback;
                             resolve(nodeId);
-                        }, 50); // Offloads heavy calculation to clear the UI thread
+                        }, 50); 
                     },
                     (error) => {
-                        console.warn("GPS Request Denied. Falling back to Profile Context.");
+                        console.warn("GPS Request Denied/Failed. Falling back to Profile Context.");
                         resolve(profileFallback);
                     },
-                    { timeout: 5000, maximumAge: 60000 }
+                    { timeout: 6000, maximumAge: 60000, enableHighAccuracy: false }
                 );
             });
         }
@@ -330,7 +330,8 @@ export async function initRegionsEngine(containerId) {
                     setupDropdownListeners();
                 }
             } catch (err) { 
-                container.querySelector('#territoryTbody').innerHTML = `<tr><td colspan="4" class="py-16 text-center text-red-500 font-bold">Ledger sync failed. Check console.</td></tr>`;
+                const tbody = container.querySelector('#territoryTbody');
+                if(tbody) tbody.innerHTML = `<tr><td colspan="4" class="py-16 text-center text-red-500 font-bold">Ledger sync failed. Check console.</td></tr>`;
                 console.error("Fetch Tree Data Error:", err); 
             }
         }
@@ -347,15 +348,6 @@ export async function initRegionsEngine(containerId) {
         function applyGlobalSelection(nodeId) {
             const fallbackGlobalNode = { node_id: 'GLOBAL', node_name: 'World', node_level: 'root', dynamic_config_payload: {} };
             const activeNode = treeNodes.find(n => n.node_id === nodeId) || fallbackGlobalNode;
-
-            if (map3D) {
-                if (nodeId === 'GLOBAL') {
-                    map3D.controls().autoRotate = true;
-                    map3D.controls().autoRotateSpeed = 0.5;
-                } else {
-                    map3D.controls().autoRotate = false;
-                }
-            }
 
             const lineage = getLineage(nodeId);
             if (nodeId === 'GLOBAL') {
@@ -408,6 +400,7 @@ export async function initRegionsEngine(containerId) {
                     let isActiveRegion = (nodeId === 'GLOBAL') || (n.node_id === nodeId || isDescendant(n, nodeId));
                     let rawGeom = n.dynamic_config_payload.geojson;
                     
+                    // AUTONOMOUS GEOJSON NORMALIZER
                     let cleanGeom = rawGeom;
                     if (rawGeom && rawGeom.type === 'FeatureCollection' && rawGeom.features && rawGeom.features.length > 0) {
                         cleanGeom = rawGeom.features[0].geometry;
@@ -427,6 +420,7 @@ export async function initRegionsEngine(containerId) {
                         if (sub && sub.dynamic_config_payload && sub.dynamic_config_payload.fill_color) effectiveColor = sub.dynamic_config_payload.fill_color;
                     }
 
+                    // 3D Globe Properties
                     let feature = {
                         type: "Feature",
                         geometry: cleanGeom,
@@ -441,6 +435,7 @@ export async function initRegionsEngine(containerId) {
                     globePolygons.push(feature);
                     if (isActiveRegion) activeGeoJSONFeatures.push(feature);
 
+                    // 2D Matrix Rendering
                     let styleOptions = isActiveRegion ? { color: '#0f172a', weight: 0.6, fillColor: effectiveColor, fillOpacity: 0.95 } : { color: '#64748b', weight: 0.3, fillColor: effectiveColor, fillOpacity: 0.15 }; 
                     let lPrimary = window.L.geoJSON(cleanGeom, { style: styleOptions });
                     polygonLayerGroup.addLayer(lPrimary);
@@ -487,13 +482,14 @@ export async function initRegionsEngine(containerId) {
                 let inlineStyle = `transform: rotate(${rotation}); max-width: ${maxWidth};`;
                 if (textColor) inlineStyle += ` color: ${textColor}; text-shadow: none;`;
 
+                // 2D Label
                 let marker = window.L.marker(anchor, {
                     icon: window.L.divIcon({ className: `map-label ${cssClass}`, html: `<div class="label-text" style="${inlineStyle}">${formattedName}</div>`, iconSize: [120, 40], iconAnchor: [60, 20] }),
                     interactive: false
                 });
                 polygonLayerGroup.addLayer(marker);
                 
-                // Restrict 3D DOM Labels to prevent Globe.gl overload
+                // 3D DOM Labels
                 if (data.isActive || nodeId === 'GLOBAL') {
                     globeLabels.push({
                         lat: anchor[0],
@@ -505,6 +501,7 @@ export async function initRegionsEngine(containerId) {
                 }
             });
 
+            // Execute 3D Globe Injection
             if (map3D) {
                 map3D.polygonsData(globePolygons)
                     .polygonCapColor(d => d.properties.color)
@@ -524,6 +521,7 @@ export async function initRegionsEngine(containerId) {
                     });
             }
 
+            // AUTONOMOUS SPATIAL MATH (TURF.JS)
             if (activeGeoJSONFeatures.length > 0 && window.turf) {
                 setTimeout(() => {
                     try {
@@ -532,6 +530,7 @@ export async function initRegionsEngine(containerId) {
                         const center = window.turf.center(collection);
                         const [lng, lat] = center.geometry.coordinates;
 
+                        // 2D MAP MATH
                         if (polygonLayerGroup.getLayers().length > 0) {
                             polygonLayerGroup.addTo(map2D);
                             const targetBounds = window.L.latLngBounds([bbox[1], bbox[0]], [bbox[3], bbox[2]]);
@@ -541,6 +540,7 @@ export async function initRegionsEngine(containerId) {
                             map2D.fitBounds(targetBounds, { padding: [padX, padY], animate: true, duration: 1.0 });
                         }
 
+                        // 3D GLOBE MATH
                         if (map3D && nodeId !== 'GLOBAL') {
                             const maxDiff = Math.max(Math.abs(bbox[2] - bbox[0]), Math.abs(bbox[3] - bbox[1]));
                             let altitude = maxDiff / 50; 
@@ -550,7 +550,7 @@ export async function initRegionsEngine(containerId) {
                     } catch(err) {
                         console.error("Spatial Calculation Error:", err);
                     }
-                }, 50); 
+                }, 50);
             }
         }
 
