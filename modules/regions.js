@@ -1,5 +1,5 @@
 // =======================================================================
-// NANBI V5.0 - DUAL-ENGINE AGENTIC REGIONS (STATIC DEPENDENCIES)
+// NANBI V5.0 - DUAL-ENGINE AGENTIC REGIONS (GPS-DRIVEN, 3D DEFAULT)
 // =======================================================================
 
 export async function initRegionsEngine(containerId) {
@@ -13,9 +13,9 @@ export async function initRegionsEngine(containerId) {
         el = el.parentElement;
     }
 
-    // Agentic Safety Check: Ensure static libraries loaded from index.html
+    // STATIC DEPENDENCY CHECK
     if (!window.L || !window.Globe || !window.turf) {
-        container.innerHTML = `<div style="padding: 20px; color: red; font-family: monospace;"><b>Critical Fault:</b> Spatial libraries not found in index.html.</div>`;
+        container.innerHTML = `<div style="padding: 20px; color: red; font-family: monospace;"><b>Critical Fault:</b> Spatial libraries (Leaflet, Turf, Globe.gl) not found in index.html.</div>`;
         return;
     }
 
@@ -80,7 +80,7 @@ export async function initRegionsEngine(containerId) {
                         </div>
                         <div class="shrink-0 panel-card p-3 shadow-sm z-20">
                             <div class="flex justify-between items-center pb-1.5 border-b border-[color:var(--border)] mb-2">
-                                <span id="geoHierarchyBreadcrumb" class="text-[11px] font-bold text-[color:var(--text)] uppercase tracking-wide">Initializing Engine...</span>
+                                <span id="geoHierarchyBreadcrumb" class="text-[11px] font-bold text-[color:var(--text)] uppercase tracking-wide">Acquiring GPS Signal...</span>
                                 <button id="btnResetView" class="text-[10px] font-bold text-[color:var(--muted)] hover:text-[color:var(--brand-orange-dark)] transition"><i class="fas fa-undo mr-1"></i> Reset Matrix</button>
                             </div>
                             <div class="grid grid-cols-2 gap-x-3 gap-y-2">
@@ -180,7 +180,7 @@ export async function initRegionsEngine(containerId) {
             }
         };
 
-        // AWAIT DOM PAINT TO SECURE VALID DIMENSIONS FOR RENDERERS
+        // Ensure structural paint for engine dimensions
         await new Promise(r => requestAnimationFrame(r));
 
         // INITIALIZE 2D LEAFLET
@@ -208,7 +208,6 @@ export async function initRegionsEngine(containerId) {
             .polygonStrokeColor(() => '#111')
             .polygonAltitude(0.01);
 
-        // Responsive Resizing
         window.addEventListener('resize', () => {
             if(map2D) map2D.invalidateSize();
             if(map3D) {
@@ -223,6 +222,55 @@ export async function initRegionsEngine(containerId) {
 
         function toTitleCase(str) { return (!str) ? '' : str.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '); }
 
+        // GPS AUTONOMOUS ROUTING
+        function determineUserRegionViaGPS() {
+            return new Promise((resolve) => {
+                if (!navigator.geolocation) {
+                    console.warn("Geolocation API not supported.");
+                    return resolve('GLOBAL');
+                }
+
+                container.querySelector('#geoHierarchyBreadcrumb').innerText = "Locating Edge Device...";
+
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const userPt = window.turf.point([position.coords.longitude, position.coords.latitude]);
+                        let deepestNode = 'GLOBAL';
+                        let maxDepth = -1;
+                        const depthMap = { 'root': 0, 'continent': 1, 'sub_continent': 2, 'country': 3, 'state': 4, 'district': 5, 'taluk': 6 };
+
+                        // Mathematically intersect GPS with all Supabase GeoJSON
+                        treeNodes.forEach(n => {
+                            try {
+                                if (!n.dynamic_config_payload || !n.dynamic_config_payload.geojson) return;
+                                let rawGeom = n.dynamic_config_payload.geojson;
+                                let cleanGeom = rawGeom;
+                                if (rawGeom.type === 'FeatureCollection' && rawGeom.features.length > 0) cleanGeom = rawGeom.features[0].geometry;
+                                else if (rawGeom.type === 'Feature') cleanGeom = rawGeom.geometry;
+
+                                if (cleanGeom.type === 'Polygon' || cleanGeom.type === 'MultiPolygon') {
+                                    if (window.turf.booleanPointInPolygon(userPt, cleanGeom)) {
+                                        let d = depthMap[n.node_level] || 0;
+                                        if (d > maxDepth) {
+                                            maxDepth = d;
+                                            deepestNode = n.node_id;
+                                        }
+                                    }
+                                }
+                            } catch(e) {} // Silently ignore bad polygons during intersection scan
+                        });
+
+                        resolve(deepestNode);
+                    },
+                    (error) => {
+                        console.warn("GPS Request Denied or Timeout.", error);
+                        resolve('GLOBAL');
+                    },
+                    { timeout: 6000, enableHighAccuracy: false }
+                );
+            });
+        }
+
         async function fetchTreeData() {
             try {
                 const { data, error } = await window.nanbiDB.from('regional_hierarchy_nodes').select('*').order('node_level');
@@ -231,14 +279,10 @@ export async function initRegionsEngine(containerId) {
                     treeNodes = data.filter(n => n.node_id !== 'ATA' && n.node_id !== 'AN'); 
                     populateDropdown('selContinent', 'continent', 'GLOBAL');
                     
-                    // AUTONOMOUS CONTEXT ROUTING
-                    let anchorNode = 'GLOBAL';
-                    if (treeNodes.some(n => n.node_id === 'IN-KA')) anchorNode = 'IN-KA';
-                    else if (treeNodes.some(n => n.node_id === 'IN')) anchorNode = 'IN';
-                    else if (treeNodes.some(n => n.node_id === 'AS-SAS')) anchorNode = 'AS-SAS';
-                    else if (treeNodes.some(n => n.node_id === 'AS')) anchorNode = 'AS';
+                    // Fetch user's exact region via GPS, fallback to GLOBAL
+                    const activeAnchor = await determineUserRegionViaGPS();
                     
-                    applyGlobalSelection(anchorNode);
+                    applyGlobalSelection(activeAnchor);
                     setupDropdownListeners();
                 }
             } catch (err) { 
@@ -280,16 +324,6 @@ export async function initRegionsEngine(containerId) {
         function applyGlobalSelection(nodeId) {
             const fallbackGlobalNode = { node_id: 'GLOBAL', node_name: 'World', node_level: 'root', dynamic_config_payload: {} };
             const activeNode = treeNodes.find(n => n.node_id === nodeId) || fallbackGlobalNode;
-
-            // Handle Globe Auto-Rotation based on selection
-            if (map3D) {
-                if (nodeId === 'GLOBAL') {
-                    map3D.controls().autoRotate = true;
-                    map3D.controls().autoRotateSpeed = 0.8;
-                } else {
-                    map3D.controls().autoRotate = false;
-                }
-            }
 
             const lineage = getLineage(nodeId);
             if (nodeId === 'GLOBAL') {
@@ -480,10 +514,12 @@ export async function initRegionsEngine(containerId) {
                     }
 
                     // 3D GLOBE MATH
-                    if (map3D && nodeId !== 'GLOBAL') {
+                    if (map3D) {
                         const maxDiff = Math.max(Math.abs(bbox[2] - bbox[0]), Math.abs(bbox[3] - bbox[1]));
                         let altitude = maxDiff / 50; 
                         if (altitude < 0.3) altitude = 0.3;
+                        if (nodeId === 'GLOBAL') altitude = 2.5;
+
                         map3D.pointOfView({ lat: lat, lng: lng, altitude: altitude }, 1500);
                     }
                 } catch(err) {
