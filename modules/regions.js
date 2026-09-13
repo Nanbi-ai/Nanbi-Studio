@@ -75,7 +75,7 @@ export async function initRegionsEngine(containerId) {
                         </div>
                         <div class="shrink-0 panel-card p-3 shadow-sm z-20">
                             <div class="flex justify-between items-center pb-1.5 border-b border-[color:var(--border)] mb-2">
-                                <span id="geoHierarchyBreadcrumb" class="text-[11px] font-bold text-[color:var(--brand-orange-dark)] uppercase tracking-wide">Syncing Tree Ledger...</span>
+                                <span id="geoHierarchyBreadcrumb" class="text-[11px] font-bold text-[color:var(--brand-orange-dark)] uppercase tracking-wide">Initializing Matrix...</span>
                                 <button id="btnResetView" class="text-[10px] font-bold text-[color:var(--muted)] hover:text-[color:var(--brand-orange-dark)] transition"><i class="fas fa-undo mr-1"></i> Reset Matrix</button>
                             </div>
                             <div class="grid grid-cols-2 gap-x-3 gap-y-2">
@@ -100,7 +100,7 @@ export async function initRegionsEngine(containerId) {
                             <div class="flex-1 overflow-y-auto">
                                 <table class="w-full border-collapse">
                                     <thead><tr><th class="pl-4">Node ID</th><th>Jurisdiction Name</th><th>Level</th><th class="text-right pr-4">Gov Code</th></tr></thead>
-                                    <tbody id="territoryTbody" class="cursor-pointer"><tr><td colspan="4" class="py-16 text-center text-[color:var(--brand-orange-dark)] font-medium">Booting Spatial Ledger...</td></tr></tbody>
+                                    <tbody id="territoryTbody" class="cursor-pointer"><tr><td colspan="4" class="py-16 text-center text-[color:var(--brand-orange-dark)] font-medium">Synchronizing with Edge Ledger...</td></tr></tbody>
                                 </table>
                             </div>
                         </div>
@@ -224,8 +224,6 @@ export async function initRegionsEngine(containerId) {
             try {
                 if (!window.nanbiDB) throw new Error("Supabase client is undefined.");
                 
-                // CRITICAL FIX: .limit(10000) prevents the 1000-row truncation timeout
-                // Fetches ONLY text metadata to keep it instant and lightweight
                 const { data, error } = await window.nanbiDB.from('regional_hierarchy_nodes')
                     .select('node_id, parent_id, node_level, node_name')
                     .limit(10000);
@@ -240,7 +238,6 @@ export async function initRegionsEngine(containerId) {
                     
                     populateDropdown('selContinent', 'continent', 'GLOBAL');
                     
-                    // Natively default to User Profile Edge Context (Non-Negotiable)
                     const userProfileRegion = 'IN-KA'; 
                     await applyGlobalSelection(userProfileRegion);
                     
@@ -276,9 +273,17 @@ export async function initRegionsEngine(containerId) {
         // ==========================================
         // JIT (JUST-IN-TIME) SPATIAL RENDERING ENGINE
         // ==========================================
-        async function applyGlobalSelection(nodeId) {
+        async function applyGlobalSelection(targetNodeId) {
             const bc = container.querySelector('#geoHierarchyBreadcrumb');
             if(bc) bc.innerText = "Structuring Context...";
+
+            // AGENTIC ROUTING FAILSAFE: If the requested profile/region (e.g., IN-KA) is not yet ingested in the database,
+            // the engine mathematically catches the null state and defaults safely to the GLOBAL root.
+            let nodeId = targetNodeId;
+            if (nodeId !== 'GLOBAL' && !treeNodes.some(n => n.node_id === nodeId)) {
+                console.warn(`[Nanbi Edge] Node ${nodeId} not found in local ledger. Falling back to GLOBAL root.`);
+                nodeId = 'GLOBAL';
+            }
 
             const fallbackGlobalNode = { node_id: 'GLOBAL', node_name: 'World', node_level: 'root' };
             const activeNode = treeNodes.find(n => n.node_id === nodeId) || fallbackGlobalNode;
@@ -511,9 +516,9 @@ export async function initRegionsEngine(containerId) {
                             container.querySelector('#configNodeMeta').innerText = `Level: ${node.node_level.toUpperCase()} | ID: ${node.node_id}`;
                             const ta = container.querySelector('#jsonConfigTextarea');
                             ta.disabled = true;
-                            ta.value = "Fetching secure payload from server...";
+                            ta.value = "Fetching secure payload...";
                             
-                            // JIT Fetch for specific node config
+                            // JIT Fetching for Config Hub
                             const { data: pData } = await window.nanbiDB.from('regional_hierarchy_nodes').select('dynamic_config_payload').eq('node_id', node.node_id).single();
                             if(pData) {
                                 ta.value = JSON.stringify(pData.dynamic_config_payload, null, 4);
