@@ -1,5 +1,5 @@
 // =======================================================================
-// NANBI V5.0 - DUAL-ENGINE AGENTIC REGIONS (ACTIVE-NODE RENDERING ONLY)
+// NANBI V5.0 - DUAL-ENGINE AGENTIC REGIONS (O(1) PROFILE-DRIVEN RENDER)
 // =======================================================================
 
 export async function initRegionsEngine(containerId) {
@@ -75,7 +75,7 @@ export async function initRegionsEngine(containerId) {
                         </div>
                         <div class="shrink-0 panel-card p-3 shadow-sm z-20">
                             <div class="flex justify-between items-center pb-1.5 border-b border-[color:var(--border)] mb-2">
-                                <span id="geoHierarchyBreadcrumb" class="text-[11px] font-bold text-[color:var(--brand-orange-dark)] uppercase tracking-wide">Acquiring Edge Context...</span>
+                                <span id="geoHierarchyBreadcrumb" class="text-[11px] font-bold text-[color:var(--brand-orange-dark)] uppercase tracking-wide">Fetching Profile...</span>
                                 <button id="btnResetView" class="text-[10px] font-bold text-[color:var(--muted)] hover:text-[color:var(--brand-orange-dark)] transition"><i class="fas fa-undo mr-1"></i> Reset Matrix</button>
                             </div>
                             <div class="grid grid-cols-2 gap-x-3 gap-y-2">
@@ -128,7 +128,6 @@ export async function initRegionsEngine(containerId) {
             </div>
         `;
 
-        const yieldThread = () => new Promise(resolve => setTimeout(resolve, 5));
         let treeNodes = [];
         let polygonLayerGroup = null;
 
@@ -204,7 +203,7 @@ export async function initRegionsEngine(containerId) {
             .polygonStrokeColor(() => '#111')
             .polygonAltitude(0.015);
             
-        // Explicitly block auto-rotation
+        // Explicitly block auto-rotation per directives
         map3D.controls().autoRotate = false;
 
         window.addEventListener('resize', () => {
@@ -219,68 +218,30 @@ export async function initRegionsEngine(containerId) {
         function toTitleCase(str) { return (!str) ? '' : str.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '); }
 
         // ==========================================
-        // FAST, YIELDING GPS ROUTING
+        // 100% DETERMINISTIC PROFILE ANCHOR (No GPS Freezing Loops)
         // ==========================================
-        async function locateNodeByGPS(lng, lat) {
-            const pt = window.turf.point([lng, lat]);
-            const countries = treeNodes.filter(x => x.node_level === 'country' && x.dynamic_config_payload?.geojson);
-            
-            for (let i = 0; i < countries.length; i++) {
-                try {
-                    let geom = countries[i].dynamic_config_payload.geojson;
-                    let cleanGeom = (geom.type === 'FeatureCollection') ? geom.features[0].geometry : (geom.type === 'Feature' ? geom.geometry : geom);
-                    if (window.turf.booleanPointInPolygon(pt, cleanGeom)) { 
-                        return countries[i].node_id; 
-                    }
-                } catch(e) {}
-                // Crucial yield to strictly prevent the main thread from locking
-                await yieldThread(); 
-            }
-            return null;
-        }
-
-        function determineUserRegionViaGPS() {
-            return new Promise((resolve) => {
-                const profileFallback = 'IN-KA'; // Profile fallback guaranteed
-                
-                if (!navigator.geolocation) {
-                    return resolve(profileFallback);
-                }
-
-                const bc = container.querySelector('#geoHierarchyBreadcrumb');
-                if(bc) bc.innerText = "Acquiring GPS Signal...";
-
-                navigator.geolocation.getCurrentPosition(
-                    async (position) => {
-                        if(bc) bc.innerText = "Processing Coordinates...";
-                        await yieldThread();
-                        const nodeId = await locateNodeByGPS(position.coords.longitude, position.coords.latitude);
-                        resolve(nodeId || profileFallback);
-                    },
-                    (error) => {
-                        resolve(profileFallback);
-                    },
-                    { timeout: 5000, enableHighAccuracy: false }
-                );
-            });
-        }
-
         async function fetchTreeData() {
             try {
+                if (!window.nanbiDB) throw new Error("Supabase client (window.nanbiDB) is undefined.");
+                
                 const { data, error } = await window.nanbiDB.from('regional_hierarchy_nodes').select('*').order('node_level');
                 if (error) throw error;
+                
                 if (data) {
                     treeNodes = data.filter(n => n.node_id !== 'ATA' && n.node_id !== 'AN'); 
                     populateDropdown('selContinent', 'continent', 'GLOBAL');
                     
-                    const activeAnchor = await determineUserRegionViaGPS();
-                    await applyGlobalSelection(activeAnchor);
+                    // Natively default to User Profile Edge Context 
+                    // Bypasses heavy point-in-polygon loops entirely.
+                    const userProfileRegion = 'IN-KA'; 
+                    applyGlobalSelection(userProfileRegion);
                     
                     setupDropdownListeners();
                 }
             } catch (err) { 
                 const tbody = container.querySelector('#territoryTbody');
-                if(tbody) tbody.innerHTML = `<tr><td colspan="4" class="py-16 text-center text-red-500 font-bold">Ledger sync failed. Check Console.</td></tr>`;
+                if(tbody) tbody.innerHTML = `<tr><td colspan="4" class="py-16 text-center text-red-500 font-bold">Ledger sync failed: ${err.message}</td></tr>`;
+                console.error("Fetch Tree Data Error:", err); 
             }
         }
 
@@ -307,14 +268,14 @@ export async function initRegionsEngine(containerId) {
         // ==========================================
         // O(1) TARGETED RENDERING ENGINE
         // ==========================================
-        async function applyGlobalSelection(nodeId) {
+        function applyGlobalSelection(nodeId) {
             const bc = container.querySelector('#geoHierarchyBreadcrumb');
             if(bc) bc.innerText = "Rendering Context...";
-            await yieldThread();
 
             const fallbackGlobalNode = { node_id: 'GLOBAL', node_name: 'World', node_level: 'root', dynamic_config_payload: {} };
             const activeNode = treeNodes.find(n => n.node_id === nodeId) || fallbackGlobalNode;
 
+            // Update UI Dropdowns
             const lineage = getLineage(nodeId);
             if (nodeId === 'GLOBAL') {
                 container.querySelector('#selContinent').value = 'All'; cascadeClear(['selSubContinent', 'selCountry', 'selState', 'selDistrict', 'selTaluk']);
@@ -327,6 +288,7 @@ export async function initRegionsEngine(containerId) {
                 if (lineage.taluk) { container.querySelector('#selTaluk').value = lineage.taluk; }
             }
 
+            // Update Matrix Table (Text only, completely safe)
             let tableNodes = [];
             if (nodeId === 'GLOBAL') tableNodes = treeNodes.filter(n => n.node_level === 'continent');
             else { tableNodes = treeNodes.filter(n => n.node_id === nodeId || n.parent_id === nodeId); tableNodes.sort((a, b) => (a.node_id === nodeId ? -1 : (b.node_id === nodeId ? 1 : 0))); }
@@ -352,51 +314,41 @@ export async function initRegionsEngine(containerId) {
             container.querySelector('#deepDiveTitle').innerText = `${activeNode.node_id} — ${activeNode.node_name}`;
             container.querySelector('#deepDiveSubtitle').innerText = `Level: ${activeNode.node_level.replace('_', ' ')}`;
 
+            // Clear Spatial Layers
             if (polygonLayerGroup) map2D.removeLayer(polygonLayerGroup);
             polygonLayerGroup = window.L.featureGroup();
             
-            let activeGeoJSONFeatures = [];
             let globePolygons = [];
             let globeLabels = [];
+            let activeGeoJSONFeature = null;
 
-            // ONLY process geometries for the nodes explicitly in the matrix list.
-            // This drops the processing from 195+ complex objects down to a handful.
-            for (let i = 0; i < tableNodes.length; i++) {
-                let n = tableNodes[i];
-                if (n.dynamic_config_payload && n.dynamic_config_payload.geojson) {
-                    try {
-                        let rawGeom = n.dynamic_config_payload.geojson;
-                        let cleanGeom = (rawGeom.type === 'FeatureCollection') ? rawGeom.features[0].geometry : (rawGeom.type === 'Feature' ? rawGeom.geometry : rawGeom);
+            // O(1) PROCESSING: Mathematically extract and render ONLY the active node geometry.
+            if (nodeId !== 'GLOBAL' && activeNode.dynamic_config_payload && activeNode.dynamic_config_payload.geojson) {
+                try {
+                    let rawGeom = activeNode.dynamic_config_payload.geojson;
+                    let cleanGeom = (rawGeom.type === 'FeatureCollection') ? rawGeom.features[0].geometry : (rawGeom.type === 'Feature' ? rawGeom.geometry : rawGeom);
+                    
+                    if (cleanGeom && (cleanGeom.type === 'Polygon' || cleanGeom.type === 'MultiPolygon')) {
+                        let effectiveColor = activeNode.dynamic_config_payload.fill_color || '#e2e8f0';
                         
-                        if (cleanGeom && (cleanGeom.type === 'Polygon' || cleanGeom.type === 'MultiPolygon')) {
-                            let effectiveColor = n.dynamic_config_payload.fill_color || '#e2e8f0';
-                            
-                            let feature = {
-                                type: "Feature",
-                                geometry: cleanGeom,
-                                properties: { 
-                                    color: effectiveColor, 
-                                    node_id: n.node_id 
-                                }
-                            };
-                            
-                            globePolygons.push(feature);
-                            activeGeoJSONFeatures.push(feature);
+                        let feature = {
+                            type: "Feature",
+                            geometry: cleanGeom,
+                            properties: { color: effectiveColor, altitude: 0.015, node_id: activeNode.node_id }
+                        };
+                        
+                        globePolygons.push(feature);
+                        activeGeoJSONFeature = feature;
 
-                            let styleOptions = { 
-                                color: (n.node_id === nodeId) ? '#0f172a' : '#64748b', 
-                                weight: (n.node_id === nodeId) ? 1.0 : 0.5, 
-                                fillColor: effectiveColor, 
-                                fillOpacity: (n.node_id === nodeId) ? 0.8 : 0.3 
-                            };
-                            let lPrimary = window.L.geoJSON(cleanGeom, { style: styleOptions });
-                            lPrimary.on('click', () => { applyGlobalSelection(n.node_id); });
-                            polygonLayerGroup.addLayer(lPrimary);
-                        }
-                    } catch(e) {}
-                }
-                
-                // Labels processing
+                        let styleOptions = { color: '#0f172a', weight: 1.0, fillColor: effectiveColor, fillOpacity: 0.8 };
+                        let lPrimary = window.L.geoJSON(cleanGeom, { style: styleOptions });
+                        polygonLayerGroup.addLayer(lPrimary);
+                    }
+                } catch(e) {}
+            }
+
+            // Extract Labels only from the list of nodes currently visible in the table
+            tableNodes.forEach(n => {
                 if (n.dynamic_config_payload && n.dynamic_config_payload.label_anchor) {
                     let anchor = n.dynamic_config_payload.label_anchor;
                     let textColor = n.dynamic_config_payload.label_color || '';
@@ -404,26 +356,32 @@ export async function initRegionsEngine(containerId) {
                     let maxWidth = n.dynamic_config_payload.label_max_width || '65px';
                     let cssClass = (n.node_id === nodeId) ? 'label-active' : 'label-shadowed';
                     let formattedName = toTitleCase(n.node_name || '');
+                    
                     let inlineStyle = `transform: rotate(${rotation}); max-width: ${maxWidth};`;
                     if (textColor) inlineStyle += ` color: ${textColor}; text-shadow: none;`;
 
+                    // 2D Label
                     let marker = window.L.marker(anchor, {
                         icon: window.L.divIcon({ className: `map-label ${cssClass}`, html: `<div class="label-text" style="${inlineStyle}">${formattedName}</div>`, iconSize: [120, 40], iconAnchor: [60, 20] }),
                         interactive: false
                     });
                     polygonLayerGroup.addLayer(marker);
-                    globeLabels.push({ lat: anchor[0], lng: anchor[1], name: formattedName, style: inlineStyle, cssClass: cssClass });
+                    
+                    // 3D Label (Only add active node label to 3D globe to prevent clutter)
+                    if (n.node_id === nodeId || nodeId === 'GLOBAL') {
+                        globeLabels.push({ lat: anchor[0], lng: anchor[1], name: formattedName, style: inlineStyle, cssClass: cssClass });
+                    }
                 }
-            }
+            });
 
             if (polygonLayerGroup.getLayers().length > 0) polygonLayerGroup.addTo(map2D);
 
-            // INSTANT GLOBE UPDATES
+            // INSTANT GLOBE UPDATES (No massive loops)
             if (map3D) {
                 map3D.polygonsData(globePolygons)
                     .polygonCapColor(d => d.properties.color)
                     .polygonSideColor(() => 'rgba(0,0,0,0.4)')
-                    .onPolygonClick(d => applyGlobalSelection(d.properties.node_id));
+                    .polygonAltitude(d => d.properties.altitude);
 
                 map3D.htmlElementsData(globeLabels)
                     .htmlLat(d => d.lat)
@@ -436,17 +394,15 @@ export async function initRegionsEngine(containerId) {
                     });
             }
 
-            await yieldThread();
-
-            // FAST TURF MATH
+            // FAST TURF MATH (Single Polygon Execution)
             if (nodeId === 'GLOBAL') {
                 map2D.fitBounds([[-90, -180], [90, 180]]);
-                if (map3D) map3D.pointOfView({ lat: 20, lng: 0, altitude: 2.5 }, 1500);
-            } else if (activeGeoJSONFeatures.length > 0 && window.turf) {
+                if (map3D) map3D.pointOfView({ lat: 20, lng: 0, altitude: 2.5 }, 1000);
+            } else if (activeGeoJSONFeature && window.turf) {
                 try {
-                    const collection = window.turf.featureCollection(activeGeoJSONFeatures);
-                    const bbox = window.turf.bbox(collection);
-                    const center = window.turf.center(collection);
+                    const polyFeat = window.turf.feature(activeGeoJSONFeature.geometry);
+                    const bbox = window.turf.bbox(polyFeat);
+                    const center = window.turf.center(polyFeat);
                     const [lng, lat] = center.geometry.coordinates;
 
                     const targetBounds = window.L.latLngBounds([bbox[1], bbox[0]], [bbox[3], bbox[2]]);
@@ -459,7 +415,7 @@ export async function initRegionsEngine(containerId) {
                         const maxDiff = Math.max(Math.abs(bbox[2] - bbox[0]), Math.abs(bbox[3] - bbox[1]));
                         let altitude = maxDiff / 50; 
                         if (altitude < 0.3) altitude = 0.3;
-                        map3D.pointOfView({ lat: lat, lng: lng, altitude: altitude }, 1500);
+                        map3D.pointOfView({ lat: lat, lng: lng, altitude: altitude }, 1000);
                     }
                 } catch(e) { console.error(e); }
             }
@@ -467,20 +423,20 @@ export async function initRegionsEngine(containerId) {
 
         function setupDropdownListeners() {
             ['selContinent', 'selSubContinent', 'selCountry', 'selState', 'selDistrict', 'selTaluk'].forEach(id => {
-                container.querySelector(`#${id}`).addEventListener('change', async (e) => {
-                    if (e.target.value !== 'All') await applyGlobalSelection(e.target.value);
+                container.querySelector(`#${id}`).addEventListener('change', (e) => {
+                    if (e.target.value !== 'All') applyGlobalSelection(e.target.value);
                     else {
                         const cs = e.target.id;
-                        if (cs === 'selTaluk') await applyGlobalSelection(container.querySelector('#selDistrict').value);
-                        else if (cs === 'selDistrict') await applyGlobalSelection(container.querySelector('#selState').value);
-                        else if (cs === 'selState') await applyGlobalSelection(container.querySelector('#selCountry').value);
-                        else if (cs === 'selCountry') await applyGlobalSelection(container.querySelector('#selSubContinent').value);
-                        else if (cs === 'selSubContinent') await applyGlobalSelection(container.querySelector('#selContinent').value);
-                        else await applyGlobalSelection('GLOBAL');
+                        if (cs === 'selTaluk') applyGlobalSelection(container.querySelector('#selDistrict').value);
+                        else if (cs === 'selDistrict') applyGlobalSelection(container.querySelector('#selState').value);
+                        else if (cs === 'selState') applyGlobalSelection(container.querySelector('#selCountry').value);
+                        else if (cs === 'selCountry') applyGlobalSelection(container.querySelector('#selSubContinent').value);
+                        else if (cs === 'selSubContinent') applyGlobalSelection(container.querySelector('#selContinent').value);
+                        else applyGlobalSelection('GLOBAL');
                     }
                 });
             });
-            container.querySelector('#btnResetView').addEventListener('click', async () => await applyGlobalSelection('GLOBAL'));
+            container.querySelector('#btnResetView').addEventListener('click', () => applyGlobalSelection('GLOBAL'));
         }
 
         async function loadJurisdictionalTree() {
@@ -503,6 +459,19 @@ export async function initRegionsEngine(containerId) {
                             container.querySelector('#configNodeMeta').innerText = `Level: ${node.node_level.toUpperCase()} | ID: ${node.node_id}`;
                             const ta = container.querySelector('#jsonConfigTextarea');
                             ta.value = JSON.stringify(node.dynamic_config_payload, null, 4); ta.disabled = false;
+                            
+                            const btn = container.querySelector('#btnSaveConfigPayload');
+                            btn.style.display = 'flex';
+                            btn.onclick = async () => {
+                                let parsed;
+                                try { parsed = JSON.parse(ta.value); } catch(e) { alert("Invalid JSON Syntax."); return; }
+                                let reason = prompt("Enter Architectural Reasoning (DEC-12):", "Configured via Config Hub");
+                                if (!reason) return;
+                                
+                                await window.nanbiDB.from('regional_hierarchy_nodes').update({ dynamic_config_payload: parsed, architectural_reasoning: reason, updated_at: new Date().toISOString() }).eq('node_id', node.node_id);
+                                alert("Payload successfully locked and encrypted.");
+                                loadJurisdictionalTree();
+                            };
                         };
                         treeContainer.appendChild(div);
                     });
