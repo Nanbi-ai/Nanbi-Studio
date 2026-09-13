@@ -1,5 +1,5 @@
 // =======================================================================
-// NANBI V5.0 - DUAL-ENGINE AGENTIC REGIONS (O(1) PROFILE-DRIVEN RENDER)
+// NANBI V5.0 - DUAL-ENGINE AGENTIC REGIONS (JIT SPATIAL FETCHING)
 // =======================================================================
 
 export async function initRegionsEngine(containerId) {
@@ -75,7 +75,7 @@ export async function initRegionsEngine(containerId) {
                         </div>
                         <div class="shrink-0 panel-card p-3 shadow-sm z-20">
                             <div class="flex justify-between items-center pb-1.5 border-b border-[color:var(--border)] mb-2">
-                                <span id="geoHierarchyBreadcrumb" class="text-[11px] font-bold text-[color:var(--brand-orange-dark)] uppercase tracking-wide">Fetching Profile...</span>
+                                <span id="geoHierarchyBreadcrumb" class="text-[11px] font-bold text-[color:var(--brand-orange-dark)] uppercase tracking-wide">Syncing Tree Ledger...</span>
                                 <button id="btnResetView" class="text-[10px] font-bold text-[color:var(--muted)] hover:text-[color:var(--brand-orange-dark)] transition"><i class="fas fa-undo mr-1"></i> Reset Matrix</button>
                             </div>
                             <div class="grid grid-cols-2 gap-x-3 gap-y-2">
@@ -100,7 +100,7 @@ export async function initRegionsEngine(containerId) {
                             <div class="flex-1 overflow-y-auto">
                                 <table class="w-full border-collapse">
                                     <thead><tr><th class="pl-4">Node ID</th><th>Jurisdiction Name</th><th>Level</th><th class="text-right pr-4">Gov Code</th></tr></thead>
-                                    <tbody id="territoryTbody" class="cursor-pointer"><tr><td colspan="4" class="py-16 text-center text-[color:var(--brand-orange-dark)] font-medium">Synchronizing Ledger...</td></tr></tbody>
+                                    <tbody id="territoryTbody" class="cursor-pointer"><tr><td colspan="4" class="py-16 text-center text-[color:var(--brand-orange-dark)] font-medium">Booting Spatial Ledger...</td></tr></tbody>
                                 </table>
                             </div>
                         </div>
@@ -128,6 +128,7 @@ export async function initRegionsEngine(containerId) {
             </div>
         `;
 
+        const yieldThread = () => new Promise(resolve => setTimeout(resolve, 5));
         let treeNodes = [];
         let polygonLayerGroup = null;
 
@@ -203,7 +204,6 @@ export async function initRegionsEngine(containerId) {
             .polygonStrokeColor(() => '#111')
             .polygonAltitude(0.015);
             
-        // Explicitly block auto-rotation per directives
         map3D.controls().autoRotate = false;
 
         window.addEventListener('resize', () => {
@@ -218,23 +218,32 @@ export async function initRegionsEngine(containerId) {
         function toTitleCase(str) { return (!str) ? '' : str.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '); }
 
         // ==========================================
-        // 100% DETERMINISTIC PROFILE ANCHOR (No GPS Freezing Loops)
+        // STRUCTURAL SKELETON FETCHING (Bypasses Supabase Timeout)
         // ==========================================
         async function fetchTreeData() {
             try {
-                if (!window.nanbiDB) throw new Error("Supabase client (window.nanbiDB) is undefined.");
+                if (!window.nanbiDB) throw new Error("Supabase client is undefined.");
                 
-                const { data, error } = await window.nanbiDB.from('regional_hierarchy_nodes').select('*').order('node_level');
+                // CRITICAL FIX: Only fetching the lightweight string metadata to build the UI instantly.
+                // We do NOT download the massive dynamic_config_payload GeoJSONs on boot.
+                const { data, error } = await window.nanbiDB.from('regional_hierarchy_nodes')
+                    .select('node_id, parent_id, node_level, node_name')
+                    .order('node_level');
+                    
                 if (error) throw error;
                 
                 if (data) {
-                    treeNodes = data.filter(n => n.node_id !== 'ATA' && n.node_id !== 'AN'); 
+                    // Initialize objects with a payload tracking flag
+                    treeNodes = data.filter(n => n.node_id !== 'ATA' && n.node_id !== 'AN').map(n => ({
+                        ...n,
+                        payload_fetched: false
+                    }));
+                    
                     populateDropdown('selContinent', 'continent', 'GLOBAL');
                     
                     // Natively default to User Profile Edge Context 
-                    // Bypasses heavy point-in-polygon loops entirely.
                     const userProfileRegion = 'IN-KA'; 
-                    applyGlobalSelection(userProfileRegion);
+                    await applyGlobalSelection(userProfileRegion);
                     
                     setupDropdownListeners();
                 }
@@ -266,16 +275,16 @@ export async function initRegionsEngine(containerId) {
         function cascadeClear(ids) { ids.forEach(id => { const el = container.querySelector(`#${id}`); if (el) { el.innerHTML = '<option value="All">All</option>'; el.disabled = true; } }); }
 
         // ==========================================
-        // O(1) TARGETED RENDERING ENGINE
+        // JIT (JUST-IN-TIME) SPATIAL RENDERING ENGINE
         // ==========================================
-        function applyGlobalSelection(nodeId) {
+        async function applyGlobalSelection(nodeId) {
             const bc = container.querySelector('#geoHierarchyBreadcrumb');
-            if(bc) bc.innerText = "Rendering Context...";
+            if(bc) bc.innerText = "Structuring Context...";
 
-            const fallbackGlobalNode = { node_id: 'GLOBAL', node_name: 'World', node_level: 'root', dynamic_config_payload: {} };
+            const fallbackGlobalNode = { node_id: 'GLOBAL', node_name: 'World', node_level: 'root' };
             const activeNode = treeNodes.find(n => n.node_id === nodeId) || fallbackGlobalNode;
 
-            // Update UI Dropdowns
+            // UI Matrix Cascade
             const lineage = getLineage(nodeId);
             if (nodeId === 'GLOBAL') {
                 container.querySelector('#selContinent').value = 'All'; cascadeClear(['selSubContinent', 'selCountry', 'selState', 'selDistrict', 'selTaluk']);
@@ -288,7 +297,6 @@ export async function initRegionsEngine(containerId) {
                 if (lineage.taluk) { container.querySelector('#selTaluk').value = lineage.taluk; }
             }
 
-            // Update Matrix Table (Text only, completely safe)
             let tableNodes = [];
             if (nodeId === 'GLOBAL') tableNodes = treeNodes.filter(n => n.node_level === 'continent');
             else { tableNodes = treeNodes.filter(n => n.node_id === nodeId || n.parent_id === nodeId); tableNodes.sort((a, b) => (a.node_id === nodeId ? -1 : (b.node_id === nodeId ? 1 : 0))); }
@@ -310,45 +318,76 @@ export async function initRegionsEngine(containerId) {
                 tbody.appendChild(tr);
             });
 
+            if(bc) bc.innerText = "Syncing Spatial Ledger...";
+            
+            // JIT DATA FETCHING: Only download the massive GeoJSON for the nodes visible on screen right now.
+            let nodesToFetch = [activeNode, ...tableNodes].filter(n => n && !n.payload_fetched && n.node_id !== 'GLOBAL');
+            let fetchIds = nodesToFetch.map(n => n.node_id);
+            
+            if (fetchIds.length > 0) {
+                try {
+                    const { data: payloadData, error: fetchErr } = await window.nanbiDB.from('regional_hierarchy_nodes')
+                        .select('node_id, dynamic_config_payload')
+                        .in('node_id', fetchIds);
+                        
+                    if (!fetchErr && payloadData) {
+                        payloadData.forEach(p => {
+                            let match = treeNodes.find(n => n.node_id === p.node_id);
+                            if (match) {
+                                match.dynamic_config_payload = p.dynamic_config_payload;
+                                match.payload_fetched = true;
+                            }
+                        });
+                    }
+                } catch (e) {
+                    console.error("Payload Fetch Error:", e);
+                }
+            }
+
             if(bc) bc.innerText = activeNode.node_name;
             container.querySelector('#deepDiveTitle').innerText = `${activeNode.node_id} — ${activeNode.node_name}`;
             container.querySelector('#deepDiveSubtitle').innerText = `Level: ${activeNode.node_level.replace('_', ' ')}`;
 
-            // Clear Spatial Layers
             if (polygonLayerGroup) map2D.removeLayer(polygonLayerGroup);
             polygonLayerGroup = window.L.featureGroup();
             
+            let activeGeoJSONFeatures = [];
             let globePolygons = [];
             let globeLabels = [];
-            let activeGeoJSONFeature = null;
 
-            // O(1) PROCESSING: Mathematically extract and render ONLY the active node geometry.
-            if (nodeId !== 'GLOBAL' && activeNode.dynamic_config_payload && activeNode.dynamic_config_payload.geojson) {
-                try {
-                    let rawGeom = activeNode.dynamic_config_payload.geojson;
-                    let cleanGeom = (rawGeom.type === 'FeatureCollection') ? rawGeom.features[0].geometry : (rawGeom.type === 'Feature' ? rawGeom.geometry : rawGeom);
-                    
-                    if (cleanGeom && (cleanGeom.type === 'Polygon' || cleanGeom.type === 'MultiPolygon')) {
-                        let effectiveColor = activeNode.dynamic_config_payload.fill_color || '#e2e8f0';
+            for (let i = 0; i < tableNodes.length; i++) {
+                let n = tableNodes[i];
+                if (n.dynamic_config_payload && n.dynamic_config_payload.geojson) {
+                    try {
+                        let rawGeom = n.dynamic_config_payload.geojson;
+                        let cleanGeom = (rawGeom.type === 'FeatureCollection') ? rawGeom.features[0].geometry : (rawGeom.type === 'Feature' ? rawGeom.geometry : rawGeom);
                         
-                        let feature = {
-                            type: "Feature",
-                            geometry: cleanGeom,
-                            properties: { color: effectiveColor, altitude: 0.015, node_id: activeNode.node_id }
-                        };
-                        
-                        globePolygons.push(feature);
-                        activeGeoJSONFeature = feature;
+                        if (cleanGeom && (cleanGeom.type === 'Polygon' || cleanGeom.type === 'MultiPolygon')) {
+                            let effectiveColor = n.dynamic_config_payload.fill_color || '#e2e8f0';
+                            
+                            let feature = {
+                                type: "Feature",
+                                geometry: cleanGeom,
+                                properties: { color: effectiveColor, node_id: n.node_id }
+                            };
+                            
+                            globePolygons.push(feature);
+                            activeGeoJSONFeatures.push(feature);
 
-                        let styleOptions = { color: '#0f172a', weight: 1.0, fillColor: effectiveColor, fillOpacity: 0.8 };
-                        let lPrimary = window.L.geoJSON(cleanGeom, { style: styleOptions });
-                        polygonLayerGroup.addLayer(lPrimary);
-                    }
-                } catch(e) {}
-            }
-
-            // Extract Labels only from the list of nodes currently visible in the table
-            tableNodes.forEach(n => {
+                            let styleOptions = { 
+                                color: (n.node_id === nodeId) ? '#0f172a' : '#64748b', 
+                                weight: (n.node_id === nodeId) ? 1.0 : 0.5, 
+                                fillColor: effectiveColor, 
+                                fillOpacity: (n.node_id === nodeId) ? 0.8 : 0.3 
+                            };
+                            let lPrimary = window.L.geoJSON(cleanGeom, { style: styleOptions });
+                            lPrimary.on('click', () => { applyGlobalSelection(n.node_id); });
+                            polygonLayerGroup.addLayer(lPrimary);
+                        }
+                    } catch(e) {}
+                }
+                
+                // Labels processing
                 if (n.dynamic_config_payload && n.dynamic_config_payload.label_anchor) {
                     let anchor = n.dynamic_config_payload.label_anchor;
                     let textColor = n.dynamic_config_payload.label_color || '';
@@ -356,32 +395,26 @@ export async function initRegionsEngine(containerId) {
                     let maxWidth = n.dynamic_config_payload.label_max_width || '65px';
                     let cssClass = (n.node_id === nodeId) ? 'label-active' : 'label-shadowed';
                     let formattedName = toTitleCase(n.node_name || '');
-                    
                     let inlineStyle = `transform: rotate(${rotation}); max-width: ${maxWidth};`;
                     if (textColor) inlineStyle += ` color: ${textColor}; text-shadow: none;`;
 
-                    // 2D Label
                     let marker = window.L.marker(anchor, {
                         icon: window.L.divIcon({ className: `map-label ${cssClass}`, html: `<div class="label-text" style="${inlineStyle}">${formattedName}</div>`, iconSize: [120, 40], iconAnchor: [60, 20] }),
                         interactive: false
                     });
                     polygonLayerGroup.addLayer(marker);
-                    
-                    // 3D Label (Only add active node label to 3D globe to prevent clutter)
-                    if (n.node_id === nodeId || nodeId === 'GLOBAL') {
-                        globeLabels.push({ lat: anchor[0], lng: anchor[1], name: formattedName, style: inlineStyle, cssClass: cssClass });
-                    }
+                    globeLabels.push({ lat: anchor[0], lng: anchor[1], name: formattedName, style: inlineStyle, cssClass: cssClass });
                 }
-            });
+            }
 
             if (polygonLayerGroup.getLayers().length > 0) polygonLayerGroup.addTo(map2D);
 
-            // INSTANT GLOBE UPDATES (No massive loops)
+            // INSTANT GLOBE UPDATES
             if (map3D) {
                 map3D.polygonsData(globePolygons)
                     .polygonCapColor(d => d.properties.color)
                     .polygonSideColor(() => 'rgba(0,0,0,0.4)')
-                    .polygonAltitude(d => d.properties.altitude);
+                    .onPolygonClick(d => applyGlobalSelection(d.properties.node_id));
 
                 map3D.htmlElementsData(globeLabels)
                     .htmlLat(d => d.lat)
@@ -394,15 +427,17 @@ export async function initRegionsEngine(containerId) {
                     });
             }
 
-            // FAST TURF MATH (Single Polygon Execution)
+            await yieldThread();
+
+            // FAST TURF MATH
             if (nodeId === 'GLOBAL') {
                 map2D.fitBounds([[-90, -180], [90, 180]]);
-                if (map3D) map3D.pointOfView({ lat: 20, lng: 0, altitude: 2.5 }, 1000);
-            } else if (activeGeoJSONFeature && window.turf) {
+                if (map3D) map3D.pointOfView({ lat: 20, lng: 0, altitude: 2.5 }, 1500);
+            } else if (activeGeoJSONFeatures.length > 0 && window.turf) {
                 try {
-                    const polyFeat = window.turf.feature(activeGeoJSONFeature.geometry);
-                    const bbox = window.turf.bbox(polyFeat);
-                    const center = window.turf.center(polyFeat);
+                    const collection = window.turf.featureCollection(activeGeoJSONFeatures);
+                    const bbox = window.turf.bbox(collection);
+                    const center = window.turf.center(collection);
                     const [lng, lat] = center.geometry.coordinates;
 
                     const targetBounds = window.L.latLngBounds([bbox[1], bbox[0]], [bbox[3], bbox[2]]);
@@ -415,7 +450,7 @@ export async function initRegionsEngine(containerId) {
                         const maxDiff = Math.max(Math.abs(bbox[2] - bbox[0]), Math.abs(bbox[3] - bbox[1]));
                         let altitude = maxDiff / 50; 
                         if (altitude < 0.3) altitude = 0.3;
-                        map3D.pointOfView({ lat: lat, lng: lng, altitude: altitude }, 1000);
+                        map3D.pointOfView({ lat: lat, lng: lng, altitude: altitude }, 1500);
                     }
                 } catch(e) { console.error(e); }
             }
@@ -423,20 +458,20 @@ export async function initRegionsEngine(containerId) {
 
         function setupDropdownListeners() {
             ['selContinent', 'selSubContinent', 'selCountry', 'selState', 'selDistrict', 'selTaluk'].forEach(id => {
-                container.querySelector(`#${id}`).addEventListener('change', (e) => {
-                    if (e.target.value !== 'All') applyGlobalSelection(e.target.value);
+                container.querySelector(`#${id}`).addEventListener('change', async (e) => {
+                    if (e.target.value !== 'All') await applyGlobalSelection(e.target.value);
                     else {
                         const cs = e.target.id;
-                        if (cs === 'selTaluk') applyGlobalSelection(container.querySelector('#selDistrict').value);
-                        else if (cs === 'selDistrict') applyGlobalSelection(container.querySelector('#selState').value);
-                        else if (cs === 'selState') applyGlobalSelection(container.querySelector('#selCountry').value);
-                        else if (cs === 'selCountry') applyGlobalSelection(container.querySelector('#selSubContinent').value);
-                        else if (cs === 'selSubContinent') applyGlobalSelection(container.querySelector('#selContinent').value);
-                        else applyGlobalSelection('GLOBAL');
+                        if (cs === 'selTaluk') await applyGlobalSelection(container.querySelector('#selDistrict').value);
+                        else if (cs === 'selDistrict') await applyGlobalSelection(container.querySelector('#selState').value);
+                        else if (cs === 'selState') await applyGlobalSelection(container.querySelector('#selCountry').value);
+                        else if (cs === 'selCountry') await applyGlobalSelection(container.querySelector('#selSubContinent').value);
+                        else if (cs === 'selSubContinent') await applyGlobalSelection(container.querySelector('#selContinent').value);
+                        else await applyGlobalSelection('GLOBAL');
                     }
                 });
             });
-            container.querySelector('#btnResetView').addEventListener('click', () => applyGlobalSelection('GLOBAL'));
+            container.querySelector('#btnResetView').addEventListener('click', async () => await applyGlobalSelection('GLOBAL'));
         }
 
         async function loadJurisdictionalTree() {
@@ -444,7 +479,7 @@ export async function initRegionsEngine(containerId) {
                 const treeContainer = container.querySelector('#treeListContainer');
                 treeContainer.innerHTML = `<p class="text-[color:var(--muted)] italic text-center py-10">Synchronizing with Edge Ledger...</p>`;
                 
-                const { data } = await window.nanbiDB.from('regional_hierarchy_nodes').select('*').order('node_level');
+                const { data } = await window.nanbiDB.from('regional_hierarchy_nodes').select('node_id, parent_id, node_level, node_name').order('node_level');
                 if (data) {
                     treeNodes = data.filter(n => n.node_id !== 'ATA' && n.node_id !== 'AN'); 
                     container.querySelector('#treeNodeCountBadge').innerText = treeNodes.length + " Nodes";
@@ -454,11 +489,19 @@ export async function initRegionsEngine(containerId) {
                         const div = document.createElement('div');
                         div.className = "p-2.5 rounded border border-[color:var(--border)] hover:bg-[color:var(--hover-bg)] cursor-pointer transition flex justify-between items-center";
                         div.innerHTML = `<div><div class="font-bold text-[color:var(--text)] text-xs">${node.node_name}</div><div class="text-[9px] text-[color:var(--muted)] uppercase font-mono font-bold">${node.node_level.replace('_', ' ')} | ID: ${node.node_id}</div></div><i class="fas fa-edit text-xs text-[color:var(--muted)]"></i>`;
-                        div.onclick = () => {
+                        div.onclick = async () => {
                             container.querySelector('#configNodeTitle').innerText = node.node_name;
                             container.querySelector('#configNodeMeta').innerText = `Level: ${node.node_level.toUpperCase()} | ID: ${node.node_id}`;
                             const ta = container.querySelector('#jsonConfigTextarea');
-                            ta.value = JSON.stringify(node.dynamic_config_payload, null, 4); ta.disabled = false;
+                            ta.disabled = true;
+                            ta.value = "Fetching secure payload...";
+                            
+                            // JIT Fetching for Config Hub
+                            const { data: pData } = await window.nanbiDB.from('regional_hierarchy_nodes').select('dynamic_config_payload').eq('node_id', node.node_id).single();
+                            if(pData) {
+                                ta.value = JSON.stringify(pData.dynamic_config_payload, null, 4);
+                                ta.disabled = false;
+                            }
                             
                             const btn = container.querySelector('#btnSaveConfigPayload');
                             btn.style.display = 'flex';
