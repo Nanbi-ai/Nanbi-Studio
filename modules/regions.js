@@ -1,5 +1,5 @@
 // =======================================================================
-// NANBI V5.0 - DUAL-ENGINE AGENTIC REGIONS (BATCH RENDER & OCEAN BLUE)
+// NANBI V5.0 - DUAL-ENGINE AGENTIC REGIONS (NNs RESTORED & BATCH RENDERED)
 // =======================================================================
 
 export async function initRegionsEngine(containerId) {
@@ -34,9 +34,9 @@ export async function initRegionsEngine(containerId) {
                 #regions-module #map-wrapper { position: relative; width: 100%; height: 100%; min-height: 0; flex: 1; border-radius: 5px; overflow: hidden; }
                 #map-2d, #map-3d { position: absolute; inset: 0; width: 100%; height: 100%; }
                 
-                /* Ocean Blue for 2D Map, Deep Space for 3D Globe */
-                #map-2d { background-color: #0ea5e9; z-index: 5; visibility: hidden; opacity: 0; } 
-                #map-3d { background-color: #0f172a; z-index: 10; visibility: visible; opacity: 1; display: flex; justify-content: center; align-items: center; }
+                /* RESTORED OCEANIC BLUE BACKGROUND */
+                #map-2d { background-color: #0ea5e9; z-index: 5; display: none; } 
+                #map-3d { background-color: #0f172a; z-index: 10; display: flex; justify-content: center; align-items: center; }
                 .leaflet-container { background: transparent !important; }
                 
                 .engine-toggle { position: absolute; top: 12px; right: 12px; z-index: 999; display: flex; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
@@ -45,8 +45,8 @@ export async function initRegionsEngine(containerId) {
                 .engine-btn.inactive { background: transparent; color: var(--muted); }
                 .engine-btn.inactive:hover { background: var(--hover-bg); }
                 
-                #regions-module path.leaflet-interactive { transition: fill-opacity 0.2s, stroke-width 0.2s, stroke 0.2s; outline: none; }
-                #regions-module path.leaflet-interactive:hover { stroke: #0f172a !important; stroke-width: 1.5px !important; fill-opacity: 0.9 !important; cursor: pointer; }
+                /* TOOLTIP NN RESTORED */
+                .region-tooltip { background: var(--card); color: var(--text); border: 1px solid var(--brand-orange-dark); font-weight: 800; font-size: 11px; padding: 4px 8px; border-radius: 4px; font-family: var(--font-main); text-transform: uppercase; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
                 
                 .map-label { background: transparent !important; border: none !important; box-shadow: none !important; display: flex; justify-content: center; align-items: center; text-align: center; pointer-events: none; }
                 .label-text { font-family: var(--font-main); display: inline-block; white-space: normal; word-wrap: break-word; line-height: 1.1; }
@@ -77,7 +77,7 @@ export async function initRegionsEngine(containerId) {
                         </div>
                         <div class="shrink-0 panel-card p-3 shadow-sm z-20">
                             <div class="flex justify-between items-center pb-1.5 border-b border-[color:var(--border)] mb-2">
-                                <span id="geoHierarchyBreadcrumb" class="text-[11px] font-bold text-[color:var(--brand-orange-dark)] uppercase tracking-wide">Initializing Engine...</span>
+                                <span id="geoHierarchyBreadcrumb" class="text-[11px] font-bold text-[color:var(--text)] uppercase tracking-wide">Initializing Engine...</span>
                                 <button id="btnResetView" class="text-[10px] font-bold text-[color:var(--muted)] hover:text-[color:var(--brand-orange-dark)] transition"><i class="fas fa-undo mr-1"></i> Reset Matrix</button>
                             </div>
                             <div class="grid grid-cols-2 gap-x-3 gap-y-2">
@@ -136,6 +136,7 @@ export async function initRegionsEngine(containerId) {
         let map3D = null;
         let polygonLayerGroup = null;
 
+        // UI NAVIGATION
         const tabMapMatrix = container.querySelector('#tabMapMatrix');
         const tabConfigHub = container.querySelector('#tabConfigHub');
         const viewMapMatrix = container.querySelector('#viewMapMatrix');
@@ -155,6 +156,7 @@ export async function initRegionsEngine(containerId) {
             loadJurisdictionalTree();
         };
 
+        // MEMORY ANNIHILATION ENGINE TOGGLE
         let activeEngine = '3D';
         const btn2D = container.querySelector('#btn2D');
         const btn3D = container.querySelector('#btn3D');
@@ -194,7 +196,6 @@ export async function initRegionsEngine(containerId) {
             btn2D.className = "engine-btn active"; btn3D.className = "engine-btn inactive";
             
             if (map3D) { map3DContainer.innerHTML = ''; map3D = null; }
-            
             map3DContainer.style.display = 'none';
             map2DContainer.style.display = 'block';
             
@@ -211,7 +212,6 @@ export async function initRegionsEngine(containerId) {
                 map2D.remove(); map2D = null; polygonLayerGroup = null;
                 if (window.nanbiMapInstance) window.nanbiMapInstance = null;
             }
-            
             map2DContainer.style.display = 'none';
             map3DContainer.style.display = 'flex';
             
@@ -261,7 +261,7 @@ export async function initRegionsEngine(containerId) {
         function toTitleCase(str) { return (!str) ? '' : str.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '); }
 
         // ==========================================
-        // STRUCTURAL BOOT
+        // 1. INSTANT STRUCTURAL BOOT
         // ==========================================
         async function fetchTreeData() {
             try {
@@ -283,9 +283,10 @@ export async function initRegionsEngine(containerId) {
                     
                     currentActiveNodeId = treeNodes.some(n => n.node_id === 'IN-KA') ? 'IN-KA' : (treeNodes.some(n => n.node_id === 'IND') ? 'IND' : 'GLOBAL'); 
                     applyGlobalSelection(currentActiveNodeId); 
-                    
                     setupDropdownListeners();
-                    fetchMacroGeometriesInBackground(); // Non-blocking full data sync
+                    
+                    // Background Prefetch (Safely fetches compressed GeoJSONs for the world)
+                    fetchMacroGeometriesInBackground();
                 }
             } catch (err) { 
                 const tbody = container.querySelector('#territoryTbody');
@@ -293,13 +294,12 @@ export async function initRegionsEngine(containerId) {
             }
         }
 
-        // Fast background fetch of all compressed Country/State geometries to paint the whole map
         async function fetchMacroGeometriesInBackground() {
             const bc = container.querySelector('#geoHierarchyBreadcrumb');
             try {
                 const { data, error } = await window.nanbiDB.from('regional_hierarchy_nodes')
                     .select('node_id, dynamic_config_payload')
-                    .in('node_level', ['country', 'state']);
+                    .in('node_level', ['country', 'continent', 'sub_continent']);
                 
                 if (!error && data) {
                     data.forEach(p => {
@@ -310,9 +310,7 @@ export async function initRegionsEngine(containerId) {
                         }
                     });
                     if(bc) bc.innerText = "Spatial Engine Ready";
-                    if (currentActiveNodeId) {
-                        applyGlobalSelection(currentActiveNodeId);
-                    }
+                    if (currentActiveNodeId) applyGlobalSelection(currentActiveNodeId);
                 }
             } catch (e) {}
         }
@@ -344,9 +342,9 @@ export async function initRegionsEngine(containerId) {
         function cascadeClear(ids) { ids.forEach(id => { const el = container.querySelector(`#${id}`); if (el) { el.innerHTML = '<option value="All">All</option>'; el.disabled = true; } }); }
 
         // ==========================================
-        // O(1) BATCH RENDERING ENGINE
+        // 2. SYNCHRONOUS UI MATRIX (0ms Response)
         // ==========================================
-        async function applyGlobalSelection(targetNodeId) {
+        function applyGlobalSelection(targetNodeId) {
             const bc = container.querySelector('#geoHierarchyBreadcrumb');
 
             let nodeId = targetNodeId;
@@ -397,17 +395,26 @@ export async function initRegionsEngine(containerId) {
             container.querySelector('#deepDiveTitle').innerText = `${activeNode.node_id} — ${activeNode.node_name}`;
             container.querySelector('#deepDiveSubtitle').innerText = `Level: ${activeNode.node_level.replace('_', ' ')}`;
 
-            // RENDER ACTIVE ENGINE ONLY (Batch Processing for 0ms lag)
-            let globePolygons = [];
-            let globeLabels = [];
-            let leafletFeatures = [];
+            // FIRE FAST BATCH RENDERER
+            renderSpatialDataSynchronously(nodeId, activeNode, tableNodes);
+        }
+
+        // ==========================================
+        // 3. FAST BATCH RENDERING (Ocean Blue, Diminished Neighbors, Tooltips Restored)
+        // ==========================================
+        function renderSpatialDataSynchronously(nodeId, activeNode, tableNodes) {
             
             if (activeEngine === '2D') {
                 if (polygonLayerGroup) map2D.removeLayer(polygonLayerGroup);
                 polygonLayerGroup = window.L.featureGroup();
             }
 
-            // Iterate through ALL fetched nodes to restore full map context (greyed out boundaries)
+            let globePolygons = [];
+            let globeLabels = [];
+            let leafletFeatures = [];
+
+            // We loop through ALL fetched nodes to restore the "greyed out neighbors" context.
+            // Since the user ran the Python compression script, this loop completes in milliseconds.
             const renderableNodes = treeNodes.filter(n => n.payload_fetched && n.dynamic_config_payload && n.dynamic_config_payload.geojson);
 
             for (let i = 0; i < renderableNodes.length; i++) {
@@ -416,14 +423,18 @@ export async function initRegionsEngine(containerId) {
                 let cleanGeom = (rawGeom.type === 'FeatureCollection') ? rawGeom.features[0].geometry : (rawGeom.type === 'Feature' ? rawGeom.geometry : rawGeom);
                 
                 if (cleanGeom && (cleanGeom.type === 'Polygon' || cleanGeom.type === 'MultiPolygon')) {
-                    // Dominant styling vs diminished grey styling
-                    let isDominant = (nodeId === 'GLOBAL' && n.node_level === 'country') || (n.node_id === nodeId || isDescendant(n, nodeId));
-                    if (nodeId === 'GLOBAL' && n.node_level !== 'country') continue; 
+                    
+                    // DOMINANT vs DIMINISHED LOGIC
+                    let isDominant = (nodeId === 'GLOBAL' && n.node_level === 'continent') || (n.node_id === nodeId || isDescendant(n, nodeId));
+                    // Prevent state-level clutter on global map
+                    if (nodeId === 'GLOBAL' && n.node_level !== 'continent') continue; 
                     
                     let configuredColor = n.dynamic_config_payload.fill_color || '#3b82f6';
+                    
+                    // NNs Restored: Active = colored, Neighbors = grey
                     let fillColor = isDominant ? configuredColor : '#475569';
-                    let fillOpacity = isDominant ? ((n.node_id === nodeId) ? 0.05 : 0.8) : 0.2; 
-                    let strokeColor = isDominant ? '#0f172a' : '#cbd5e1';
+                    let fillOpacity = isDominant ? ((n.node_id === nodeId) ? 0.05 : 0.8) : 0.3; 
+                    let strokeColor = isDominant ? '#0f172a' : '#94a3b8';
                     let strokeWidth = isDominant ? 1.0 : 0.5;
                     let globeAlt = isDominant ? 0.015 : 0.005;
 
@@ -431,7 +442,7 @@ export async function initRegionsEngine(containerId) {
                         globePolygons.push({
                             type: "Feature",
                             geometry: cleanGeom,
-                            properties: { color: fillColor, node_id: n.node_id, altitude: globeAlt }
+                            properties: { name: n.node_name, color: fillColor, node_id: n.node_id, altitude: globeAlt }
                         });
                     }
 
@@ -441,6 +452,7 @@ export async function initRegionsEngine(containerId) {
                             geometry: cleanGeom,
                             properties: { 
                                 node_id: n.node_id,
+                                name: n.node_name,
                                 style: { color: strokeColor, weight: strokeWidth, fillColor: fillColor, fillOpacity: fillOpacity }
                             }
                         });
@@ -450,7 +462,7 @@ export async function initRegionsEngine(containerId) {
                 // Labels logic: The engine parses label_rotation and label_anchor from DB payload
                 let isDominantLabel = (nodeId === 'GLOBAL' && n.node_level === 'continent') || (n.node_id === nodeId || isDescendant(n, nodeId));
                 
-                if (isDominantLabel && n.dynamic_config_payload.label_anchor) {
+                if (isDominantLabel && n.dynamic_config_payload.label_anchor && tableNodes.some(t => t.node_id === n.node_id)) {
                     let anchor = n.dynamic_config_payload.label_anchor;
                     let textColor = n.dynamic_config_payload.label_color || '#ffffff';
                     let rotation = n.dynamic_config_payload.label_rotation || '0deg';
@@ -479,6 +491,22 @@ export async function initRegionsEngine(containerId) {
                     let geoJsonLayer = window.L.geoJSON(leafletFeatures, {
                         style: function(feature) { return feature.properties.style; },
                         onEachFeature: function(feature, layer) {
+                            
+                            // RESTORED NN: Mouse-over Tooltips
+                            layer.bindTooltip(toTitleCase(feature.properties.name), {
+                                className: 'region-tooltip',
+                                sticky: true,
+                                direction: 'auto'
+                            });
+                            
+                            // RESTORED NN: Mouse-over Highlighting
+                            layer.on('mouseover', function(e) {
+                                layer.setStyle({ weight: 2.0, fillOpacity: 0.9, color: '#111' });
+                            });
+                            layer.on('mouseout', function(e) {
+                                geoJsonLayer.resetStyle(layer); // Instantly restores configured color/grey state
+                            });
+                            
                             layer.on('click', () => applyGlobalSelection(feature.properties.node_id));
                         }
                     });
@@ -491,7 +519,15 @@ export async function initRegionsEngine(containerId) {
                     map2D.fitBounds([[-55, -180], [85, 180]]); 
                 } else if (polygonLayerGroup.getLayers().length > 0) {
                     try {
-                        let bounds = polygonLayerGroup.getBounds();
+                        let boundsLayer = window.L.featureGroup();
+                        polygonLayerGroup.eachLayer(layer => {
+                            if (layer.options && layer.options.style && layer.options.style.fillOpacity === 0.8) {
+                                boundsLayer.addLayer(layer);
+                            }
+                        });
+                        if (boundsLayer.getLayers().length === 0) return;
+                        let bounds = boundsLayer.getBounds();
+                        
                         if ((bounds.getEast() - bounds.getWest()) > 280) {
                             const centerLat = nodeId === 'AS' ? 45 : 0; 
                             const centerLng = nodeId === 'AS' ? 90 : 0;
@@ -515,7 +551,9 @@ export async function initRegionsEngine(containerId) {
                     .polygonCapColor(d => d.properties.color)
                     .polygonSideColor(d => (d.properties.altitude === 0.015) ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.1)')
                     .polygonAltitude(d => d.properties.altitude)
-                    .onPolygonClick(d => applyGlobalSelection(d.properties.node_id));
+                    .onPolygonClick(d => applyGlobalSelection(d.properties.node_id))
+                    // RESTORED NN: 3D Globe Tooltips
+                    .polygonLabel(d => `<div class="region-tooltip" style="background: white; color: black; padding: 4px; border-radius: 4px; font-weight: bold; font-family: monospace;">${toTitleCase(d.properties.name)}</div>`);
 
                 map3D.htmlElementsData(globeLabels)
                     .htmlLat(d => d.lat)
