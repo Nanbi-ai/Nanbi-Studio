@@ -1,5 +1,5 @@
 // =======================================================================
-// NANBI V5.0 - DUAL-ENGINE AGENTIC REGIONS (UNCOMPROMISED AESTHETIC RESTORATION)
+// NANBI V5.0 - DUAL-ENGINE AGENTIC REGIONS (NN RESTORATION - FLAWLESS BASEMAP)
 // =======================================================================
 
 export async function initRegionsEngine(containerId) {
@@ -34,10 +34,10 @@ export async function initRegionsEngine(containerId) {
                 #regions-module #map-wrapper { position: relative; width: 100%; height: 100%; min-height: 0; flex: 1; border-radius: 5px; overflow: hidden; background-color: #D4F1F9; }
                 #map-2d, #map-3d { position: absolute; inset: 0; width: 100%; height: 100%; transition: opacity 0.2s ease; }
                 
-                /* RESTORED: NATIVE OCEAN BLUE & SVG DROP SHADOWS */
-                #map-2d { background-color: #D4F1F9; z-index: 5; opacity: 0; pointer-events: none; } 
+                /* EXACT NN: OCEAN BLUE & SVG DROP SHADOWS */
+                #map-2d { background-color: #D4F1F9 !important; z-index: 5; opacity: 0; pointer-events: none; } 
                 .leaflet-container { background: #D4F1F9 !important; }
-                .leaflet-overlay-pane svg path { filter: drop-shadow(2px 3px 4px rgba(0,0,0,0.25)); transition: fill-opacity 0.2s, stroke-width 0.2s; outline: none; }
+                .leaflet-overlay-pane svg path { filter: drop-shadow(1px 2px 3px rgba(0,0,0,0.20)); transition: fill-opacity 0.2s, stroke-width 0.2s; outline: none; }
                 .leaflet-overlay-pane svg path:hover { stroke: #0f172a !important; stroke-width: 2px !important; fill-opacity: 1.0 !important; cursor: pointer; }
                 
                 #map-3d { background-color: #0f172a; z-index: 10; opacity: 1; pointer-events: auto; display: flex; justify-content: center; align-items: center; }
@@ -48,12 +48,12 @@ export async function initRegionsEngine(containerId) {
                 .engine-btn.inactive { background: transparent; color: var(--muted); }
                 .engine-btn.inactive:hover { background: var(--hover-bg); }
                 
-                /* RESTORED: DYNAMIC LABELS & TOOLTIPS */
+                /* EXACT NN: TOOLTIPS & SHADOWED LABELS */
                 .region-tooltip { background: var(--card); color: var(--text); border: 1px solid var(--brand-orange-dark); font-weight: 800; font-size: 11px; padding: 4px 8px; border-radius: 4px; font-family: var(--font-main); text-transform: uppercase; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
                 .map-label { background: transparent !important; border: none !important; box-shadow: none !important; display: flex; justify-content: center; align-items: center; text-align: center; pointer-events: none; }
                 .label-text { font-family: var(--font-main); display: inline-block; white-space: normal; word-wrap: break-word; line-height: 1.1; font-weight: 800; font-size: 11px; }
                 .label-active .label-text { text-shadow: 0px 0px 3px rgba(255,255,255,0.9), 0px 0px 5px rgba(255,255,255,0.8); }
-                .label-shadowed .label-text { opacity: 0.5; font-size: 9px; text-shadow: 0px 0px 2px rgba(255,255,255,0.5); }
+                .label-shadowed .label-text { opacity: 0.6; font-size: 9px; text-shadow: 0px 0px 2px rgba(255,255,255,0.5); }
                 
                 #regions-module ::-webkit-scrollbar { width: 6px; }
                 #regions-module ::-webkit-scrollbar-thumb { background-color: var(--border); border-radius: 4px; }
@@ -148,7 +148,7 @@ export async function initRegionsEngine(containerId) {
             tabMapMatrix.className = "px-4 py-1 rounded text-[11px] font-bold bg-[color:var(--brand-orange-dark)] text-white shadow-sm transition";
             tabConfigHub.className = "px-4 py-1 rounded text-[11px] font-bold bg-[color:var(--card)] text-[color:var(--muted)] border border-[color:var(--border)] hover:bg-[color:var(--hover-bg)] transition";
             viewMapMatrix.style.display = "flex"; viewConfigHub.style.display = "none";
-            if (map2D && activeEngine === '2D') setTimeout(() => map2D.invalidateSize(true), 50);
+            if (activeEngine === '2D' && map2D) setTimeout(() => map2D.invalidateSize(true), 50);
         };
 
         tabConfigHub.onclick = () => {
@@ -158,7 +158,7 @@ export async function initRegionsEngine(containerId) {
             loadJurisdictionalTree();
         };
 
-        // ENGINE TOGGLE LOGIC
+        // MEMORY PRESERVATION ENGINE TOGGLE
         let activeEngine = '3D';
         const btn2D = container.querySelector('#btn2D');
         const btn3D = container.querySelector('#btn3D');
@@ -190,7 +190,7 @@ export async function initRegionsEngine(containerId) {
             applyGlobalSelection(currentActiveNodeId);
         };
 
-        // DEPENDENCY LOADERS
+        // DEPENDENCIES
         const loadScript = (src, globalVar) => new Promise((resolve) => {
             if (window[globalVar]) return resolve(true);
             const script = document.createElement('script');
@@ -233,7 +233,7 @@ export async function initRegionsEngine(containerId) {
             .showAtmosphere(true)
             .atmosphereColor('#3a228a')
             .atmosphereAltitude(0.15)
-            .polygonStrokeColor(() => '#1e293b'); // Dark clean border for 3D globe polygons
+            .polygonStrokeColor(() => '#1e293b'); 
             
         map3D.pointOfView({ lat: 20.0, lng: 78.0, altitude: 2.5 });
         map3D.controls().autoRotate = true;
@@ -257,11 +257,7 @@ export async function initRegionsEngine(containerId) {
             try {
                 if (!window.nanbiDB) throw new Error("Supabase client is undefined.");
                 
-                // Fetch ALL compressed data synchronously. No more background lags.
-                const { data, error } = await window.nanbiDB.from('regional_hierarchy_nodes')
-                    .select('node_id, parent_id, node_level, node_name, official_gov_code, dynamic_config_payload')
-                    .limit(10000);
-                    
+                const { data, error } = await window.nanbiDB.from('regional_hierarchy_nodes').select('*').limit(10000);
                 if (error) throw error;
                 
                 if (data) {
@@ -309,7 +305,7 @@ export async function initRegionsEngine(containerId) {
         function cascadeClear(ids) { ids.forEach(id => { const el = container.querySelector(`#${id}`); if (el) { el.innerHTML = '<option value="All">All</option>'; el.disabled = true; } }); }
 
         // ==========================================
-        // 2. SYNCHRONOUS 4-WAY INTERACTIVITY (O(1) PERFORMANCE)
+        // 2. SYNCHRONOUS 4-WAY INTERACTIVITY
         // ==========================================
         function applyGlobalSelection(targetNodeId) {
             let nodeId = targetNodeId;
@@ -363,7 +359,7 @@ export async function initRegionsEngine(containerId) {
         }
 
         // ==========================================
-        // 3. PERFECT DOMINANT/DIMINISHED RENDERER (Shadow Effects Restored)
+        // 3. FLAWLESS DOMINANT/DIMINISHED RENDERER
         // ==========================================
         function renderSpatialData(nodeId, activeNode, tableNodes) {
             if (polygonLayerGroup) map2D.removeLayer(polygonLayerGroup);
@@ -372,28 +368,54 @@ export async function initRegionsEngine(containerId) {
             let globePolygons = [];
             let globeLabels = [];
             let leafletFeatures = [];
+            let activeBoundsLayer = window.L.featureGroup();
+
+            // Fetch all renderable nodes, drawing countries first to form the base, then states on top.
+            const renderableNodes = treeNodes.filter(n => n.dynamic_config_payload && n.dynamic_config_payload.geojson);
             
-            // Step 1: Identify what level we are rendering
-            let targetLevel = 'continent';
-            if (activeNode.node_level === 'continent') targetLevel = 'sub_continent';
-            if (activeNode.node_level === 'sub_continent') targetLevel = 'country';
-            if (activeNode.node_level === 'country') targetLevel = 'state';
+            renderableNodes.sort((a, b) => {
+                if (a.node_level === 'country' && b.node_level !== 'country') return -1;
+                if (a.node_level !== 'country' && b.node_level === 'country') return 1;
+                return 0;
+            });
 
-            let vibrantNodes = [];
-            let shadowNodes = [];
-
-            if (nodeId === 'GLOBAL') {
-                vibrantNodes = treeNodes.filter(n => n.node_level === 'continent');
-            } else {
-                // Vibrant nodes are the children of the active node
-                vibrantNodes = treeNodes.filter(n => n.parent_id === nodeId && n.node_level === targetLevel);
-                // Shadow nodes are the siblings of the active node (to provide global context)
-                shadowNodes = treeNodes.filter(n => n.node_level === activeNode.node_level && n.node_id !== activeNode.node_id);
-            }
-
-            const processGeometry = (n, isDominant) => {
-                if (!n.dynamic_config_payload || !n.dynamic_config_payload.geojson) return;
+            for (let i = 0; i < renderableNodes.length; i++) {
+                let n = renderableNodes[i];
                 
+                // Keep memory clean: we only ever need countries for the basemap, and states if they are active.
+                if (n.node_level !== 'country' && n.node_level !== 'state') continue;
+
+                let isDominant = false;
+                let drawNode = false;
+
+                if (nodeId === 'GLOBAL') {
+                    if (n.node_level === 'country') { isDominant = true; drawNode = true; }
+                } else {
+                    if (activeNode.node_level === 'continent' || activeNode.node_level === 'sub_continent') {
+                        if (n.node_level === 'country') {
+                            drawNode = true;
+                            if (isDescendant(n, nodeId)) isDominant = true;
+                        }
+                    } else if (activeNode.node_level === 'country') {
+                        if (n.node_level === 'country') {
+                            drawNode = true;
+                            if (n.node_id === nodeId) isDominant = true;
+                        }
+                        if (n.node_level === 'state' && n.parent_id === nodeId) {
+                            drawNode = true;
+                            isDominant = true;
+                        }
+                    } else if (activeNode.node_level === 'state') {
+                        if (n.node_level === 'country') drawNode = true; // Background world context
+                        if (n.node_level === 'state' && (n.node_id === nodeId || n.parent_id === activeNode.parent_id)) {
+                            drawNode = true;
+                            if (n.node_id === nodeId) isDominant = true;
+                        }
+                    }
+                }
+
+                if (!drawNode) continue;
+
                 let rawGeom = n.dynamic_config_payload.geojson;
                 let cleanGeom = (rawGeom.type === 'FeatureCollection') ? rawGeom.features[0].geometry : (rawGeom.type === 'Feature' ? rawGeom.geometry : rawGeom);
                 
@@ -401,10 +423,10 @@ export async function initRegionsEngine(containerId) {
                     
                     let configuredColor = n.dynamic_config_payload.fill_color || '#3b82f6';
                     
-                    // NN RESTORED: Vibrant Active Regions vs Pale/Shadowed Neighbors
-                    let fillColor = configuredColor;
-                    let fillOpacity = isDominant ? 1.0 : 0.35; 
-                    let strokeColor = isDominant ? '#0f172a' : '#64748b';
+                    // EXACT NN FIX: Strict Grey for Neighbors, Vibrant Configured Color for Dominant
+                    let fillColor = isDominant ? configuredColor : '#cbd5e1'; 
+                    let fillOpacity = isDominant ? 0.9 : 0.5; 
+                    let strokeColor = isDominant ? '#0f172a' : '#94a3b8';
                     let strokeWidth = isDominant ? 1.0 : 0.5;
                     let globeAlt = isDominant ? 0.015 : 0.005;
 
@@ -412,7 +434,7 @@ export async function initRegionsEngine(containerId) {
                         globePolygons.push({
                             type: "Feature",
                             geometry: cleanGeom,
-                            properties: { name: n.node_name, color: fillColor, opacity: fillOpacity, node_id: n.node_id, altitude: globeAlt }
+                            properties: { name: n.node_name, color: fillColor, node_id: n.node_id, altitude: globeAlt }
                         });
                     }
 
@@ -430,13 +452,17 @@ export async function initRegionsEngine(containerId) {
                     }
                 }
                 
-                // NN RESTORED: Dynamic Labels only on the vibrant nodes
-                if (isDominant && n.dynamic_config_payload.label_anchor) {
+                // EXACT NN FIX: Labels shape and slant directly to the Config Payload properties
+                let drawLabel = false;
+                if (nodeId === 'GLOBAL' && n.node_level === 'country') drawLabel = true;
+                if (nodeId !== 'GLOBAL' && isDominant) drawLabel = true;
+
+                if (drawLabel && n.dynamic_config_payload.label_anchor) {
                     let anchor = n.dynamic_config_payload.label_anchor;
                     let textColor = n.dynamic_config_payload.label_color || '#1e293b';
                     let rotation = n.dynamic_config_payload.label_rotation || '0deg';
                     let maxWidth = n.dynamic_config_payload.label_max_width || '80px';
-                    let cssClass = 'label-active';
+                    let cssClass = (n.node_id === nodeId) ? 'label-active' : 'label-shadowed';
                     let formattedName = toTitleCase(n.node_name || '');
                     
                     let inlineStyle = `transform: rotate(${rotation}); max-width: ${maxWidth}; color: ${textColor};`;
@@ -452,26 +478,8 @@ export async function initRegionsEngine(containerId) {
                     if (activeEngine === '3D') {
                         globeLabels.push({ lat: anchor[0], lng: anchor[1], name: formattedName, style: inlineStyle, cssClass: cssClass });
                     }
-                } else if (isDominant) {
-                    // Native Leaflet Center Fallback if payload lacks label_anchor
-                    if (activeEngine === '2D') {
-                        try {
-                            let tempLayer = window.L.geoJSON(cleanGeom);
-                            let center = tempLayer.getBounds().getCenter();
-                            let formattedName = toTitleCase(n.node_name || '');
-                            let marker = window.L.marker(center, {
-                                icon: window.L.divIcon({ className: `map-label label-active`, html: `<div class="label-text" style="color: #1e293b;">${formattedName}</div>`, iconSize: [160, 40], iconAnchor: [80, 20] }),
-                                interactive: false
-                            });
-                            polygonLayerGroup.addLayer(marker);
-                        } catch(e) {}
-                    }
                 }
-            };
-
-            // Render both Vibrant and Shadow nodes
-            vibrantNodes.forEach(n => processGeometry(n, true));
-            shadowNodes.forEach(n => processGeometry(n, false));
+            }
 
             // BATCH RENDER LEAFLET
             if (activeEngine === '2D') {
@@ -479,12 +487,17 @@ export async function initRegionsEngine(containerId) {
                     let geoJsonLayer = window.L.geoJSON(leafletFeatures, {
                         style: function(feature) { return feature.properties.style; },
                         onEachFeature: function(feature, layer) {
-                            // NN RESTORED: Mouse-over Tooltips
+                            
+                            // EXACT NN FIX: Tooltips restored for perfect hover context
                             layer.bindTooltip(toTitleCase(feature.properties.name), { className: 'region-tooltip', sticky: true, direction: 'auto' });
                             
                             layer.on('mouseover', function(e) { layer.setStyle({ weight: 2.0, fillOpacity: 1.0, color: '#111' }); });
                             layer.on('mouseout', function(e) { geoJsonLayer.resetStyle(layer); });
                             layer.on('click', () => applyGlobalSelection(feature.properties.node_id));
+                            
+                            if (feature.properties.isDominant) {
+                                activeBoundsLayer.addLayer(layer);
+                            }
                         }
                     });
                     polygonLayerGroup.addLayer(geoJsonLayer);
@@ -492,33 +505,21 @@ export async function initRegionsEngine(containerId) {
 
                 if (polygonLayerGroup.getLayers().length > 0) polygonLayerGroup.addTo(map2D);
                 
-                // NN RESTORED: Strict 95:5 Margin Box
+                // EXACT NN FIX: Strict 95:5 Margin Zoom
                 if (nodeId === 'GLOBAL') {
                     map2D.fitBounds([[-55, -180], [85, 180]]); 
-                } else if (polygonLayerGroup.getLayers().length > 0) {
+                } else if (activeBoundsLayer.getLayers().length > 0) {
                     try {
-                        let boundsLayer = window.L.featureGroup();
-                        polygonLayerGroup.eachLayer(layer => {
-                            // Calculate padding ONLY based on the vibrant/active regions
-                            if (layer.options && layer.options.style && layer.options.style.fillOpacity === 1.0) {
-                                boundsLayer.addLayer(layer);
-                            }
-                        });
-                        
-                        if (boundsLayer.getLayers().length > 0) {
-                            let bounds = boundsLayer.getBounds();
-                            
-                            // Anti-Meridian failsafe for Oceania/Asia
-                            if ((bounds.getEast() - bounds.getWest()) > 280) {
-                                let cLat = activeNode.dynamic_config_payload.label_anchor ? activeNode.dynamic_config_payload.label_anchor[0] : 0;
-                                let cLng = activeNode.dynamic_config_payload.label_anchor ? activeNode.dynamic_config_payload.label_anchor[1] : 0;
-                                map2D.setView([cLat, cLng], 2.5);
-                            } else {
-                                const currentSize = map2D.getSize(); 
-                                const padX = Math.max(10, Math.floor(currentSize.x * 0.05)); 
-                                const padY = Math.max(10, Math.floor(currentSize.y * 0.05)); 
-                                map2D.fitBounds(bounds, { padding: [padX, padY], animate: true, duration: 0.8 });
-                            }
+                        let bounds = activeBoundsLayer.getBounds();
+                        if ((bounds.getEast() - bounds.getWest()) > 280) {
+                            let cLat = activeNode.dynamic_config_payload.label_anchor ? activeNode.dynamic_config_payload.label_anchor[0] : 0;
+                            let cLng = activeNode.dynamic_config_payload.label_anchor ? activeNode.dynamic_config_payload.label_anchor[1] : 0;
+                            map2D.setView([cLat, cLng], 2.5);
+                        } else {
+                            const currentSize = map2D.getSize(); 
+                            const padX = Math.max(10, Math.floor(currentSize.x * 0.05)); 
+                            const padY = Math.max(10, Math.floor(currentSize.y * 0.05)); 
+                            map2D.fitBounds(bounds, { padding: [padX, padY], animate: true, duration: 0.8 });
                         }
                     } catch(e) {}
                 }
