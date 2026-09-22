@@ -1,5 +1,5 @@
 // =======================================================================
-// NANBI V5.0 - DUAL-ENGINE AGENTIC REGIONS (NN RESTORATION - FLAWLESS BASEMAP)
+// NANBI V5.0 - DUAL-ENGINE AGENTIC REGIONS (STRICT 5% SETBACK FIX)
 // =======================================================================
 
 export async function initRegionsEngine(containerId) {
@@ -34,7 +34,6 @@ export async function initRegionsEngine(containerId) {
                 #regions-module #map-wrapper { position: relative; width: 100%; height: 100%; min-height: 0; flex: 1; border-radius: 5px; overflow: hidden; background-color: #D4F1F9; }
                 #map-2d, #map-3d { position: absolute; inset: 0; width: 100%; height: 100%; transition: opacity 0.2s ease; }
                 
-                /* EXACT NN: OCEAN BLUE & SVG DROP SHADOWS */
                 #map-2d { background-color: #D4F1F9 !important; z-index: 5; opacity: 0; pointer-events: none; } 
                 .leaflet-container { background: #D4F1F9 !important; }
                 .leaflet-overlay-pane svg path { filter: drop-shadow(1px 2px 3px rgba(0,0,0,0.20)); transition: fill-opacity 0.2s, stroke-width 0.2s; outline: none; }
@@ -48,7 +47,6 @@ export async function initRegionsEngine(containerId) {
                 .engine-btn.inactive { background: transparent; color: var(--muted); }
                 .engine-btn.inactive:hover { background: var(--hover-bg); }
                 
-                /* EXACT NN: TOOLTIPS & SHADOWED LABELS */
                 .region-tooltip { background: var(--card); color: var(--text); border: 1px solid var(--brand-orange-dark); font-weight: 800; font-size: 11px; padding: 4px 8px; border-radius: 4px; font-family: var(--font-main); text-transform: uppercase; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
                 .map-label { background: transparent !important; border: none !important; box-shadow: none !important; display: flex; justify-content: center; align-items: center; text-align: center; pointer-events: none; }
                 .label-text { font-family: var(--font-main); display: inline-block; white-space: normal; word-wrap: break-word; line-height: 1.1; font-weight: 800; font-size: 11px; }
@@ -251,7 +249,7 @@ export async function initRegionsEngine(containerId) {
         function toTitleCase(str) { return (!str) ? '' : str.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '); }
 
         // ==========================================
-        // 1. INSTANT FULL FETCH (Compression allows 0ms load)
+        // 1. INSTANT FULL FETCH
         // ==========================================
         async function fetchTreeData() {
             try {
@@ -359,7 +357,7 @@ export async function initRegionsEngine(containerId) {
         }
 
         // ==========================================
-        // 3. FLAWLESS DOMINANT/DIMINISHED RENDERER
+        // 3. EXACT 95:5 SETBACK RENDERER (Untouched Working Core)
         // ==========================================
         function renderSpatialData(nodeId, activeNode, tableNodes) {
             if (polygonLayerGroup) map2D.removeLayer(polygonLayerGroup);
@@ -370,7 +368,6 @@ export async function initRegionsEngine(containerId) {
             let leafletFeatures = [];
             let activeBoundsLayer = window.L.featureGroup();
 
-            // Fetch all renderable nodes, drawing countries first to form the base, then states on top.
             const renderableNodes = treeNodes.filter(n => n.dynamic_config_payload && n.dynamic_config_payload.geojson);
             
             renderableNodes.sort((a, b) => {
@@ -381,8 +378,6 @@ export async function initRegionsEngine(containerId) {
 
             for (let i = 0; i < renderableNodes.length; i++) {
                 let n = renderableNodes[i];
-                
-                // Keep memory clean: we only ever need countries for the basemap, and states if they are active.
                 if (n.node_level !== 'country' && n.node_level !== 'state') continue;
 
                 let isDominant = false;
@@ -406,7 +401,7 @@ export async function initRegionsEngine(containerId) {
                             isDominant = true;
                         }
                     } else if (activeNode.node_level === 'state') {
-                        if (n.node_level === 'country') drawNode = true; // Background world context
+                        if (n.node_level === 'country') drawNode = true;
                         if (n.node_level === 'state' && (n.node_id === nodeId || n.parent_id === activeNode.parent_id)) {
                             drawNode = true;
                             if (n.node_id === nodeId) isDominant = true;
@@ -420,10 +415,8 @@ export async function initRegionsEngine(containerId) {
                 let cleanGeom = (rawGeom.type === 'FeatureCollection') ? rawGeom.features[0].geometry : (rawGeom.type === 'Feature' ? rawGeom.geometry : rawGeom);
                 
                 if (cleanGeom && (cleanGeom.type === 'Polygon' || cleanGeom.type === 'MultiPolygon')) {
-                    
                     let configuredColor = n.dynamic_config_payload.fill_color || '#3b82f6';
                     
-                    // EXACT NN FIX: Strict Grey for Neighbors, Vibrant Configured Color for Dominant
                     let fillColor = isDominant ? configuredColor : '#cbd5e1'; 
                     let fillOpacity = isDominant ? 0.9 : 0.5; 
                     let strokeColor = isDominant ? '#0f172a' : '#94a3b8';
@@ -452,7 +445,6 @@ export async function initRegionsEngine(containerId) {
                     }
                 }
                 
-                // EXACT NN FIX: Labels shape and slant directly to the Config Payload properties
                 let drawLabel = false;
                 if (nodeId === 'GLOBAL' && n.node_level === 'country') drawLabel = true;
                 if (nodeId !== 'GLOBAL' && isDominant) drawLabel = true;
@@ -464,7 +456,6 @@ export async function initRegionsEngine(containerId) {
                     let maxWidth = n.dynamic_config_payload.label_max_width || '80px';
                     let cssClass = (n.node_id === nodeId) ? 'label-active' : 'label-shadowed';
                     let formattedName = toTitleCase(n.node_name || '');
-                    
                     let inlineStyle = `transform: rotate(${rotation}); max-width: ${maxWidth}; color: ${textColor};`;
 
                     if (activeEngine === '2D') {
@@ -481,20 +472,18 @@ export async function initRegionsEngine(containerId) {
                 }
             }
 
-            // BATCH RENDER LEAFLET
+            // BATCH RENDER LEAFLET WITH GUARANTEED 5% SETBACK
             if (activeEngine === '2D') {
                 if (leafletFeatures.length > 0) {
                     let geoJsonLayer = window.L.geoJSON(leafletFeatures, {
                         style: function(feature) { return feature.properties.style; },
                         onEachFeature: function(feature, layer) {
-                            
-                            // EXACT NN FIX: Tooltips restored for perfect hover context
                             layer.bindTooltip(toTitleCase(feature.properties.name), { className: 'region-tooltip', sticky: true, direction: 'auto' });
-                            
                             layer.on('mouseover', function(e) { layer.setStyle({ weight: 2.0, fillOpacity: 1.0, color: '#111' }); });
                             layer.on('mouseout', function(e) { geoJsonLayer.resetStyle(layer); });
                             layer.on('click', () => applyGlobalSelection(feature.properties.node_id));
                             
+                            // ACCURATE 5% SETBACK: Collect bounds strictly for dominant/active nodes
                             if (feature.properties.isDominant) {
                                 activeBoundsLayer.addLayer(layer);
                             }
@@ -505,14 +494,13 @@ export async function initRegionsEngine(containerId) {
 
                 if (polygonLayerGroup.getLayers().length > 0) polygonLayerGroup.addTo(map2D);
                 
-                // EXACT NN FIX: Strict 95:5 Margin Zoom
                 if (nodeId === 'GLOBAL') {
                     map2D.fitBounds([[-55, -180], [85, 180]]); 
                 } else if (activeBoundsLayer.getLayers().length > 0) {
                     try {
                         let bounds = activeBoundsLayer.getBounds();
                         if ((bounds.getEast() - bounds.getWest()) > 280) {
-                            let cLat = activeNode.dynamic_config_payload.label_anchor ? activeNode.dynamic_config_payload.label_anchor[0] : 0;
+                            let cLat = activeNode.dynamic_config_payload && activeNode.dynamic_config_payload.label_anchor ? activeNode.dynamic_config_payload.label_anchor[0] : 0;
                             let cLng = activeNode.dynamic_config_payload.label_anchor ? activeNode.dynamic_config_payload.label_anchor[1] : 0;
                             map2D.setView([cLat, cLng], 2.5);
                         } else {
