@@ -1,5 +1,5 @@
 // =======================================================================
-// NANBI V5.0 - DUAL-ENGINE AGENTIC REGIONS (JIT MICRO-RENDERER FIX)
+// NANBI V5.0 - DUAL-ENGINE AGENTIC REGIONS (FULL RESTORATION)
 // =======================================================================
 
 export async function initRegionsEngine(containerId) {
@@ -34,7 +34,7 @@ export async function initRegionsEngine(containerId) {
                 #regions-module #map-wrapper { position: relative; width: 100%; height: 100%; min-height: 0; flex: 1; border-radius: 5px; overflow: hidden; background-color: #D4F1F9; }
                 #map-2d, #map-3d { position: absolute; inset: 0; width: 100%; height: 100%; transition: opacity 0.2s ease; }
                 
-                /* EXACT NN: OCEAN BLUE & SVG DROP SHADOWS */
+                /* OCEAN BLUE & SVG DROP SHADOWS */
                 #map-2d { background-color: #D4F1F9 !important; z-index: 5; opacity: 0; pointer-events: none; } 
                 .leaflet-container { background: #D4F1F9 !important; }
                 .leaflet-overlay-pane svg path { filter: drop-shadow(1px 2px 3px rgba(0,0,0,0.20)); transition: fill-opacity 0.2s, stroke-width 0.2s; outline: none; }
@@ -48,7 +48,7 @@ export async function initRegionsEngine(containerId) {
                 .engine-btn.inactive { background: transparent; color: var(--muted); }
                 .engine-btn.inactive:hover { background: var(--hover-bg); }
                 
-                /* EXACT NN: TOOLTIPS & SHADOWED LABELS */
+                /* TOOLTIPS & SHADOWED LABELS */
                 .region-tooltip { background: var(--card); color: var(--text); border: 1px solid var(--brand-orange-dark); font-weight: 800; font-size: 11px; padding: 4px 8px; border-radius: 4px; font-family: var(--font-main); text-transform: uppercase; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
                 .map-label { background: transparent !important; border: none !important; box-shadow: none !important; display: flex; justify-content: center; align-items: center; text-align: center; pointer-events: none; }
                 .label-text { font-family: var(--font-main); display: inline-block; white-space: normal; word-wrap: break-word; line-height: 1.1; font-weight: 800; font-size: 11px; }
@@ -138,7 +138,6 @@ export async function initRegionsEngine(containerId) {
         let map3D = null;
         let polygonLayerGroup = null;
 
-        // UI NAVIGATION
         const tabMapMatrix = container.querySelector('#tabMapMatrix');
         const tabConfigHub = container.querySelector('#tabConfigHub');
         const viewMapMatrix = container.querySelector('#viewMapMatrix');
@@ -158,7 +157,6 @@ export async function initRegionsEngine(containerId) {
             loadJurisdictionalTree();
         };
 
-        // MEMORY PRESERVATION ENGINE TOGGLE
         let activeEngine = '3D';
         const btn2D = container.querySelector('#btn2D');
         const btn3D = container.querySelector('#btn3D');
@@ -190,7 +188,6 @@ export async function initRegionsEngine(containerId) {
             applyGlobalSelection(currentActiveNodeId);
         };
 
-        // DEPENDENCIES
         const loadScript = (src, globalVar) => new Promise((resolve) => {
             if (window[globalVar]) return resolve(true);
             const script = document.createElement('script');
@@ -215,7 +212,6 @@ export async function initRegionsEngine(containerId) {
             return;
         }
 
-        // INITIALIZE ENGINES ONCE
         if (window.nanbiMapInstance) window.nanbiMapInstance.remove();
         map2D = window.L.map('map-2d', { 
             preferCanvas: true, zoomControl: true, attributionControl: false, zoomSnap: 0, zoomDelta: 0.5, worldCopyJump: false, minZoom: 1.0 
@@ -250,28 +246,20 @@ export async function initRegionsEngine(containerId) {
 
         function toTitleCase(str) { return (!str) ? '' : str.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '); }
 
-        // ==========================================
-        // 1. FAST LIGHTWEIGHT BOOT (PREVENTS CRASHES)
-        // ==========================================
         async function fetchTreeData() {
             try {
                 if (!window.nanbiDB) throw new Error("Supabase client is undefined.");
                 
-                // CRITICAL FIX: Only fetch lightweight metadata at boot to prevent browser freezes.
-                const { data, error } = await window.nanbiDB.from('regional_hierarchy_nodes')
-                    .select('node_id, parent_id, node_level, node_name, official_gov_code')
-                    .limit(10000);
-                    
+                const { data, error } = await window.nanbiDB.from('regional_hierarchy_nodes').select('*').limit(10000);
                 if (error) throw error;
                 
                 if (data) {
-                    treeNodes = data.filter(n => n.node_id !== 'ATA' && n.node_id !== 'AN').map(n => ({
-                        ...n,
-                        payload_fetched: false
-                    }));
+                    treeNodes = data.filter(n => n.node_id !== 'ATA' && n.node_id !== 'AN');
                     populateDropdown('selContinent', 'continent', 'GLOBAL');
-                    
                     currentActiveNodeId = treeNodes.some(n => n.node_id === 'IN-KA') ? 'IN-KA' : (treeNodes.some(n => n.node_id === 'IND') ? 'IND' : 'GLOBAL'); 
+                    
+                    const bc = container.querySelector('#geoHierarchyBreadcrumb');
+                    if(bc) bc.innerText = "Spatial Engine Ready";
                     
                     applyGlobalSelection(currentActiveNodeId); 
                     setupDropdownListeners();
@@ -308,13 +296,7 @@ export async function initRegionsEngine(containerId) {
 
         function cascadeClear(ids) { ids.forEach(id => { const el = container.querySelector(`#${id}`); if (el) { el.innerHTML = '<option value="All">All</option>'; el.disabled = true; } }); }
 
-        // ==========================================
-        // 2. SYNCHRONOUS 4-WAY INTERACTIVITY
-        // ==========================================
-        async function applyGlobalSelection(targetNodeId) {
-            const bc = container.querySelector('#geoHierarchyBreadcrumb');
-            if (bc) bc.innerText = "Fetching Spatial Data...";
-
+        function applyGlobalSelection(targetNodeId) {
             let nodeId = targetNodeId;
             if (nodeId !== 'GLOBAL' && !treeNodes.some(n => n.node_id === nodeId)) { nodeId = 'GLOBAL'; }
             currentActiveNodeId = nodeId;
@@ -362,46 +344,10 @@ export async function initRegionsEngine(containerId) {
             container.querySelector('#deepDiveTitle').innerText = `${activeNode.node_id} — ${activeNode.node_name}`;
             container.querySelector('#deepDiveSubtitle').innerText = `Level: ${activeNode.node_level.replace('_', ' ')}`;
 
-            // JIT DATA FETCHING: Only fetch the polygons we need to draw right now.
-            let neededIds = [];
-            // We always need continents for the global basemap
-            treeNodes.filter(n => n.node_level === 'continent').forEach(n => neededIds.push(n.node_id));
-            // We need the active node
-            if (nodeId !== 'GLOBAL') neededIds.push(nodeId);
-            // We need the children to color them in
-            tableNodes.forEach(n => neededIds.push(n.node_id));
-
-            let unfetchedIds = neededIds.filter(id => {
-                let node = treeNodes.find(n => n.node_id === id);
-                return node && !node.payload_fetched;
-            });
-
-            if (unfetchedIds.length > 0) {
-                try {
-                    const { data: pData } = await window.nanbiDB.from('regional_hierarchy_nodes')
-                        .select('node_id, dynamic_config_payload')
-                        .in('node_id', unfetchedIds);
-                        
-                    if (pData) {
-                        pData.forEach(p => {
-                            let match = treeNodes.find(n => n.node_id === p.node_id);
-                            if (match) {
-                                match.dynamic_config_payload = p.dynamic_config_payload;
-                                match.payload_fetched = true;
-                            }
-                        });
-                    }
-                } catch(e) {}
-            }
-
-            if (bc) bc.innerText = activeNode.node_name;
-            renderSpatialData(nodeId, activeNode, tableNodes);
+            renderSpatialData(nodeId, activeNode);
         }
 
-        // ==========================================
-        // 3. FLAWLESS DOMINANT/DIMINISHED RENDERER
-        // ==========================================
-        function renderSpatialData(nodeId, activeNode, tableNodes) {
+        function renderSpatialData(nodeId, activeNode) {
             if (polygonLayerGroup) map2D.removeLayer(polygonLayerGroup);
             polygonLayerGroup = window.L.featureGroup();
             
@@ -409,42 +355,58 @@ export async function initRegionsEngine(containerId) {
             let globeLabels = [];
             let leafletFeatures = [];
             
-            // STRICT BOUNDS INITIALIZATION
-            let dominantBounds = window.L.latLngBounds();
-
-            // We only process nodes that have been fetched
-            const renderableNodes = treeNodes.filter(n => n.payload_fetched && n.dynamic_config_payload && n.dynamic_config_payload.geojson);
+            let activeBounds = window.L.latLngBounds();
+            const renderableNodes = treeNodes.filter(n => n.dynamic_config_payload && n.dynamic_config_payload.geojson);
+            
+            renderableNodes.sort((a, b) => {
+                if (a.node_level === 'country' && b.node_level !== 'country') return -1;
+                if (a.node_level !== 'country' && b.node_level === 'country') return 1;
+                return 0;
+            });
 
             for (let i = 0; i < renderableNodes.length; i++) {
                 let n = renderableNodes[i];
+                if (n.node_level !== 'country' && n.node_level !== 'state') continue;
+
                 let isDominant = false;
-                let isBackground = false;
+                let drawNode = false;
 
                 if (nodeId === 'GLOBAL') {
-                    if (n.node_level === 'continent') isDominant = true;
+                    if (n.node_level === 'country') { isDominant = true; drawNode = true; }
                 } else {
-                    // It is Dominant if it is the active node OR a direct child of the active node
-                    if (n.node_id === nodeId || tableNodes.some(t => t.node_id === n.node_id)) {
-                        isDominant = true;
-                    } 
-                    // It is Background if it is a continent but NOT part of the active selection lineage
-                    else if (n.node_level === 'continent' && !isDescendant(activeNode, n.node_id) && n.node_id !== activeNode.node_id) {
-                        isBackground = true;
+                    if (activeNode.node_level === 'continent' || activeNode.node_level === 'sub_continent') {
+                        if (n.node_level === 'country') {
+                            drawNode = true;
+                            if (isDescendant(n, nodeId)) isDominant = true;
+                        }
+                    } else if (activeNode.node_level === 'country') {
+                        if (n.node_level === 'country') {
+                            drawNode = true;
+                            if (n.node_id === nodeId) isDominant = true;
+                        }
+                        if (n.node_level === 'state' && n.parent_id === nodeId) {
+                            drawNode = true;
+                            isDominant = true;
+                        }
+                    } else if (activeNode.node_level === 'state') {
+                        if (n.node_level === 'country') drawNode = true;
+                        if (n.node_level === 'state' && (n.node_id === nodeId || n.parent_id === activeNode.parent_id)) {
+                            drawNode = true;
+                            if (n.node_id === nodeId) isDominant = true;
+                        }
                     }
                 }
 
-                if (!isDominant && !isBackground) continue;
+                if (!drawNode) continue;
 
                 let rawGeom = n.dynamic_config_payload.geojson;
                 let cleanGeom = (rawGeom.type === 'FeatureCollection') ? rawGeom.features[0].geometry : (rawGeom.type === 'Feature' ? rawGeom.geometry : rawGeom);
                 
                 if (cleanGeom && (cleanGeom.type === 'Polygon' || cleanGeom.type === 'MultiPolygon')) {
-                    
                     let configuredColor = n.dynamic_config_payload.fill_color || '#3b82f6';
                     
-                    // EXACT NN FIX: True Grey Background vs Vibrant Selection
                     let fillColor = isDominant ? configuredColor : '#cbd5e1'; 
-                    let fillOpacity = isDominant ? 0.9 : 1.0; 
+                    let fillOpacity = isDominant ? 0.9 : 0.5; 
                     let strokeColor = isDominant ? '#0f172a' : '#94a3b8';
                     let strokeWidth = isDominant ? 1.0 : 0.5;
                     let globeAlt = isDominant ? 0.015 : 0.005;
@@ -465,20 +427,24 @@ export async function initRegionsEngine(containerId) {
                                 node_id: n.node_id,
                                 name: n.node_name,
                                 isDominant: isDominant,
+                                isTargetForZoom: (n.node_id === nodeId), 
                                 style: { color: strokeColor, weight: strokeWidth, fillColor: fillColor, fillOpacity: fillOpacity }
                             }
                         });
                     }
                 }
                 
-                if (isDominant && n.dynamic_config_payload.label_anchor) {
+                let drawLabel = false;
+                if (nodeId === 'GLOBAL' && n.node_level === 'country') drawLabel = true;
+                if (nodeId !== 'GLOBAL' && isDominant) drawLabel = true;
+
+                if (drawLabel && n.dynamic_config_payload.label_anchor) {
                     let anchor = n.dynamic_config_payload.label_anchor;
                     let textColor = n.dynamic_config_payload.label_color || '#1e293b';
                     let rotation = n.dynamic_config_payload.label_rotation || '0deg';
                     let maxWidth = n.dynamic_config_payload.label_max_width || '80px';
                     let cssClass = (n.node_id === nodeId) ? 'label-active' : 'label-shadowed';
                     let formattedName = toTitleCase(n.node_name || '');
-                    
                     let inlineStyle = `transform: rotate(${rotation}); max-width: ${maxWidth}; color: ${textColor};`;
 
                     if (activeEngine === '2D') {
@@ -495,22 +461,20 @@ export async function initRegionsEngine(containerId) {
                 }
             }
 
-            // BATCH RENDER LEAFLET
             if (activeEngine === '2D') {
                 if (leafletFeatures.length > 0) {
                     let geoJsonLayer = window.L.geoJSON(leafletFeatures, {
                         style: function(feature) { return feature.properties.style; },
                         onEachFeature: function(feature, layer) {
-                            
                             layer.bindTooltip(toTitleCase(feature.properties.name), { className: 'region-tooltip', sticky: true, direction: 'auto' });
-                            
                             layer.on('mouseover', function(e) { layer.setStyle({ weight: 2.0, fillOpacity: 1.0, color: '#111' }); });
                             layer.on('mouseout', function(e) { geoJsonLayer.resetStyle(layer); });
                             layer.on('click', () => applyGlobalSelection(feature.properties.node_id));
                             
-                            // MATHEMATICAL BOUNDS: Extend bounds ONLY for the dominant layers
-                            if (feature.properties.isDominant && layer.getBounds) {
-                                dominantBounds.extend(layer.getBounds());
+                            if (feature.properties.isTargetForZoom && layer.getBounds) {
+                                activeBounds.extend(layer.getBounds());
+                            } else if (nodeId !== 'GLOBAL' && feature.properties.isDominant && !activeBounds.isValid() && layer.getBounds) {
+                                activeBounds.extend(layer.getBounds());
                             }
                         }
                     });
@@ -519,26 +483,18 @@ export async function initRegionsEngine(containerId) {
 
                 if (polygonLayerGroup.getLayers().length > 0) polygonLayerGroup.addTo(map2D);
                 
-                // EXACT NN FIX: Strict 95:5 Margin Zoom Using Mathematical Bounds
                 if (nodeId === 'GLOBAL') {
                     map2D.fitBounds([[-55, -180], [85, 180]]); 
-                } else if (dominantBounds.isValid()) {
+                } else if (activeBounds.isValid()) {
                     try {
-                        if ((dominantBounds.getEast() - dominantBounds.getWest()) > 280) {
-                            let cLat = activeNode.dynamic_config_payload && activeNode.dynamic_config_payload.label_anchor ? activeNode.dynamic_config_payload.label_anchor[0] : 0;
-                            let cLng = activeNode.dynamic_config_payload && activeNode.dynamic_config_payload.label_anchor ? activeNode.dynamic_config_payload.label_anchor[1] : 0;
-                            map2D.setView([cLat, cLng], 2.5);
-                        } else {
-                            const currentSize = map2D.getSize(); 
-                            const padX = Math.max(10, Math.floor(currentSize.x * 0.05)); 
-                            const padY = Math.max(10, Math.floor(currentSize.y * 0.05)); 
-                            map2D.fitBounds(dominantBounds, { padding: [padX, padY], animate: true, duration: 0.8 });
-                        }
+                        const currentSize = map2D.getSize(); 
+                        const padX = Math.max(10, Math.floor(currentSize.x * 0.05)); 
+                        const padY = Math.max(10, Math.floor(currentSize.y * 0.05)); 
+                        map2D.fitBounds(activeBounds, { padding: [padX, padY], animate: true, duration: 0.8 });
                     } catch(e) {}
                 }
             }
 
-            // BATCH RENDER GLOBE
             if (activeEngine === '3D' && map3D) {
                 map3D.controls().autoRotate = (nodeId === 'GLOBAL');
                 map3D.controls().autoRotateSpeed = 1.0;
